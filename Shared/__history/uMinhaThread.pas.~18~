@@ -1,0 +1,44 @@
+unit uMinhaThread;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.StdCtrls, Vcl.ExtCtrls;
+
+type
+
+  TMinhaThread = class(TThread)
+  private
+
+  public
+    tmrPainel: TTimer;
+    constructor Create;
+    destructor destroy; override;
+    procedure Execute; override;
+
+  end;
+
+implementation
+
+{ TMinhaThread }
+
+constructor TMinhaThread.Create;
+begin
+
+  tmrPainel.Create(nil);
+
+end;
+
+destructor TMinhaThread.destroy;
+begin
+  tmrPainel.Free;
+  inherited;
+end;
+
+procedure TMinhaThread.Execute;
+begin
+  inherited;
+  tmrPainel.Enabled := True;
+end;
+
+end.

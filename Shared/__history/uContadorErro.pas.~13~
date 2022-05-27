@@ -1,0 +1,65 @@
+unit uContadorErro; // classe contadora de envios
+
+interface
+
+uses
+  uInterfacesAPI, System.SysUtils;
+
+type
+
+  TContadorErro = class;
+
+  TContadorErro = class(TInterfacedObject, iErro)
+  private
+    FExcluido: integer;
+    FSucesso: integer;
+    FErro: integer;
+
+    class var FContadorErro: TContadorErro;
+  public
+    destructor Destroy; override;
+    constructor Create;
+
+    property Excluido: integer read FExcluido write FExcluido;
+    property Sucesso: integer read FSucesso write FSucesso;
+    property Erro: integer read FErro write FErro;
+
+    class procedure ReleaseMe;
+    class function GetContadorErro: TContadorErro; static;
+    class property ContadorErro: TContadorErro read GetContadorErro write FContadorErro;
+  end;
+
+implementation
+
+{ TContadorErro }
+
+constructor TContadorErro.Create;
+begin
+
+end;
+
+destructor TContadorErro.Destroy;
+begin
+
+  inherited;
+end;
+
+class function TContadorErro.GetContadorErro: TContadorErro;
+begin
+  if NOT Assigned(FContadorErro) then
+  begin
+    FContadorErro := TContadorErro.Create;
+  end;
+
+  result := FContadorErro;
+end;
+
+class procedure TContadorErro.ReleaseMe;
+begin
+  if Assigned(FContadorErro) then
+  begin
+    FreeAndNil(FContadorErro);
+  end;
+end;
+
+end.

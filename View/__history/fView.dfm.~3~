@@ -1,0 +1,240 @@
+object frmView: TfrmView
+  Left = 0
+  Top = 0
+  Caption = 'frmView'
+  ClientHeight = 460
+  ClientWidth = 693
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Label1: TLabel
+    Left = 137
+    Top = 130
+    Width = 214
+    Height = 22
+    Caption = 'alexandre '#233' newbio no cs'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label2: TLabel
+    Left = 176
+    Top = 173
+    Width = 58
+    Height = 22
+    Caption = 'Label1'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label3: TLabel
+    Left = 305
+    Top = 158
+    Width = 58
+    Height = 22
+    Caption = 'Label1'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label4: TLabel
+    Left = 350
+    Top = 108
+    Width = 273
+    Height = 22
+    Caption = 'jeferson s'#243' tem queixo de barba'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label5: TLabel
+    Left = 270
+    Top = 230
+    Width = 58
+    Height = 22
+    Caption = 'Label1'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label6: TLabel
+    Left = 54
+    Top = 292
+    Width = 609
+    Height = 16
+    Caption = 
+      'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk' +
+      'kkkkkkkkkkkkkkkkkkkkkkk'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Button1: TButton
+    Left = 0
+    Top = 0
+    Width = 693
+    Height = 83
+    Align = alTop
+    Caption = 'Teste'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -96
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    TabOrder = 0
+    OnClick = Button1Click
+  end
+  object Edit1: TEdit
+    Left = 27
+    Top = 314
+    Width = 121
+    Height = 21
+    TabOrder = 1
+    Text = 'berimbau123'
+  end
+  object Edit2: TEdit
+    Left = 113
+    Top = 402
+    Width = 121
+    Height = 21
+    TabOrder = 2
+    Text = 'berimbau123'
+  end
+  object Edit3: TEdit
+    Left = 270
+    Top = 375
+    Width = 121
+    Height = 21
+    TabOrder = 3
+    Text = 'berimbau123'
+  end
+  object Edit4: TEdit
+    Left = 77
+    Top = 220
+    Width = 121
+    Height = 21
+    TabOrder = 4
+    Text = 'berimbau123'
+  end
+  object Edit5: TEdit
+    Left = 445
+    Top = 375
+    Width = 121
+    Height = 21
+    TabOrder = 5
+    Text = 'berimbau123'
+  end
+  object Edit6: TEdit
+    Left = 314
+    Top = 292
+    Width = 121
+    Height = 21
+    TabOrder = 6
+    Text = 'berimbau123'
+  end
+  object Edit7: TEdit
+    Left = 470
+    Top = 314
+    Width = 121
+    Height = 21
+    TabOrder = 7
+    Text = 'berimbau123'
+  end
+  object Edit8: TEdit
+    Left = 121
+    Top = 146
+    Width = 121
+    Height = 21
+    TabOrder = 8
+    Text = 'berimbau123'
+  end
+  object Edit9: TEdit
+    Left = 394
+    Top = 220
+    Width = 121
+    Height = 21
+    TabOrder = 9
+    Text = 'berimbau123'
+  end
+  object Edit10: TEdit
+    Left = 542
+    Top = 402
+    Width = 121
+    Height = 21
+    TabOrder = 10
+    Text = 'berimbau123'
+  end
+  object Edit11: TEdit
+    Left = 523
+    Top = 146
+    Width = 121
+    Height = 21
+    TabOrder = 11
+    Text = 'berimbau123'
+  end
+  object Edit12: TEdit
+    Left = 113
+    Top = 355
+    Width = 121
+    Height = 21
+    TabOrder = 12
+    Text = 'berimbau123'
+  end
+  object ComboBox1: TComboBox
+    Left = 27
+    Top = 103
+    Width = 291
+    Height = 21
+    TabOrder = 13
+    Text = 
+      'apaddkosappkosakpdoksapodk11'#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39#39 +
+      #39#39#39#39#39#39#39#39#39#39#39#39
+    Items.Strings = (
+      #39#39#39#39#39#39#39'84'#39'498'#39'45'#39'41'#39'54'#39'41c541'#39'c5641v'
+      'c'#39'45c'#39'd'#39'1c651d'#39'd'
+      #39'd1'#39'c65d165w2'#39'1d'#39
+      'w'#39'd'#39'c65d165w1'#39'cdw'#39
+      'w'#39'cd'#39'5w1dc651'#39'w6dcw'#39'65d'
+      'w'#39'dcw'#39'1d65c156'#39'1dcw'#39
+      '                          '#39#39)
+  end
+  object CheckBox1: TCheckBox
+    Left = 506
+    Top = 28
+    Width = 157
+    Height = 17
+    Caption = 'aaaaaaaaaa'#39#39#39#39
+    TabOrder = 14
+  end
+  object SQLDataSet1: TSQLDataSet
+    Params = <>
+    Left = 579
+    Top = 222
+  end
+end

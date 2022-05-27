@@ -1,0 +1,75 @@
+unit uInterfacesEntity;
+
+interface
+
+uses
+  System.JSON;
+
+type
+
+  // Entidades
+  iBanco = interface
+    ['{54C1D34B-FF2C-4B07-85FC-95F39E5CABC9}']
+
+  end;
+
+  iCidade = interface
+    ['{F069D59C-9CB6-49ED-B475-D0C7FAC36DF8}']
+
+  end;
+
+  iCliente = interface
+    ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iContasPagar = interface
+    ['{372A7EA7-5A4E-4EE4-8399-D8D511C22ECE}']
+  end;
+
+  iContasReceber = interface
+    ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iFormaPagamento = interface
+    ['{1591F658-FC79-4793-BFA4-FA7A884F0C65}']
+
+  end;
+
+  iFornecedor = interface
+    ['{D06215E7-031E-489D-9B23-20DE4A506F02}']
+
+  end;
+
+  iVendedor = interface
+    ['{EA5DE32B-4A4E-43A1-BC0D-8083D3E4AA0D}']
+
+  end;
+
+  iConta = interface
+    ['{EC2A4ACD-FC9F-4C11-85A6-294F44CFB39F}']
+
+  end;
+
+  iClienteDAO = interface
+    ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+
+  iContasReceberDAO = interface
+    ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+
+  iContasPagarDAO = interface
+    ['{E711B2E4-3FE5-4313-81B6-381B6958D420}']
+  end;
+
+  iFornecedor = interface
+    ['{1BF046C8-37E3-4DAA-9BC1-A66329768B7D}']
+  end;
+
+  iFornecedorDAO = interface
+    ['{72C3C234-EF67-4AB8-8983-03C1A0E54C93}']
+  end;
+
+implementation
+
+end.

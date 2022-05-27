@@ -1,0 +1,23 @@
+unit uErro;
+
+interface
+
+uses
+  uInterfacesAPI;
+
+type
+
+  TErro = class;
+
+  TErro = class(TInterfacedObject, iErro)
+  private
+    class var FErro: string;
+    class var FSucesso: string;
+  public
+    class property Sucesso: string read FSucesso write FSucesso;
+    class property Erro: string read FErro write FErro;
+  end;
+
+implementation
+
+end.

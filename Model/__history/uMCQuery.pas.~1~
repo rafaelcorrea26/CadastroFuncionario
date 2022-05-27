@@ -1,0 +1,66 @@
+unit uMCQuery;
+
+interface
+
+uses
+{$IFDEF VER230}
+  IBQuery,
+  IBDatabase,
+{$ELSE}
+  FireDAC.Stan.Intf,
+  FireDAC.Stan.Option,
+  FireDAC.Stan.Param,
+  FireDAC.Stan.Error,
+  FireDAC.DatS,
+  FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf,
+  FireDAC.Stan.Async,
+  FireDAC.DApt,
+  Data.DB,
+  FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client,
+{$ENDIF}
+  Classes, SysUtils;
+
+type
+
+{$IFDEF VER230}
+  TMCQuery = class(TIBQuery)
+{$ELSE}
+  TMCQuery = class(TFDQuery)
+{$ENDIF}
+  private
+
+  public
+    constructor Create(AOwner: TComponent); override;
+
+    class procedure PrepareQuery(pQuery: TMCQuery; pSQL: string);
+  end;
+
+implementation
+
+uses uSistema;
+
+{ TMCQuery }
+
+constructor TMCQuery.Create(AOwner: TComponent);
+begin
+  inherited;
+{$IFDEF VER230}
+  Database := TSistema.Database;
+  Transaction := TSistema.Transaction;
+  BufferChunks := 100;
+{$ELSE}
+  Connection := TSistema.Database;
+//  Transaction := TSistema.Transaction;
+{$ENDIF}
+end;
+
+class procedure TMCQuery.PrepareQuery(pQuery: TMCQuery; pSQL: string);
+begin
+  pQuery.Close;
+  pQuery.SQL.Clear;
+  pQuery.SQL.Text := pSQL;
+end;
+
+end.

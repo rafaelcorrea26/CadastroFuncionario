@@ -1,0 +1,17 @@
+unit uInterfacesAPI;
+
+interface
+
+type
+  iMessages = interface
+    ['{229CD671-2224-4A00-9B0D-DD500371C2B5}']
+  end;
+
+  iSettings = interface
+    ['{58E8C9E5-C474-4025-A900-B08A027B5C87}']
+
+  end;
+
+implementation
+
+end.

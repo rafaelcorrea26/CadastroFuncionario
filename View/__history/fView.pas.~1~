@@ -1,0 +1,57 @@
+unit fView;
+
+interface
+
+uses
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  uConnectionAPI, Unit1, uLogErros;
+
+type
+  TfrmView = class(TForm)
+    Button1: TButton;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmView: TfrmView;
+
+implementation
+
+{$R *.dfm}
+
+procedure TfrmView.Button1Click(Sender: TObject);
+begin
+  // Memo1.Lines.Clear;
+  // Memo1.Lines.add(TConnectionAPI.ConnectionAPI.GetLogErros);
+
+  try
+    form1.ShowModal;
+  except
+    on E: Exception do
+    begin
+      tlogerros.ExecutaGravaLogErro(1, self, E)
+    end;
+
+  end;
+end;
+
+end.

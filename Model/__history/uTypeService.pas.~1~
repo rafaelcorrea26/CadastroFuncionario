@@ -1,0 +1,10 @@
+unit uService;
+
+interface
+
+type
+  TServiceAPI = (tGetCP, tPostCP, tPutCP, tDeleteCP, tGetFN, tGetFNCNPJ, tPostFN, tPutFN, tDeleteFN, tPostToken);
+
+implementation
+
+end.

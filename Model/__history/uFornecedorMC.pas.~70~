@@ -1,0 +1,840 @@
+unit uFornecedorMC;
+
+interface
+
+uses
+  FireDAC.Comp.Client, System.SysUtils, System.StrUtils, uConnection, uInterfaces;
+
+type
+  TFornecedorMC = class(TInterfacedObject, iClassReceive)
+  private
+    FQuery: TFDquery;
+    FDataSet: TFDquery;
+    FCodigo: Integer;
+    FNome: string;
+    FFantasia: string;
+    FEndereco: string;
+    FNumero: string;
+    FBairro: string;
+    FCidade: string;
+    FCep: string;
+    FIe: string;
+    FFone: string;
+    FFax: string;
+    FCelular: string;
+    FEmail: string;
+    FCodigoCidadeIbge: string;
+    FUf: string;
+    FSped: Boolean;
+    FUsuarioCadastro: Integer;
+    FUsuarioAlteracao: Integer;
+    FDataAlteracao: TDatetime;
+    FDataCadastro: TDatetime;
+    FAtivo: Boolean;
+    FPessoaFisica: Boolean;
+    FCpf: string;
+    FCnpj: string;
+    FSite: string;
+    FObservacao1: string;
+    FObservacao2: string;
+    FEnderecoCobranca: string;
+    FBairroCobranca: string;
+    FCidadeCobranca: string;
+    FCepCobranca: string;
+    FUfCobranca: string;
+    FLocalizacao: Integer;
+    FExtra: Integer;
+    FUtilizarRotinaAtacado: Boolean;
+    FObservacaoGeral: string;
+    FNomeRepresentante: string;
+    FFoneRepresentante: string;
+    FEmailRepresentante: string;
+    FEmissaoUltimoMovimento: TDate;
+    FNotaFiscalUltimoMovimento: string;
+    FValorNotaFiscalUltimoMovimento: Double;
+    FDataNascimento: TDate;
+    FCarteiraIdentidade: String;
+    FSequencia: Integer;
+    FAlterarCustos: Boolean;
+    FRegimeTributario: Integer;
+    FCrt: Integer;
+    FCNAE: string;
+    class var FObjetoBusca: TFornecedorMC;
+  public
+    destructor Destroy; override;
+    property Codigo: Integer read FCodigo write FCodigo; // MC02CODIGO
+    property Nome: string read FNome write FNome; // Mc02Nome
+    property Fantasia: string read FFantasia write FFantasia; // Mc02Fantasia
+    property Endereco: string read FEndereco write FEndereco; // Mc02Endereco
+    property Numero: string read FNumero write FNumero; // MC02_NR
+    property Bairro: string read FBairro write FBairro; // Mc02Bairro
+    property Cidade: string read FCidade write FCidade; // Mc02Cidade
+    property Cep: string read FCep write FCep; // Mc02Cep
+    property Ie: string read FIe write FIe; // Mc02ie
+    property Fone: string read FFone write FFone; // Mc02Fone
+    property Fax: string read FFax write FFax; // Mc02Fax
+    property Celular: string read FCelular write FCelular; // Mc02Celular
+    property Email: string read FEmail write FEmail; // Mc02email
+    property CodigoCidadeIbge: string read FCodigoCidadeIbge write FCodigoCidadeIbge; // MC02_COD_SEFAZ
+    property Uf: string read FUf write FUf; // Mc02UF
+    property Sped: Boolean read FSped write FSped; // MC02_SPED_SN
+    property UsuarioCadastro: Integer read FUsuarioCadastro write FUsuarioCadastro; // MC02_USU_CADASTRO
+    property UsuarioAlteracao: Integer read FUsuarioAlteracao write FUsuarioAlteracao; // MC02_USU_ALTERACAO
+    property DataCadastro: TDatetime read FDataCadastro write FDataCadastro; // Mc02DtCadastro
+    property DataAlteracao: TDatetime read FDataAlteracao write FDataAlteracao; // MC02_DT_ALTERCAO
+    property Ativo: Boolean read FAtivo write FAtivo; // MC02ATIINATIVO
+    property PessoaFisica: Boolean read FPessoaFisica write FPessoaFisica; // MC02FISJUR
+    property Cpf: string read FCpf write FCpf; // Mc02cpf
+    property Cnpj: string read FCnpj write FCnpj; // Mc02cgc
+    property Site: string read FSite write FSite; // MC02_SITE
+    property Observacao1: string read FObservacao1 write FObservacao1; // MC02_OBS1
+    property Observacao2: string read FObservacao2 write FObservacao2; // MC02_OBS2
+    property EnderecoCobranca: string read FEnderecoCobranca write FEnderecoCobranca; // Mc02endcob
+    property BairroCobranca: string read FBairroCobranca write FBairroCobranca; // Mc02BairroCob
+    property CidadeCobranca: string read FCidadeCobranca write FCidadeCobranca; // Mc02cidadecob
+    property CepCobranca: string read FCepCobranca write FCepCobranca; // Mc02Cep
+    property UfCobranca: string read FUfCobranca write FUfCobranca; // Mc02UfCob
+    property Localizacao: Integer read FLocalizacao write FLocalizacao; // MC02TBLOCAL
+    property Extra: Integer read FExtra write FExtra; // MC02TBEXTRA
+    property UtilizarRotinaAtacado: Boolean read FUtilizarRotinaAtacado write FUtilizarRotinaAtacado; // MC02_ATACADO
+    property ObservacaoGeral: string read FObservacaoGeral write FObservacaoGeral; // Mc02ObsGeral
+    property NomeRepresentante: string read FNomeRepresentante write FNomeRepresentante; // MC02CONTATO
+    property FoneRepresentante: string read FFoneRepresentante write FFoneRepresentante; // MC02FONE_CONTATO
+    property EmailRepresentante: string read FEmailRepresentante write FEmailRepresentante; // MC02EMAIL_CONTATO
+    property EmissaoUltimoMovimento: TDate read FEmissaoUltimoMovimento write FEmissaoUltimoMovimento; // Mc02dtMov
+    property NotaFiscalUltimoMovimento: string read FNotaFiscalUltimoMovimento write FNotaFiscalUltimoMovimento;
+    // Mc02UltimaNF
+    property ValorNotaFiscalUltimoMovimento: Double read FValorNotaFiscalUltimoMovimento
+      write FValorNotaFiscalUltimoMovimento; // Mc02ValorNF
+    property DataNascimento: TDate read FDataNascimento write FDataNascimento;
+    property CarteiraIdentidade: String read FCarteiraIdentidade write FCarteiraIdentidade;
+    property Sequencia: Integer read FSequencia write FSequencia;
+    property AlterarCustos: Boolean read FAlterarCustos write FAlterarCustos;
+
+    property RegimeTributario: Integer read FRegimeTributario write FRegimeTributario;
+    property Crt: Integer read FCrt write FCrt;
+    property CNAE: string read FCNAE write FCNAE;
+
+    procedure Carrega;
+    procedure Salvar(pEfetuarCommit: Boolean);
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    function GeraProximoCodigo: Integer;
+    function GetSN(pBoolean: Boolean): string;
+
+    constructor Create;
+    procedure ClearClass;
+
+    class function RemoveCaracteresEspeciais(aTexto: string): string;
+    class function Existe(pCodigo: Integer): Boolean;
+    class function BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+    class function BuscaCodigoPeloCpf(pCpf: string): Integer;
+    class property ObjetoBusca: TFornecedorMC read FObjetoBusca write FObjetoBusca;
+  end;
+
+implementation
+
+{ TFornecedorMC }
+
+procedure TFornecedorMC.Alterar(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('UPDATE MC02FORNEC SET                          ');
+  FDataSet.SQL.Add('    MC02CODIGO          = :MC02CODIGO          ');
+  FDataSet.SQL.Add('  , MC02NOME            = :MC02NOME            ');
+  FDataSet.SQL.Add('  , MC02FANTASIA        = :MC02FANTASIA        ');
+  FDataSet.SQL.Add('  , MC02ENDERECO        = :MC02ENDERECO        ');
+  FDataSet.SQL.Add('  , MC02BAIRRO          = :MC02BAIRRO          ');
+  FDataSet.SQL.Add('  , MC02CIDADE          = :MC02CIDADE          ');
+  FDataSet.SQL.Add('  , MC02CEP             = :MC02CEP             ');
+  FDataSet.SQL.Add('  , MC02UF              = :MC02UF              ');
+  FDataSet.SQL.Add('  , MC02FONE            = :MC02FONE            ');
+  FDataSet.SQL.Add('  , MC02FAX             = :MC02FAX             ');
+  FDataSet.SQL.Add('  , MC02CELULAR         = :MC02CELULAR         ');
+  FDataSet.SQL.Add('  , MC02EMAIL           = :MC02EMAIL           ');
+  FDataSet.SQL.Add('  , MC02FISJUR          = :MC02FISJUR          ');
+  FDataSet.SQL.Add('  , MC02ATIINATIVO      = :MC02ATIINATIVO      ');
+  FDataSet.SQL.Add('  , MC02DTNASCTO        = :MC02DTNASCTO        ');
+  FDataSet.SQL.Add('  , MC02CPF             = :MC02CPF             ');
+  FDataSet.SQL.Add('  , MC02CI              = :MC02CI              ');
+  FDataSet.SQL.Add('  , MC02CGC             = :MC02CGC             ');
+  FDataSet.SQL.Add('  , MC02IE              = :MC02IE              ');
+  FDataSet.SQL.Add('  , MC02ENDCOB          = :MC02ENDCOB          ');
+  FDataSet.SQL.Add('  , MC02CIDADECOB       = :MC02CIDADECOB       ');
+  FDataSet.SQL.Add('  , MC02BAIRROCOB       = :MC02BAIRROCOB       ');
+  FDataSet.SQL.Add('  , MC02UFCOB           = :MC02UFCOB           ');
+  FDataSet.SQL.Add('  , MC02CONTATO         = :MC02CONTATO         ');
+  FDataSet.SQL.Add('  , MC02OBSGERAL        = :MC02OBSGERAL        ');
+  FDataSet.SQL.Add('  , MC02DTMOV           = :MC02DTMOV           ');
+  FDataSet.SQL.Add('  , MC02ULTIMANF        = :MC02ULTIMANF        ');
+  FDataSet.SQL.Add('  , MC02VALORNF         = :MC02VALORNF         ');
+  FDataSet.SQL.Add('  , MC02_ATACADO        = :MC02_ATACADO        ');
+  FDataSet.SQL.Add('  , MC02TBLOCAL         = :MC02TBLOCAL         ');
+  FDataSet.SQL.Add('  , MC02TBEXTRA         = :MC02TBEXTRA         ');
+  FDataSet.SQL.Add('  , MC02FONE_CONTATO    = :MC02FONE_CONTATO    ');
+  FDataSet.SQL.Add('  , MC02EMAIL_CONTATO   = :MC02EMAIL_CONTATO   ');
+  FDataSet.SQL.Add('  , MC02_SEQUENCIA      = :MC02_SEQUENCIA      ');
+  FDataSet.SQL.Add('  , MC02_SITE           = :MC02_SITE           ');
+  FDataSet.SQL.Add('  , MC02_OBS1           = :MC02_OBS1           ');
+  FDataSet.SQL.Add('  , MC02_OBS2           = :MC02_OBS2           ');
+  FDataSet.SQL.Add('  , MC02_SPED_SN        = :MC02_SPED_SN        ');
+  FDataSet.SQL.Add('  , MC02_COD_SEFAZ      = :MC02_COD_SEFAZ      ');
+  FDataSet.SQL.Add('  , MC02_NR             = :MC02_NR             ');
+  FDataSet.SQL.Add('  , MC02_ALTERAR_CUSTOS = :MC02_ALTERAR_CUSTOS ');
+  FDataSet.SQL.Add('  , MC02REGIME          = :MC02REGIME          ');
+  FDataSet.SQL.Add('  , MC02CNAE            = :MC02CNAE            ');
+  FDataSet.SQL.Add('  , MC02CRT             = :MC02CRT             ');
+  FDataSet.SQL.Add('WHERE MC02CODIGO        = :MC02CODIGO          ');
+  FDataSet.ParamByName('MC02CODIGO').AsInteger := FCodigo;
+  FDataSet.ParamByName('MC02NOME').AsString := copy(FNome, 1, 35);
+  FDataSet.ParamByName('MC02FANTASIA').AsString := copy(FFantasia, 1, 20);
+  FDataSet.ParamByName('MC02ENDERECO').AsString := copy(FEndereco, 1, 35);
+  FDataSet.ParamByName('MC02BAIRRO').AsString := copy(FBairro, 1, 20);
+  FDataSet.ParamByName('MC02CIDADE').AsString := copy(FCidade, 1, 30);
+  FDataSet.ParamByName('MC02CEP').AsString := copy(FCep, 1, 10);
+  FDataSet.ParamByName('MC02UF').AsString := copy(FUf, 1, 2);
+  FDataSet.ParamByName('MC02FONE').AsString := copy(FFone, 1, 15);
+  FDataSet.ParamByName('MC02FAX').AsString := copy(FFax, 1, 15);
+  FDataSet.ParamByName('MC02CELULAR').AsString := copy(FCelular, 1, 15);
+  FDataSet.ParamByName('MC02EMAIL').AsString := copy(FEmail, 1, 50);
+  FDataSet.ParamByName('MC02DTCADASTRO').AsDateTime := FDataCadastro;
+  FDataSet.ParamByName('MC02FISJUR').AsString := GetSN(FPessoaFisica);
+  FDataSet.ParamByName('MC02ATIINATIVO').AsString := GetSN(FAtivo);
+  FDataSet.ParamByName('MC02DTNASCTO').AsDate := FDataNascimento;
+  FDataSet.ParamByName('MC02CPF').AsString := copy(FCpf, 1, 11);
+  FDataSet.ParamByName('MC02CI').AsString := copy(FCarteiraIdentidade, 1, 10);
+  FDataSet.ParamByName('MC02CGC').AsString := copy(FCnpj, 1, 14);
+  FDataSet.ParamByName('MC02IE').AsString := copy(FIe, 1, 20);
+  FDataSet.ParamByName('MC02ENDCOB').AsString := copy(FEnderecoCobranca, 1, 35);
+  FDataSet.ParamByName('MC02CIDADECOB').AsString := copy(FCidadeCobranca, 1, 30);
+  FDataSet.ParamByName('MC02BAIRROCOB').AsString := copy(FBairroCobranca, 1, 20);
+  FDataSet.ParamByName('MC02UFCOB').AsString := copy(FUfCobranca, 1, 2);
+  FDataSet.ParamByName('MC02CONTATO').AsString := copy(FNomeRepresentante, 1, 50);
+  FDataSet.ParamByName('MC02OBSGERAL').AsString := FObservacaoGeral;
+  FDataSet.ParamByName('MC02DTMOV').AsDate := FEmissaoUltimoMovimento;
+  FDataSet.ParamByName('MC02ULTIMANF').AsString := copy(FNotaFiscalUltimoMovimento, 1, 10);
+  FDataSet.ParamByName('MC02VALORNF').AsFloat := FValorNotaFiscalUltimoMovimento;
+  FDataSet.ParamByName('MC02_ATACADO').AsString := GetSN(FUtilizarRotinaAtacado);
+  FDataSet.ParamByName('MC02TBLOCAL').AsInteger := FLocalizacao;
+  FDataSet.ParamByName('MC02TBEXTRA').AsInteger := FExtra;
+  FDataSet.ParamByName('MC02FONE_CONTATO').AsString := copy(FFoneRepresentante, 1, 15);
+  FDataSet.ParamByName('MC02EMAIL_CONTATO').AsString := copy(FEmailRepresentante, 1, 50);
+  FDataSet.ParamByName('MC02_SEQUENCIA').AsInteger := FSequencia;
+  FDataSet.ParamByName('MC02_SITE').AsString := copy(FSite, 1, 100);
+  FDataSet.ParamByName('MC02_OBS1').AsString := copy(FObservacao1, 1, 150);
+  FDataSet.ParamByName('MC02_OBS2').AsString := copy(FObservacao2, 1, 150);
+  FDataSet.ParamByName('MC02_USU_CADASTRO').AsInteger := FUsuarioCadastro;
+  FDataSet.ParamByName('MC02_SPED_SN').AsString := GetSN(FSped);
+  FDataSet.ParamByName('MC02_COD_SEFAZ').AsString := copy(FCodigoCidadeIbge, 1, 14);
+  FDataSet.ParamByName('MC02_NR').AsString := copy(FNumero, 1, 15);
+  FDataSet.ParamByName('MC02_ALTERAR_CUSTOS').AsString := GetSN(FAlterarCustos);
+  FDataSet.ParamByName('MC02REGIME').AsInteger := FRegimeTributario;
+  FDataSet.ParamByName('MC02CNAE').AsString := copy(FCNAE, 1, 15);
+  FDataSet.ParamByName('MC02CRT').AsInteger := FCrt;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+class function TFornecedorMC.BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+var
+  lQuery: TFDquery;
+  lIE: string;
+begin
+  lIE := RemoveCaracteresEspeciais(pInscricaoEstadual);
+  Result := 0;
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT MC02CODIGO FROM MC02FORNEC    ');
+    lQuery.SQL.Add(' WHERE MC02CGC = :CNPJ               ');
+    lQuery.ParamByName('CNPJ').AsString := pCnpj;
+    if (Length(Trim(lIE)) > 0) then
+    begin
+
+      lQuery.SQL.Add
+        (' AND   REPLACE(REPLACE(REPLACE(REPLACE(MC02IE, ''/'',''''),''-'',''''),''.'',''''),'' '','''') = :INSCRICAO_ESTADUAL ');
+      lQuery.ParamByName('INSCRICAO_ESTADUAL').AsString := lIE;
+    end;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFornecedorMC.BuscaCodigoPeloCpf(pCpf: string): Integer;
+var
+  lQuery: TFDquery;
+begin
+  Result := 0;
+
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT MC02CPF FROM MC02FORNEC ');
+    lQuery.SQL.Add(' WHERE MC02CPF = :CPF          ');
+    lQuery.ParamByName('CPF').AsString := pCpf;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TFornecedorMC.Carrega;
+var
+  lConsulta: TFDquery;
+begin
+
+  lConsulta := TFDquery.Create(nil);
+  try
+    lConsulta.Close;
+    lConsulta.SQL.Clear;
+    lConsulta.SQL.Add(' select * from MC02FORNEC where MC02CODIGO = :CODIGO ');
+    lConsulta.ParamByName('CODIGO').AsInteger := FCodigo;
+    lConsulta.Open;
+
+    if lConsulta.RecordCount > 0 then
+    begin
+      // carrega dados
+      FCodigo := lConsulta.FieldByName('MC02CODIGO').AsInteger;
+      FNome := lConsulta.FieldByName('MC02NOME').AsString;
+      FFantasia := lConsulta.FieldByName('MC02FANTASIA').AsString;
+      FEndereco := lConsulta.FieldByName('MC02ENDERECO').AsString;
+      FNumero := lConsulta.FieldByName('MC02_NR').AsString;
+      FBairro := lConsulta.FieldByName('MC02BAIRRO').AsString;
+      FCidade := lConsulta.FieldByName('MC02CIDADE').AsString;
+      FCep := lConsulta.FieldByName('MC02CEP').AsString;
+      FIe := lConsulta.FieldByName('MC02IE').AsString;
+      FFone := lConsulta.FieldByName('MC02FONE').AsString;
+      FFax := lConsulta.FieldByName('MC02FAX').AsString;
+      FCelular := lConsulta.FieldByName('MC02CELULAR').AsString;
+      FEmail := lConsulta.FieldByName('MC02EMAIL').AsString;
+      FCodigoCidadeIbge := lConsulta.FieldByName('MC02_COD_SEFAZ').AsString;
+      FUf := lConsulta.FieldByName('MC02UF').AsString;
+      FSped := lConsulta.FieldByName('MC02_SPED_SN').AsString = 'S';
+      FUsuarioCadastro := lConsulta.FieldByName('MC02_USU_CADASTRO').AsInteger;
+      FUsuarioAlteracao := lConsulta.FieldByName('MC02_USU_ALTERACAO').AsInteger;
+      FDataAlteracao := lConsulta.FieldByName('MC02_DT_ALTERCAO').AsDateTime;
+      FDataCadastro := lConsulta.FieldByName('MC02DTCADASTRO').AsDateTime;
+      FAtivo := (lConsulta.FieldByName('MC02ATIINATIVO').AsString = 'S');
+      FPessoaFisica := (lConsulta.FieldByName('MC02FISJUR').AsString = 'S');
+      FCpf := lConsulta.FieldByName('MC02CPF').AsString;
+      FCnpj := lConsulta.FieldByName('MC02CGC').AsString;
+      FSite := lConsulta.FieldByName('MC02_SITE').AsString;
+      FObservacao1 := lConsulta.FieldByName('MC02_OBS1').AsString;
+      FObservacao2 := lConsulta.FieldByName('MC02_OBS2').AsString;
+      FEnderecoCobranca := lConsulta.FieldByName('MC02ENDCOB').AsString;
+      FBairroCobranca := lConsulta.FieldByName('MC02BAIRROCOB').AsString;
+      FCidadeCobranca := lConsulta.FieldByName('MC02CIDADECOB').AsString;
+      FCepCobranca := lConsulta.FieldByName('MC02CEP').AsString;
+      // criar campo cep cobranca na base , verificar antes com jeferson
+      FUfCobranca := lConsulta.FieldByName('MC02UFCOB').AsString;
+      FLocalizacao := lConsulta.FieldByName('MC02TBLOCAL').AsInteger;
+      FExtra := lConsulta.FieldByName('MC02TBEXTRA').AsInteger;
+      FUtilizarRotinaAtacado := lConsulta.FieldByName('MC02_ATACADO').AsString = 'S';
+      FObservacaoGeral := lConsulta.FieldByName('MC02OBSGERAL').AsString;
+      FNomeRepresentante := lConsulta.FieldByName('MC02CONTATO').AsString;
+      FFoneRepresentante := lConsulta.FieldByName('MC02FONE_CONTATO').AsString;
+      FEmailRepresentante := lConsulta.FieldByName('MC02EMAIL_CONTATO').AsString;
+      FEmissaoUltimoMovimento := lConsulta.FieldByName('MC02DTMOV').AsDateTime;
+      FNotaFiscalUltimoMovimento := lConsulta.FieldByName('MC02ULTIMANF').AsString;
+      FValorNotaFiscalUltimoMovimento := lConsulta.FieldByName('MC02VALORNF').AsFloat;
+      FDataNascimento := lConsulta.FieldByName('MC02DTNASCTO').AsDateTime;
+      FCarteiraIdentidade := lConsulta.FieldByName('MC02CI').AsString;
+      FSequencia := lConsulta.FieldByName('MC02_SEQUENCIA').AsInteger;
+      FAlterarCustos := lConsulta.FieldByName('MC02_ALTERAR_CUSTOS').AsString <> 'N';
+      FRegimeTributario := lConsulta.FieldByName('MC02REGIME').AsInteger; // HS-100 // Vagner Oliveira
+      FCrt := lConsulta.FieldByName('MC02CRT').AsInteger; // HS-100 // Vagner Oliveira
+      FCNAE := lConsulta.FieldByName('MC02CNAE').AsString;
+    end;
+  finally
+    lConsulta.Free;
+  end;
+end;
+
+procedure TFornecedorMC.ClearClass;
+begin
+  FCodigo := 0;
+  FNome := emptystr;
+  FFantasia := emptystr;
+  FEndereco := emptystr;
+  FNumero := emptystr;
+  FBairro := emptystr;
+  FCidade := emptystr;
+  FCep := emptystr;
+  FIe := emptystr;
+  FFone := emptystr;
+  FFax := emptystr;
+  FCelular := emptystr;
+  FEmail := emptystr;
+  FCodigoCidadeIbge := emptystr;
+  FUf := emptystr;
+FSped:
+  Boolean;
+  FUsuarioCadastro := 0;
+  FUsuarioAlteracao := 0;
+  FDataAlteracao := 0;
+  FDataCadastro := 0;
+  FAtivo := true;
+  FPessoaFisica := true;
+  FCpf := emptystr;
+  FCnpj := emptystr;
+  FSite := emptystr;
+  FObservacao1 := emptystr;
+  FObservacao2 := emptystr;
+  FEnderecoCobranca := emptystr;
+  FBairroCobranca := emptystr;
+  FCidadeCobranca := emptystr;
+  FCepCobranca := emptystr;
+  FUfCobranca := emptystr;
+  FLocalizacao := 0;
+  FExtra := 0;
+  FUtilizarRotinaAtacado := False;
+  FObservacaoGeral := emptystr;
+  FNomeRepresentante := emptystr;
+  FFoneRepresentante := emptystr;
+  FEmailRepresentante := emptystr;
+  FEmissaoUltimoMovimento := 0;
+  FNotaFiscalUltimoMovimento := emptystr;
+  FValorNotaFiscalUltimoMovimento := 0;
+  FDataNascimento := 0;
+  FCarteiraIdentidade := emptystr;
+  FSequencia := 0;
+  FAlterarCustos := False;
+  FRegimeTributario := 0;
+  FCrt := 0;
+  FCNAE := emptystr;
+end;
+
+constructor TFornecedorMC.Create;
+begin
+  FQuery := TFDquery.Create(nil);
+  FQuery.Connection := Tconnection.ObjectConnection.Connection;
+
+  FDataSet := TFDquery.Create(nil);
+  FDataSet.Connection := Tconnection.ObjectConnection.Connection;
+end;
+
+destructor TFornecedorMC.Destroy;
+begin
+  FDataSet.Free;
+  FQuery.Free;
+
+  inherited;
+end;
+
+procedure TFornecedorMC.Excluir(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('DELETE FROM MC02FORNEC WHERE MC02CODIGO = :MC02CODIGO ');
+  FDataSet.ParamByName('MC02CODIGO').AsInteger := FCodigo;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+class function TFornecedorMC.Existe(pCodigo: Integer): Boolean;
+var
+  lQuery: TFDquery;
+begin
+  Result := False;
+  lQuery := TFDquery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC02FORNEC WHERE MC02CODIGO = :CODIGO');
+    lQuery.ParamByName('CODIGO').AsInteger := pCodigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := true;
+
+      if not Assigned(FObjetoBusca) then
+      begin
+        FObjetoBusca := TFornecedorMC.Create;
+      end;
+      FObjetoBusca.Codigo := pCodigo;
+      FObjetoBusca.Carrega;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TFornecedorMC.GeraProximoCodigo: Integer;
+begin
+  Result := 0;
+
+  FQuery.Close;
+  FQuery.SQL.Clear;
+  FQuery.SQL.Add('SELECT MAX(MC02CODIGO) + 1 PROXIMO_CODIGO FROM MC02FORNEC ');
+  FQuery.Open;
+
+  if FQuery.RecordCount > 0 then
+  begin
+    Result := FQuery.FieldByName('PROXIMO_CODIGO').AsInteger;
+  end;
+end;
+
+function TFornecedorMC.GetSN(pBoolean: Boolean): string;
+begin
+  Result := IfThen(pBoolean, 'S', 'N');
+end;
+
+procedure TFornecedorMC.Incluir(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('INSERT INTO MC02FORNEC (   ');
+  FDataSet.SQL.Add('    MC02CODIGO             ');
+  FDataSet.SQL.Add('  , MC02NOME               ');
+  FDataSet.SQL.Add('  , MC02FANTASIA           ');
+  FDataSet.SQL.Add('  , MC02ENDERECO           ');
+  FDataSet.SQL.Add('  , MC02BAIRRO             ');
+  FDataSet.SQL.Add('  , MC02CIDADE             ');
+  FDataSet.SQL.Add('  , MC02CEP                ');
+  FDataSet.SQL.Add('  , MC02UF                 ');
+  FDataSet.SQL.Add('  , MC02FONE               ');
+  FDataSet.SQL.Add('  , MC02FAX                ');
+  FDataSet.SQL.Add('  , MC02CELULAR            ');
+  FDataSet.SQL.Add('  , MC02EMAIL              ');
+  FDataSet.SQL.Add('  , MC02DTCADASTRO         ');
+  FDataSet.SQL.Add('  , MC02FISJUR             ');
+  FDataSet.SQL.Add('  , MC02ATIINATIVO         ');
+  FDataSet.SQL.Add('  , MC02DTNASCTO           ');
+  FDataSet.SQL.Add('  , MC02CPF                ');
+  FDataSet.SQL.Add('  , MC02CI                 ');
+  FDataSet.SQL.Add('  , MC02CGC                ');
+  FDataSet.SQL.Add('  , MC02IE                 ');
+  FDataSet.SQL.Add('  , MC02ENDCOB             ');
+  FDataSet.SQL.Add('  , MC02CIDADECOB          ');
+  FDataSet.SQL.Add('  , MC02BAIRROCOB          ');
+  FDataSet.SQL.Add('  , MC02UFCOB              ');
+  FDataSet.SQL.Add('  , MC02CONTATO            ');
+  FDataSet.SQL.Add('  , MC02OBSGERAL           ');
+  FDataSet.SQL.Add('  , MC02DTMOV              ');
+  FDataSet.SQL.Add('  , MC02ULTIMANF           ');
+  FDataSet.SQL.Add('  , MC02VALORNF            ');
+  FDataSet.SQL.Add('  , MC02_ATACADO           ');
+  FDataSet.SQL.Add('  , MC02TBLOCAL            ');
+  FDataSet.SQL.Add('  , MC02TBEXTRA            ');
+  FDataSet.SQL.Add('  , MC02FONE_CONTATO       ');
+  FDataSet.SQL.Add('  , MC02EMAIL_CONTATO      ');
+  FDataSet.SQL.Add('  , MC02_SEQUENCIA         ');
+  FDataSet.SQL.Add('  , MC02_SITE              ');
+  FDataSet.SQL.Add('  , MC02_OBS1              ');
+  FDataSet.SQL.Add('  , MC02_OBS2              ');
+  FDataSet.SQL.Add('  , MC02_USU_CADASTRO      ');
+  FDataSet.SQL.Add('  , MC02_SPED_SN           ');
+  FDataSet.SQL.Add('  , MC02_COD_SEFAZ         ');
+  FDataSet.SQL.Add('  , MC02_NR                ');
+  FDataSet.SQL.Add('  , MC02_ALTERAR_CUSTOS    ');
+  FDataSet.SQL.Add('  , MC02REGIME             ');
+  FDataSet.SQL.Add('  , MC02CNAE               ');
+  FDataSet.SQL.Add('  , MC02CRT                ');
+  FDataSet.SQL.Add(' )VALUES (                 ');
+  FDataSet.SQL.Add('    :MC02CODIGO            ');
+  FDataSet.SQL.Add('  , :MC02NOME              ');
+  FDataSet.SQL.Add('  , :MC02FANTASIA          ');
+  FDataSet.SQL.Add('  , :MC02ENDERECO          ');
+  FDataSet.SQL.Add('  , :MC02BAIRRO            ');
+  FDataSet.SQL.Add('  , :MC02CIDADE            ');
+  FDataSet.SQL.Add('  , :MC02CEP               ');
+  FDataSet.SQL.Add('  , :MC02UF                ');
+  FDataSet.SQL.Add('  , :MC02FONE              ');
+  FDataSet.SQL.Add('  , :MC02FAX               ');
+  FDataSet.SQL.Add('  , :MC02CELULAR           ');
+  FDataSet.SQL.Add('  , :MC02EMAIL             ');
+  FDataSet.SQL.Add('  , :MC02DTCADASTRO        ');
+  FDataSet.SQL.Add('  , :MC02FISJUR            ');
+  FDataSet.SQL.Add('  , :MC02ATIINATIVO        ');
+  FDataSet.SQL.Add('  , :MC02DTNASCTO          ');
+  FDataSet.SQL.Add('  , :MC02CPF               ');
+  FDataSet.SQL.Add('  , :MC02CI                ');
+  FDataSet.SQL.Add('  , :MC02CGC               ');
+  FDataSet.SQL.Add('  , :MC02IE                ');
+  FDataSet.SQL.Add('  , :MC02ENDCOB            ');
+  FDataSet.SQL.Add('  , :MC02CIDADECOB         ');
+  FDataSet.SQL.Add('  , :MC02BAIRROCOB         ');
+  FDataSet.SQL.Add('  , :MC02UFCOB             ');
+  FDataSet.SQL.Add('  , :MC02CONTATO           ');
+  FDataSet.SQL.Add('  , :MC02OBSGERAL          ');
+  FDataSet.SQL.Add('  , :MC02DTMOV             ');
+  FDataSet.SQL.Add('  , :MC02ULTIMANF          ');
+  FDataSet.SQL.Add('  , :MC02VALORNF           ');
+  FDataSet.SQL.Add('  , :MC02_ATACADO          ');
+  FDataSet.SQL.Add('  , :MC02TBLOCAL           ');
+  FDataSet.SQL.Add('  , :MC02TBEXTRA           ');
+  FDataSet.SQL.Add('  , :MC02FONE_CONTATO      ');
+  FDataSet.SQL.Add('  , :MC02EMAIL_CONTATO     ');
+  FDataSet.SQL.Add('  , :MC02_SEQUENCIA        ');
+  FDataSet.SQL.Add('  , :MC02_SITE             ');
+  FDataSet.SQL.Add('  , :MC02_OBS1             ');
+  FDataSet.SQL.Add('  , :MC02_OBS2             ');
+  FDataSet.SQL.Add('  , :MC02_USU_CADASTRO     ');
+  FDataSet.SQL.Add('  , :MC02_SPED_SN          ');
+  FDataSet.SQL.Add('  , :MC02_COD_SEFAZ        ');
+  FDataSet.SQL.Add('  , :MC02_NR               ');
+  FDataSet.SQL.Add('  , :MC02_ALTERAR_CUSTOS   ');
+  FDataSet.SQL.Add('  , :MC02REGIME            ');
+  FDataSet.SQL.Add('  , :MC02CNAE              ');
+  FDataSet.SQL.Add('  , :MC02CRT               ');
+  FDataSet.SQL.Add('  )                        ');
+  FDataSet.ParamByName('MC02CODIGO').AsInteger := FCodigo;
+  FDataSet.ParamByName('MC02NOME').AsString := copy(FNome, 1, 35);
+  FDataSet.ParamByName('MC02FANTASIA').AsString := copy(FFantasia, 1, 20);
+  FDataSet.ParamByName('MC02ENDERECO').AsString := copy(FEndereco, 1, 35);
+  FDataSet.ParamByName('MC02BAIRRO').AsString := copy(FBairro, 1, 20);
+  FDataSet.ParamByName('MC02CIDADE').AsString := copy(FCidade, 1, 30);
+  FDataSet.ParamByName('MC02CEP').AsString := copy(FCep, 1, 10);
+  FDataSet.ParamByName('MC02UF').AsString := copy(FUf, 1, 2);
+  FDataSet.ParamByName('MC02FONE').AsString := copy(FFone, 1, 15);
+  FDataSet.ParamByName('MC02FAX').AsString := copy(FFax, 1, 15);
+  FDataSet.ParamByName('MC02CELULAR').AsString := copy(FCelular, 1, 15);
+  FDataSet.ParamByName('MC02EMAIL').AsString := copy(FEmail, 1, 50);
+  FDataSet.ParamByName('MC02DTCADASTRO').AsDateTime := FDataCadastro;
+  FDataSet.ParamByName('MC02FISJUR').AsString := GetSN(FPessoaFisica);
+  FDataSet.ParamByName('MC02ATIINATIVO').AsString := GetSN(FAtivo);
+  FDataSet.ParamByName('MC02DTNASCTO').AsDate := FDataNascimento;
+  FDataSet.ParamByName('MC02CPF').AsString := copy(FCpf, 1, 11);
+  FDataSet.ParamByName('MC02CI').AsString := copy(FCarteiraIdentidade, 1, 10);
+  FDataSet.ParamByName('MC02CGC').AsString := copy(FCnpj, 1, 14);
+  FDataSet.ParamByName('MC02IE').AsString := copy(FIe, 1, 20);
+  FDataSet.ParamByName('MC02ENDCOB').AsString := copy(FEnderecoCobranca, 1, 35);
+  FDataSet.ParamByName('MC02CIDADECOB').AsString := copy(FCidadeCobranca, 1, 30);
+  FDataSet.ParamByName('MC02BAIRROCOB').AsString := copy(FBairroCobranca, 1, 20);
+  FDataSet.ParamByName('MC02UFCOB').AsString := copy(FUfCobranca, 1, 2);
+  FDataSet.ParamByName('MC02CONTATO').AsString := copy(FNomeRepresentante, 1, 50);
+  FDataSet.ParamByName('MC02OBSGERAL').AsString := FObservacaoGeral;
+  FDataSet.ParamByName('MC02DTMOV').AsDate := FEmissaoUltimoMovimento;
+  FDataSet.ParamByName('MC02ULTIMANF').AsString := copy(FNotaFiscalUltimoMovimento, 1, 10);
+  FDataSet.ParamByName('MC02VALORNF').AsFloat := FValorNotaFiscalUltimoMovimento;
+  FDataSet.ParamByName('MC02_ATACADO').AsString := GetSN(FUtilizarRotinaAtacado);
+  FDataSet.ParamByName('MC02TBLOCAL').AsInteger := FLocalizacao;
+  FDataSet.ParamByName('MC02TBEXTRA').AsInteger := FExtra;
+  FDataSet.ParamByName('MC02FONE_CONTATO').AsString := copy(FFoneRepresentante, 1, 15);
+  FDataSet.ParamByName('MC02EMAIL_CONTATO').AsString := copy(FEmailRepresentante, 1, 50);
+  FDataSet.ParamByName('MC02_SEQUENCIA').AsInteger := FSequencia;
+  FDataSet.ParamByName('MC02_SITE').AsString := copy(FSite, 1, 100);
+  FDataSet.ParamByName('MC02_OBS1').AsString := copy(FObservacao1, 1, 150);
+  FDataSet.ParamByName('MC02_OBS2').AsString := copy(FObservacao2, 1, 150);
+  FDataSet.ParamByName('MC02_USU_CADASTRO').AsInteger := FUsuarioCadastro;
+  FDataSet.ParamByName('MC02_SPED_SN').AsString := GetSN(FSped);
+  FDataSet.ParamByName('MC02_COD_SEFAZ').AsString := copy(FCodigoCidadeIbge, 1, 14);
+  FDataSet.ParamByName('MC02_NR').AsString := copy(FNumero, 1, 15);
+  FDataSet.ParamByName('MC02_ALTERAR_CUSTOS').AsString := GetSN(FAlterarCustos);
+  FDataSet.ParamByName('MC02REGIME').AsInteger := FRegimeTributario;
+  FDataSet.ParamByName('MC02CNAE').AsString := copy(FCNAE, 1, 15);
+  FDataSet.ParamByName('MC02CRT').AsInteger := FCrt;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+class function TFornecedorMC.RemoveCaracteresEspeciais(aTexto: string): string;
+const
+  // Lista de Caracteres Extras
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: Integer;
+begin
+  xTexto := aTexto;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := StringReplace(xTexto, xCarExt[i], '', [rfReplaceAll]);
+  end;
+
+  Result := xTexto;
+end;
+
+procedure TFornecedorMC.Salvar(pEfetuarCommit: Boolean);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('update or insert into MC02FORNEC (  ');
+  FDataSet.SQL.Add('  MC02CODIGO                        ');
+  FDataSet.SQL.Add(', MC02NOME                          ');
+  FDataSet.SQL.Add(', MC02FANTASIA                      ');
+  FDataSet.SQL.Add(', MC02ENDERECO                      ');
+  FDataSet.SQL.Add(', MC02BAIRRO                        ');
+  FDataSet.SQL.Add(', MC02CIDADE                        ');
+  FDataSet.SQL.Add(', MC02CEP                           ');
+  FDataSet.SQL.Add(', MC02UF                            ');
+  FDataSet.SQL.Add(', MC02FONE                          ');
+  FDataSet.SQL.Add(', MC02FAX                           ');
+  FDataSet.SQL.Add(', MC02CELULAR                       ');
+  FDataSet.SQL.Add(', MC02EMAIL                         ');
+  FDataSet.SQL.Add(', MC02DTCADASTRO                    ');
+  FDataSet.SQL.Add(', MC02FISJUR                        ');
+  FDataSet.SQL.Add(', MC02ATIINATIVO                    ');
+  FDataSet.SQL.Add(', MC02DTNASCTO                      ');
+  FDataSet.SQL.Add(', MC02CPF                           ');
+  FDataSet.SQL.Add(', MC02CI                            ');
+  FDataSet.SQL.Add(', MC02CGC                           ');
+  FDataSet.SQL.Add(', MC02IE                            ');
+  FDataSet.SQL.Add(', MC02ENDCOB                        ');
+  FDataSet.SQL.Add(', MC02CIDADECOB                     ');
+  FDataSet.SQL.Add(', MC02BAIRROCOB                     ');
+  FDataSet.SQL.Add(', MC02UFCOB                         ');
+  FDataSet.SQL.Add(', MC02CONTATO                       ');
+  FDataSet.SQL.Add(', MC02OBSGERAL                      ');
+  FDataSet.SQL.Add(', MC02DTMOV                         ');
+  FDataSet.SQL.Add(', MC02ULTIMANF                      ');
+  FDataSet.SQL.Add(', MC02VALORNF                       ');
+  FDataSet.SQL.Add(', MC02_ATACADO                      ');
+  FDataSet.SQL.Add(', MC02TBLOCAL                       ');
+  FDataSet.SQL.Add(', MC02TBEXTRA                       ');
+  FDataSet.SQL.Add(', MC02FONE_CONTATO                  ');
+  FDataSet.SQL.Add(', MC02EMAIL_CONTATO                 ');
+  FDataSet.SQL.Add(', MC02_SEQUENCIA                    ');
+  FDataSet.SQL.Add(', MC02_DT_ALTERCAO                  ');
+  FDataSet.SQL.Add(', MC02_USU_ALTERACAO                ');
+  FDataSet.SQL.Add(', MC02_SITE                         ');
+  FDataSet.SQL.Add(', MC02_OBS1                         ');
+  FDataSet.SQL.Add(', MC02_OBS2                         ');
+  FDataSet.SQL.Add(', MC02_USU_CADASTRO                 ');
+  FDataSet.SQL.Add(', MC02_SPED_SN                      ');
+  FDataSet.SQL.Add(', MC02_COD_SEFAZ                    ');
+  FDataSet.SQL.Add(', MC02_NR                           ');
+  FDataSet.SQL.Add(', MC02_ALTERAR_CUSTOS               ');
+  FDataSet.SQL.Add(', MC02REGIME                        ');
+  FDataSet.SQL.Add(', MC02CRT                           ');
+  FDataSet.SQL.Add(', MC02CNAE                          ');
+  FDataSet.SQL.Add(') values (                          ');
+  FDataSet.SQL.Add('  :MC02CODIGO                       ');
+  FDataSet.SQL.Add(', :MC02NOME                         ');
+  FDataSet.SQL.Add(', :MC02FANTASIA                     ');
+  FDataSet.SQL.Add(', :MC02ENDERECO                     ');
+  FDataSet.SQL.Add(', :MC02BAIRRO                       ');
+  FDataSet.SQL.Add(', :MC02CIDADE                       ');
+  FDataSet.SQL.Add(', :MC02CEP                          ');
+  FDataSet.SQL.Add(', :MC02UF                           ');
+  FDataSet.SQL.Add(', :MC02FONE                         ');
+  FDataSet.SQL.Add(', :MC02FAX                          ');
+  FDataSet.SQL.Add(', :MC02CELULAR                      ');
+  FDataSet.SQL.Add(', :MC02EMAIL                        ');
+  FDataSet.SQL.Add(', :MC02DTCADASTRO                   ');
+  FDataSet.SQL.Add(', :MC02FISJUR                       ');
+  FDataSet.SQL.Add(', :MC02ATIINATIVO                   ');
+  FDataSet.SQL.Add(', :MC02DTNASCTO                     ');
+  FDataSet.SQL.Add(', :MC02CPF                          ');
+  FDataSet.SQL.Add(', :MC02CI                           ');
+  FDataSet.SQL.Add(', :MC02CGC                          ');
+  FDataSet.SQL.Add(', :MC02IE                           ');
+  FDataSet.SQL.Add(', :MC02ENDCOB                       ');
+  FDataSet.SQL.Add(', :MC02CIDADECOB                    ');
+  FDataSet.SQL.Add(', :MC02BAIRROCOB                    ');
+  FDataSet.SQL.Add(', :MC02UFCOB                        ');
+  FDataSet.SQL.Add(', :MC02CONTATO                      ');
+  FDataSet.SQL.Add(', :MC02OBSGERAL                     ');
+  FDataSet.SQL.Add(', :MC02DTMOV                        ');
+  FDataSet.SQL.Add(', :MC02ULTIMANF                     ');
+  FDataSet.SQL.Add(', :MC02VALORNF                      ');
+  FDataSet.SQL.Add(', :MC02_ATACADO                     ');
+  FDataSet.SQL.Add(', :MC02TBLOCAL                      ');
+  FDataSet.SQL.Add(', :MC02TBEXTRA                      ');
+  FDataSet.SQL.Add(', :MC02FONE_CONTATO                 ');
+  FDataSet.SQL.Add(', :MC02EMAIL_CONTATO                ');
+  FDataSet.SQL.Add(', :MC02_SEQUENCIA                   ');
+  FDataSet.SQL.Add(', :MC02_DT_ALTERCAO                 ');
+  FDataSet.SQL.Add(', :MC02_USU_ALTERACAO               ');
+  FDataSet.SQL.Add(', :MC02_SITE                        ');
+  FDataSet.SQL.Add(', :MC02_OBS1                        ');
+  FDataSet.SQL.Add(', :MC02_OBS2                        ');
+  FDataSet.SQL.Add(', :MC02_USU_CADASTRO                ');
+  FDataSet.SQL.Add(', :MC02_SPED_SN                     ');
+  FDataSet.SQL.Add(', :MC02_COD_SEFAZ                   ');
+  FDataSet.SQL.Add(', :MC02_NR                          ');
+  FDataSet.SQL.Add(', :MC02_ALTERAR_CUSTOS              ');
+  FDataSet.SQL.Add(', :MC02REGIME                       ');
+  FDataSet.SQL.Add(', :MC02CRT                          ');
+  FDataSet.SQL.Add(', :MC02CNAE                         ');
+  FDataSet.SQL.Add(') matching (MC02CODIGO)             ');
+
+  FDataSet.ParamByName('MC02CODIGO').AsInteger := FCodigo;
+  FDataSet.ParamByName('MC02NOME').AsString := FNome;
+  FDataSet.ParamByName('MC02FANTASIA').AsString := FFantasia;
+  FDataSet.ParamByName('MC02ENDERECO').AsString := FEndereco;
+  FDataSet.ParamByName('MC02BAIRRO').AsString := FBairro;
+  FDataSet.ParamByName('MC02CIDADE').AsString := FCidade;
+  FDataSet.ParamByName('MC02CEP').AsString := FCep;
+  FDataSet.ParamByName('MC02UF').AsString := FUf;
+  FDataSet.ParamByName('MC02FONE').AsString := FFone;
+  FDataSet.ParamByName('MC02FAX').AsString := FFax;
+  FDataSet.ParamByName('MC02CELULAR').AsString := FCelular;
+  FDataSet.ParamByName('MC02EMAIL').AsString := FEmail;
+  FDataSet.ParamByName('MC02DTCADASTRO').AsDateTime := FDataCadastro;
+  FDataSet.ParamByName('MC02FISJUR').AsString := GetSN(FPessoaFisica);
+  FDataSet.ParamByName('MC02ATIINATIVO').AsString := GetSN(FAtivo);
+  FDataSet.ParamByName('MC02DTNASCTO').AsDate := FDataNascimento;
+  FDataSet.ParamByName('MC02CPF').AsString := FCpf;
+  FDataSet.ParamByName('MC02CI').AsString := FCarteiraIdentidade;
+  FDataSet.ParamByName('MC02CGC').AsString := FCnpj;
+  FDataSet.ParamByName('MC02IE').AsString := FIe;
+  FDataSet.ParamByName('MC02ENDCOB').AsString := FEnderecoCobranca;
+  FDataSet.ParamByName('MC02CIDADECOB').AsString := FCidadeCobranca;
+  FDataSet.ParamByName('MC02BAIRROCOB').AsString := FBairroCobranca;
+  FDataSet.ParamByName('MC02UFCOB').AsString := FUfCobranca;
+  FDataSet.ParamByName('MC02CONTATO').AsString := FNomeRepresentante;
+  FDataSet.ParamByName('MC02OBSGERAL').AsString := FObservacaoGeral;
+  FDataSet.ParamByName('MC02DTMOV').AsDate := FEmissaoUltimoMovimento;
+  FDataSet.ParamByName('MC02ULTIMANF').AsString := FNotaFiscalUltimoMovimento;
+  FDataSet.ParamByName('MC02VALORNF').AsFloat := FValorNotaFiscalUltimoMovimento;
+  FDataSet.ParamByName('MC02_ATACADO').AsString := GetSN(FUtilizarRotinaAtacado);
+  FDataSet.ParamByName('MC02TBLOCAL').AsInteger := FLocalizacao;
+  FDataSet.ParamByName('MC02TBEXTRA').AsInteger := FExtra;
+  FDataSet.ParamByName('MC02FONE_CONTATO').AsString := FFoneRepresentante;
+  FDataSet.ParamByName('MC02EMAIL_CONTATO').AsString := FEmailRepresentante;
+  FDataSet.ParamByName('MC02_SEQUENCIA').AsInteger := FSequencia;
+  FDataSet.ParamByName('MC02_DT_ALTERCAO').AsDateTime := FDataAlteracao;
+  FDataSet.ParamByName('MC02_USU_ALTERACAO').AsInteger := FUsuarioAlteracao;
+  FDataSet.ParamByName('MC02_SITE').AsString := FSite;
+  FDataSet.ParamByName('MC02_OBS1').AsString := FObservacao1;
+  FDataSet.ParamByName('MC02_OBS2').AsString := FObservacao2;
+  FDataSet.ParamByName('MC02_USU_CADASTRO').AsInteger := FUsuarioCadastro;
+  FDataSet.ParamByName('MC02_SPED_SN').AsString := GetSN(FSped);
+  FDataSet.ParamByName('MC02_COD_SEFAZ').AsString := FCodigoCidadeIbge;
+  FDataSet.ParamByName('MC02_NR').AsString := FNumero;
+  FDataSet.ParamByName('MC02_ALTERAR_CUSTOS').AsString := GetSN(FAlterarCustos);
+  FDataSet.ParamByName('MC02REGIME').AsInteger := FRegimeTributario;
+  FDataSet.ParamByName('MC02CRT').AsInteger := FCrt;
+  FDataSet.ParamByName('MC02CNAE').AsString := FCNAE;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+end.

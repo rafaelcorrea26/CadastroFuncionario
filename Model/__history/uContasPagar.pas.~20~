@@ -1,0 +1,84 @@
+unit uContasPagar;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uinterfaces;
+
+type
+  TContasPagar = class;
+
+  TContasPagar = class(TInterfacedObject, iclassSend)
+  private
+    Fdata_ultima_alteracao: string; // "2021-12-15 14:04:16",
+    Fchave_empresa: string; // "666",
+    Ftitulo: string; // "TITULO_EMPRESA_666",
+    Femissao: string; // "2021-12-16",
+    Fdata_vencimento: string; // "2021-12-17",
+    Fdata_fluxo_caixa: string; // "2021-12-17",
+    Fdata_pagamento: string; // "2021-12-16",
+    Forigem_documento: string; // "NF",
+    Ffornecedor: string; // 5570714000159,
+    Fforma_pagamento: integer; // 1,
+    Fconta_dre: string; // 12345,
+    Fcodigo_de_barras: string; // "45787135487",
+    Fsituacao_documento: string; // "P",
+    Fvalor_original: Double; // "15.40",
+    Ftotal_pago: Double; // "15.40",
+    Fpagamentos: Double; // "15.40",
+    Fdescontos: Double; // "0.00",
+    Fjuros_pagos: Double; // "0.00",
+    Fobs1: string; // "obs 1",
+    Fobs2: string; // "obs 1"
+
+  public
+
+    property data_ultima_alteracao: string read Fdata_ultima_alteracao write Fdata_ultima_alteracao;
+    property chave_empresa: string read Fchave_empresa write Fchave_empresa;
+    property titulo: string read Ftitulo write Ftitulo;
+    property emissao: string read Femissao write Femissao;
+    property data_vencimento: string read Fdata_vencimento write Fdata_vencimento;
+    property data_fluxo_caixa: string read Fdata_fluxo_caixa write Fdata_fluxo_caixa;
+    property data_pagamento: string read Fdata_pagamento write Fdata_pagamento;
+    property origem_documento: string read Forigem_documento write Forigem_documento;
+    property situacao_documento: string read Fsituacao_documento write Fsituacao_documento;
+    property fornecedor: string read Ffornecedor write Ffornecedor;
+    property forma_pagamento: integer read Fforma_pagamento write Fforma_pagamento;
+    property conta_dre: string read Fconta_dre write Fconta_dre;
+    property codigo_de_barras: string read Fcodigo_de_barras write Fcodigo_de_barras;
+    property valor_original: Double read Fvalor_original write Fvalor_original;
+    property total_pago: Double read Ftotal_pago write Ftotal_pago;
+    property pagamentos: Double read Fpagamentos write Fpagamentos;
+    property descontos: Double read Fdescontos write Fdescontos;
+    property juros_pagos: Double read Fjuros_pagos write Fjuros_pagos;
+    property obs1: string read Fobs1 write Fobs1;
+    property obs2: string read Fobs2 write Fobs2;
+
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: TJSONObject;
+  end;
+
+implementation
+
+function TContasPagar.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TContasPagar.Create;
+begin
+
+end;
+
+destructor TContasPagar.Destroy;
+begin
+end;
+
+end.

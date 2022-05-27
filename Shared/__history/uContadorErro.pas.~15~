@@ -1,0 +1,75 @@
+unit uContadorErro; // classe contadora de envios
+
+interface
+
+uses
+  uInterfacesAPI, System.SysUtils;
+
+type
+
+  TContadorErro = class;
+
+  TContadorErro = class(TInterfacedObject, iErro)
+  private
+      FSucesso: integer;
+    FExcluido: integer;
+    FErro: integer;
+
+    class var FContadorErro: TContadorErro;
+    FRecebimentoCP: integer;
+    FRecebimentoCR: integer;
+    FEnvioCP: integer;
+    FEnvioCR: integer;
+  public
+    destructor Destroy; override;
+    constructor Create;
+
+    property Sucesso: integer read FSucesso write FSucesso;
+    property Excluido: integer read FExcluido write FExcluido;
+    property Erro: integer read FErro write FErro;
+
+    property RecebimentoCP: integer read FRecebimentoCP write FRecebimentoCP;
+    property RecebimentoCR: integer read FRecebimentoCR write FRecebimentoCR;
+    property EnvioCP: integer read FEnvioCP write FEnvioCP;
+    property EnvioCR: integer read FEnvioCR write FEnvioCR;
+
+
+    class procedure ReleaseMe;
+    class function GetContadorErro: TContadorErro; static;
+    class property ContadorErro: TContadorErro read GetContadorErro write FContadorErro;
+  end;
+
+implementation
+
+{ TContadorErro }
+
+constructor TContadorErro.Create;
+begin
+
+end;
+
+destructor TContadorErro.Destroy;
+begin
+
+  inherited;
+end;
+
+class function TContadorErro.GetContadorErro: TContadorErro;
+begin
+  if NOT Assigned(FContadorErro) then
+  begin
+    FContadorErro := TContadorErro.Create;
+  end;
+
+  result := FContadorErro;
+end;
+
+class procedure TContadorErro.ReleaseMe;
+begin
+  if Assigned(FContadorErro) then
+  begin
+    FreeAndNil(FContadorErro);
+  end;
+end;
+
+end.

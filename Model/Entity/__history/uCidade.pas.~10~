@@ -1,0 +1,50 @@
+unit uCidade;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity;
+
+type
+  TCidade = class;
+
+  TCidade = class(TInterfacedObject, iCliente)
+  private
+    Fcodigo: string;
+    FNome: string;
+    FUf: string;
+    FCep: string;
+    FAliquota: double;
+
+  public
+    property Codigo: string read Fcodigo write Fcodigo;
+    property Nome: string read FNome write FNome;
+    property Uf: string read FUf write FUf;
+    property Cep: string read FCep write FCep;
+    property Aliquota: double read FAliquota write FAliquota;
+
+    destructor Destroy; override;
+    constructor Create;
+
+    function ToJson: TJSONObject;
+  end;
+
+implementation
+
+function TCidade.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonObject(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TCidade.Create;
+begin
+
+end;
+
+end.

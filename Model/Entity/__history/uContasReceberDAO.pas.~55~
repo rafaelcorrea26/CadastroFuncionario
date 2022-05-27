@@ -1,0 +1,1036 @@
+unit uContasReceberDAO;
+
+interface
+
+uses
+  FireDAC.Comp.Client,
+  System.SysUtils,
+  System.StrUtils,
+  uConnection,
+  uQuery,
+  System.DateUtils,
+  uInterfacesEntity,
+  uContasReceber,
+  System.JSON,
+  uFunctions,
+  uConnectionRest;
+
+type
+
+
+  TContasReceberDAO = class(TInterfacedObject, iContasReceberDAO)
+  private
+    FConexao: TFDConnection;
+
+    class var FObjetoBusca: TContasReceber;
+
+  public
+    destructor Destroy; override;
+    // CRUD
+    procedure Carrega(pContasReceber: TContasReceber);
+    procedure Incluir(pContasReceber: TContasReceber);
+    procedure Alterar(pContasReceber: TContasReceber);
+    procedure Excluir(pTitulo: string);
+    function IncluirOuAltera(pContasReceber: TContasReceber): String;
+    function ExcluirTituloEmpresa(pTitulo: string): Boolean;
+
+    // Func Auxiliar
+    function RetornaTituloPeloTituloEmpresa(pTituloEmp: String): string;
+    function ExisteEmpresaTitulo(pTitulo: string): Boolean;
+    function GetSN(pBoolean: Boolean): string;
+    function GeraProximoTituloIntegracao: string;
+    function GeraProximoCodigo: integer;
+
+    constructor Create;
+    procedure clearClass;
+    class function RemoveCaracteresEspeciais(aTexto: string): string;
+    class function Existe(pTitulo: string): Boolean;
+    class function BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): integer;
+    class function BuscaCodigoPeloCpf(pCpf: string): integer;
+    class property ObjetoBusca: TContasReceber read FObjetoBusca write FObjetoBusca;
+
+    // HTTP
+    function Get(pAll: Boolean = false): string;
+    function Delete(pTitulo, pData: String): string;
+    function Put(pContasReceber: TContasReceber): string;
+    function Post(pContasReceber: TContasReceber): string;
+
+  end;
+
+implementation
+
+{ TContasPagarMC }
+
+procedure TContasReceberDAO.Alterar(pContasReceber: TContasReceber);
+var
+  lQuery: Tquery;
+begin
+
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE MC09CREC SET                           ');
+    lQuery.SQL.Add('   AD09EMISSAO = :AD09EMISSAO                  ');
+    lQuery.SQL.Add(' , AN09CLIENTE = :AN09CLIENTE                  ');
+    lQuery.SQL.Add(' , AN09VALOR = :AN09VALOR                      ');
+    lQuery.SQL.Add(' , AD09VCTO = :AD09VCTO                        ');
+    lQuery.SQL.Add(' , AD09FLUXO = :AD09FLUXO                      ');
+    lQuery.SQL.Add(' , AN09VEND = :AN09VEND                        ');
+    lQuery.SQL.Add(' , AC09BCOR = :AC09BCOR                        ');
+    lQuery.SQL.Add(' , AC09BCPG = :AC09BCPG                        ');
+    lQuery.SQL.Add(' , AC09SIT = :AC09SIT                          ');
+    lQuery.SQL.Add(' , AC09FRPGTO = :AC09FRPGTO                    ');
+    lQuery.SQL.Add(' , AN09JUROS = :AN09JUROS                      ');
+    lQuery.SQL.Add(' , AN09DESC = :AN09DESC                        ');
+    lQuery.SQL.Add(' , AD09DTPGTO = :AD09DTPGTO                    ');
+    lQuery.SQL.Add(' , AN09VLPAGO = :AN09VLPAGO                    ');
+    lQuery.SQL.Add(' , AN09TOTALPAGO = :AN09TOTALPAGO              ');
+    lQuery.SQL.Add(' , AC09DHCAD = :AC09DHCAD                      ');
+    lQuery.SQL.Add(' , AC09DHPGTO = :AC09DHPGTO                    ');
+    lQuery.SQL.Add(' , AC09USUCAD = :AC09USUCAD                    ');
+    lQuery.SQL.Add(' , AC09USUPGTO = :AC09USUPGTO                  ');
+    lQuery.SQL.Add(' , AC09DHALT = :AC09DHALT                      ');
+    lQuery.SQL.Add(' , AC09USUALT = :AC09USUALT                    ');
+    lQuery.SQL.Add(' , AC09ORIG = :AC09ORIG                        ');
+    lQuery.SQL.Add(' , AN09VLORIG = :AN09VLORIG                    ');
+    lQuery.SQL.Add(' , AL09BXPARCIAL = :AL09BXPARCIAL              ');
+    lQuery.SQL.Add(' , AC09_ANO = :AC09_ANO                        ');
+    lQuery.SQL.Add(' , AC09_MES = :AC09_MES                        ');
+    lQuery.SQL.Add(' , AC09_OBS1 = :AC09_OBS1                      ');
+    lQuery.SQL.Add(' , AC09_OBS2 = :AC09_OBS2                      ');
+    lQuery.SQL.Add(' , AN09_COMISSAO = :AN09_COMISSAO              ');
+    lQuery.SQL.Add(' , AN09_VL_ORIGINAL = :AN09_VL_ORIGINAL        ');
+    lQuery.SQL.Add(' , AN09_VL_PRINCIPAL = :AN09_VL_PRINCIPAL      ');
+    lQuery.SQL.Add(' , AN09_TOTAL_REC = :AN09_TOTAL_REC            ');
+    lQuery.SQL.Add(' , AC09_CTA = :AC09_CTA                        ');
+    lQuery.SQL.Add(' , AN09_EMPRESA = :AN09_EMPRESA                ');
+    lQuery.SQL.Add(' , AC09FRPGTO_BAIXARCR = :AC09FRPGTO_BAIXARCR  ');
+    lQuery.SQL.Add('  where (AC09DUP = :AC09DUP)                   ');
+    lQuery.ParamByName('AC09DUP').AsString := pContasReceber.Duplicata;
+
+    lQuery.ParamByName('AD09EMISSAO').asstring := ;
+    lQuery.ParamByName('AN09CLIENTE').asstring := ;
+    lQuery.ParamByName('AN09VALOR').asstring := ;
+    lQuery.ParamByName('AD09VCTO').asstring := ;
+    lQuery.ParamByName('AD09FLUXO').asstring := ;
+    lQuery.ParamByName('AN09VEND').asstring := ;
+    lQuery.ParamByName('AC09BCOR').asstring := ;
+    lQuery.ParamByName('AC09BCPG').asstring := ;
+    lQuery.ParamByName('AC09SIT').asstring := ;
+    lQuery.ParamByName('AC09FRPGTO').asstring := ;
+    lQuery.ParamByName('AN09JUROS').asstring := ;
+    lQuery.ParamByName('AN09DESC').asstring := ;
+    lQuery.ParamByName('AD09DTPGTO').asstring := ;
+    lQuery.ParamByName('AN09VLPAGO').asstring := ;
+    lQuery.ParamByName('AN09TOTALPAGO').asstring := ;
+    lQuery.ParamByName('AC09DHCAD').asstring := ;
+    lQuery.ParamByName('AC09DHPGTO').asstring := ;
+    lQuery.ParamByName('AC09USUCAD').asstring := ;
+    lQuery.ParamByName('AC09USUPGTO').asstring := ;
+    lQuery.ParamByName('AC09DHALT').asstring := ;
+    lQuery.ParamByName('AC09USUALT').asstring := ;
+    lQuery.ParamByName('AC09ORIG').asstring := ;
+    lQuery.ParamByName('AN09VLORIG').asstring := ;
+    lQuery.ParamByName('AL09BXPARCIAL').asstring := ;
+    lQuery.ParamByName('AC09_ANO').asstring := ;
+    lQuery.ParamByName('AC09_MES').asstring := ;
+    lQuery.ParamByName('AC09_OBS1').asstring := ;
+    lQuery.ParamByName('AC09_OBS2').asstring := ;
+    lQuery.ParamByName('AN09_COMISSAO').asstring := ;
+    lQuery.ParamByName('AN09_VL_ORIGINAL').asstring := ;
+    lQuery.ParamByName('AN09_VL_PRINCIPAL').asstring := ;
+    lQuery.ParamByName('AN09_TOTAL_REC').asstring := ;
+    lQuery.ParamByName('AC09_CTA').asstring := ;
+    lQuery.ParamByName('AN09_EMPRESA').asstring := ;
+    lQuery.ParamByName('AC09FRPGTO_BAIXARCR').asstring := ;
+
+    lQuery.ExecSQL;
+    lQuery.Connection.commit;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TContasReceberDAO.BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): integer;
+var
+  lQuery: TFDquery;
+  lIE: string;
+begin
+  lIE := RemoveCaracteresEspeciais(pInscricaoEstadual);
+  Result := 0;
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT MC02CODIGO FROM MC02FORNEC    ');
+    lQuery.SQL.Add(' WHERE MC02CGC = :CNPJ               ');
+    lQuery.ParamByName('CNPJ').AsString := pCnpj;
+    if (Length(trim(lIE)) > 0) then
+    begin
+
+      lQuery.SQL.Add
+        (' AND   REPLACE(REPLACE(REPLACE(REPLACE(MC02IE, ''/'',''''),''-'',''''),''.'',''''),'' '','''') = :INSCRICAO_ESTADUAL ');
+      lQuery.ParamByName('INSCRICAO_ESTADUAL').AsString := lIE;
+    end;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TContasReceberDAO.BuscaCodigoPeloCpf(pCpf: string): integer;
+var
+  lQuery: TFDquery;
+begin
+  Result := 0;
+
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT MC02CPF FROM MC02FORNEC ');
+    lQuery.SQL.Add(' WHERE MC02CPF = :CPF          ');
+    lQuery.ParamByName('CPF').AsString := pCpf;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TContasReceberDAO.Carrega(pContasReceber: TContasReceber);
+var
+  lQuery: Tquery;
+begin
+
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' select * from MC08CPAG where AC08TIT = :AC08TIT ');
+    lQuery.ParamByName('AC08TIT').AsString := pContasReceber.Titulo;
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      // carrega dados
+      pContasReceber.Titulo := lQuery.FieldByName('AC08TIT').AsString;
+      pContasReceber.Empresa := lQuery.FieldByName('AC08EMPRESA').AsInteger;
+      pContasReceber.Emissao := lQuery.FieldByName('AD08EMISSAO').AsDate;
+      pContasReceber.Fornecedor := lQuery.FieldByName('AN08FORNEC').AsInteger;
+      pContasReceber.Valor := lQuery.FieldByName('AN08VALOR').asfloat;
+      pContasReceber.Vencimento := lQuery.FieldByName('AD08VCTO').AsDate;
+      pContasReceber.FluxoCaixa := lQuery.FieldByName('AD08FLUXO').AsDate;
+      pContasReceber.Vendedor := lQuery.FieldByName('AN08VEND').AsInteger;
+      pContasReceber.BancoCobranca := lQuery.FieldByName('AC08BCOR').AsString;
+      pContasReceber.BancoPagamento := lQuery.FieldByName('AC08BCPG').AsString;
+      pContasReceber.Situacao := lQuery.FieldByName('AC08SIT').AsString;
+      pContasReceber.FormaPagamento := lQuery.FieldByName('AC08FRPGTO').AsInteger;
+      pContasReceber.Juros := lQuery.FieldByName('AN08JUROS').asfloat;
+      pContasReceber.Desconto := lQuery.FieldByName('AN08DESC').asfloat;
+      pContasReceber.DataPagamento := lQuery.FieldByName('AD08DTPGTO').AsDate;
+      pContasReceber.ValorPago := lQuery.FieldByName('AN08VLPAGO').asfloat;
+      pContasReceber.TotalPago := lQuery.FieldByName('AN08TOTALPAGO').asfloat;
+      pContasReceber.DataHoraCadastro := lQuery.FieldByName('AC08DHCAD').AsDate;
+      pContasReceber.DataHoraPagamento := lQuery.FieldByName('AC08DHPGTO').AsDate;
+      pContasReceber.UsuarioCadastro := lQuery.FieldByName('AC08USUCAD').AsInteger;
+      pContasReceber.UsuarioPagamento := lQuery.FieldByName('AC08USUPGTO').AsInteger;
+      pContasReceber.DataHoraAlteracao := lQuery.FieldByName('AC08DHALT').AsDate;
+      pContasReceber.UsuarioAlteracao := lQuery.FieldByName('AC08USUALT').AsInteger;
+      pContasReceber.Origem := lQuery.FieldByName('AC08ORIG').AsString;
+      pContasReceber.Ano := lQuery.FieldByName('AC08_ANO').AsString;
+      pContasReceber.Mes := lQuery.FieldByName('AC08_MES').AsString;
+      pContasReceber.OBS1 := lQuery.FieldByName('AC08_OBS1').AsString;
+      pContasReceber.OBS2 := lQuery.FieldByName('AC08_OBS2').AsString;
+      pContasReceber.Parcial := lQuery.FieldByName('AC08_PARCIAL').AsString;
+      pContasReceber.Empresa := lQuery.FieldByName('AN08_EMPRESA').AsInteger;
+      pContasReceber.Conta := lQuery.FieldByName('AC08_CTA').AsString;
+      pContasReceber.CodigoBarras := lQuery.FieldByName('AC08_COD_BARRAS').AsString;
+      pContasReceber.FormaPagamentoBaixar := lQuery.FieldByName('AC08FRPGTO_BAIXARCP').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TContasReceberDAO.clearClass;
+begin
+
+end;
+
+constructor TContasReceberDAO.Create;
+begin
+
+end;
+
+function TContasReceberDAO.Delete(pTitulo, pData: String): string;
+begin
+
+end;
+
+destructor TContasReceberDAO.Destroy;
+begin
+
+  inherited;
+end;
+
+procedure TContasReceberDAO.Excluir(pTitulo: string);
+var
+  lQuery: Tquery;
+begin
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('DELETE FROM MC08CPAG WHERE AC08TIT = :AC08TIT ');
+    lQuery.ParamByName('AC08TIT').AsString := pTitulo;
+    lQuery.ExecSQL;
+    lQuery.Connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TContasReceberDAO.ExcluirTituloEmpresa(pTitulo: string): Boolean;
+var
+  lQuery: Tquery;
+begin
+  Result := false;
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' select * from MC08CPAG  WHERE AC08EMP_TIT = :AC08EMP_TIT ');
+    lQuery.ParamByName('AC08EMP_TIT').AsString := pTitulo;
+    lQuery.Open;
+    lQuery.FetchAll;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('DELETE FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT ');
+      lQuery.ParamByName('AC08EMP_TIT').AsString := pTitulo;
+      lQuery.ExecSQL;
+      lQuery.Connection.commit;
+
+      Result := True;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TContasReceberDAO.Existe(pTitulo: string): Boolean;
+var
+  lQuery: TFDquery;
+begin
+  Result := false;
+  lQuery := TFDquery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08TIT = :AC08TIT');
+    lQuery.ParamByName('AC08TIT').AsString := pTitulo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+
+      if not Assigned(FObjetoBusca) then
+      begin
+        FObjetoBusca := TContasReceberDAO.Create;
+      end;
+      FObjetoBusca.Titulo := pTitulo;
+      Carrega(FObjetoBusca);
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasReceberDAO.ExisteEmpresaTitulo(pTitulo: string): Boolean;
+var
+  lQuery: TFDquery;
+begin
+  lQuery := TFDquery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT');
+    lQuery.ParamByName('AC08EMP_TIT').AsString := pTitulo;
+    lQuery.Open;
+
+    Result := lQuery.RecordCount > 0;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TContasReceberDAO.GeraProximoCodigo: integer;
+var
+  lQuery: Tquery;
+begin
+  Result := 0;
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT MAX(AC08TIT) + 1 PROXIMO_CODIGO FROM MC08CPAG ');
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      Result := lQuery.FieldByName('PROXIMO_CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TContasReceberDAO.GeraProximoTituloIntegracao: string;
+var
+  lQuery: Tquery;
+  lProximoNumero: integer;
+begin
+  lQuery := Tquery.Create(nil);
+
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT FIRST 1 CAST(substring(AC08TIT FROM 6 FOR 30)AS int) AS PROX_NUMERO ');
+    lQuery.SQL.Add(' from mc08cpag                                                              ');
+    lQuery.SQL.Add(' where substring(AC08TIT FROM 1 FOR 3) = ''INT''                            ');
+    lQuery.SQL.Add(' order by 1 desc                                                            ');
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      lProximoNumero := lQuery.FieldByName('PROX_NUMERO').AsInteger + 1;
+    end
+    else
+    begin
+      lProximoNumero := 1;
+    end;
+
+    Result := lProximoNumero.ToString;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasReceberDAO.Get(pAll: Boolean): string;
+var
+  lJson: TJSONObject;
+  lJsonArray: TJSONArray;
+  i: integer;
+  lContaRegistros, lTotalVendas: integer;
+  lDataUltimaSinc: TDateTime;
+  lCP: TContasReceberDAO;
+  lExcluido: Boolean;
+  lResposta: string;
+  lDataTimeCP: string;
+  lHTTP: TconnectionRest;
+
+begin
+
+  lHTTP := TconnectionRest.Create(Self);
+  try // FTotalCPGet := 0;
+    // FTotalFNGet := 0;
+
+    lDataUltimaSinc := tfunctions.ReturnsLastDateSync;
+
+    Result := True;
+    if pAll then
+    begin
+      lDataTimeCP := '2000/01/01 00:00:00';
+    end
+    else
+    begin
+      lDataTimeCP := tfunctions.DecodeDateHourJson(lDataUltimaSinc);
+    end;
+
+    // CheckTokenValidity;
+    lHTTP.ConfigureRest(rmGET, tGetCP, '');
+
+    // Token Expirado
+    if lHTTP.RestResponse.StatusCode = 401 then
+    begin
+      GenerateToken;
+      lHTTP.ConfigureRest(rmGET, tGetCP, '');
+    end;
+
+    if (tfunctions.LengthString(IntToStr(lHTTP.RestResponse.StatusCode), 1)) = '2' then
+    begin
+      try
+        lCP := TContasReceberDAO.Create;
+        try
+          lJson := TJSONObject.ParseJSONValue(lHTTP.RestResponse.Content) as TJSONObject;
+          lJsonArray := lJson.GetValue<TJSONArray>('contas') as TJSONArray;
+
+          if not(TJSONObject.ParseJSONValue(lJsonArray.ToString).Null) and
+            not(TJSONObject.ParseJSONValue(lJsonArray.ToString).ToString = '[]') then
+          begin
+            tfunctions.CreateFileTxtLog(lHTTP.RestResponse.Content, 'GET');
+          end;
+
+          for i := 0 to lJsonArray.Count - 1 do
+          begin
+            if (lJsonArray <> nil) then
+            begin
+              lJson := lJsonArray.Items[i] as TJSONObject;
+              lJson := lJson.GetValue<TJSONObject> as TJSONObject;
+
+              lExcluido := lJson.GetValue<String>('excluido') = 'S';
+
+              if lExcluido then // Variavel Utilizada pra baixar ou deletar apartir do GET da api
+              begin
+                if lJson.GetValue<String>('titulo') <> '' then
+                begin
+                  lCP.EmpresaTitulo := lJson.GetValue<String>('titulo');
+                  if lCP.ExcluirTituloEmpresa(True) then
+                  begin
+                    FTotalCPGet := FTotalCPGet + 1;
+                    pmmoGet.Lines.Add('GET - Exclusão do titulo: ' + lCP.RetornaTituloPeloTituloEmpresa
+                      (lJson.GetValue<String>('titulo')) + ' - Titulo Empresa: ' + lJson.GetValue<String>('titulo') +
+                      ' - ' + DateTimeToStr(tfunctions.DateServer));
+                  end
+                  else
+                  begin
+                    pmmoError.Lines.Add('GET - Não encontrado para exclusão o titulo: ' +
+                      lCP.RetornaTituloPeloTituloEmpresa(lJson.GetValue<String>('titulo')) + ' - Titulo Empresa: ' +
+                      lJson.GetValue<String>('titulo') + ' - ' + DateTimeToStr(tfunctions.DateServer));
+                  end;
+                end;
+              end
+              else
+              begin
+                lCP.clearClass;
+                if lJson.GetValue<String>('titulo') <> '' then
+                begin
+                  lCP.EmpresaTitulo := lJson.GetValue<String>('titulo');
+                end;
+                if lJson.GetValue<String>('emissao') <> '' then
+                begin
+                  lCP.Emissao := lJson.GetValue<TDate>('emissao');
+                end;
+                if lJson.GetValue<String>('data_vencimento') <> '' then
+                begin
+                  lCP.Vencimento := lJson.GetValue<TDate>('data_vencimento');
+                end;
+                if lJson.GetValue<String>('data_fluxo_caixa') <> '' then
+                begin
+                  lCP.FluxoCaixa := lJson.GetValue<TDate>('data_fluxo_caixa');
+                end;
+                if lJson.GetValue<String>('data_pagamento') <> '' then
+                begin
+                  lCP.DataPagamento := lJson.GetValue<TDate>('data_pagamento');
+                end;
+                if lJson.GetValue<String>('origem_documento') <> '' then
+                begin
+                  lCP.Origem := lJson.GetValue<String>('origem_documento');
+                end;
+                if lJson.GetValue<String>('situacao_documento') <> '' then
+                begin
+                  lCP.Situacao := lJson.GetValue<String>('situacao_documento');
+                end;
+                if lJson.GetValue<String>('fornecedor') <> '' then
+                begin
+                  lCP.Fornecedor := ReturnFN(lJson.GetValue<String>('fornecedor'));
+                end;
+                if lJson.GetValue<String>('forma_pagamento') <> '' then
+                begin
+                  lCP.FormaPagamento := lJson.GetValue<integer>('forma_pagamento');
+                end;
+                if lJson.GetValue<String>('conta_dre') <> '' then
+                begin
+                  lCP.Conta := lJson.GetValue<String>('conta_dre');
+                end;
+                if lJson.GetValue<String>('codigo_de_barras') <> '' then
+                begin
+                  lCP.CodigoBarras := lJson.GetValue<String>('codigo_de_barras');
+                end;
+                if lJson.GetValue<String>('valor_original') <> '' then
+                begin
+                  lCP.Valor := lJson.GetValue<Double>('valor_original');
+                end;
+                if lJson.GetValue<String>('total_pago') <> '' then
+                begin
+                  lCP.TotalPago := lJson.GetValue<Double>('total_pago');
+                end;
+                if lJson.GetValue<String>('pagamentos') <> '' then
+                begin
+                  lCP.ValorPago := lJson.GetValue<Double>('pagamentos');
+                end;
+                if lJson.GetValue<String>('descontos') <> '' then
+                begin
+                  lCP.Desconto := lJson.GetValue<Double>('descontos');
+                end;
+                if lJson.GetValue<String>('juros_pagos') <> '' then
+                begin
+                  lCP.Juros := lJson.GetValue<Double>('juros_pagos');
+                end;
+                if lJson.GetValue<String>('obs1') <> '' then
+                begin
+                  lCP.OBS1 := lJson.GetValue<String>('obs1');
+                end;
+                if lJson.GetValue<String>('obs2') <> '' then
+                begin
+                  lCP.OBS2 := lJson.GetValue<String>('obs2');
+                end;
+                lCP.DataUltimoSincronismo := lDataUltimaSinc;
+                lCP.CodigoEmpresa := ReturnCodeCompany;
+                lResposta := lCP.IncluirOuAltera(FMainCompany);
+
+                pmmoGet.Lines.Add(lResposta + ' - ' + DateTimeToStr(tfunctions.DateServer));
+                FTotalCPGet := FTotalCPGet + 1;
+              end;
+            end;
+          end;
+        finally
+          lCP.Free;
+        end;
+      except
+        on E: Exception do
+        begin
+          Result := false;
+        end;
+      end;
+
+      tfunctions.TotalizerMemoRecords;
+    end
+    else if (lHTTP.RestResponse.StatusCode <> 400) then
+    begin
+      FMessage := ('Error:' + IntToStr(lHTTP.RestResponse.StatusCode));
+    end;
+
+  finally
+    lHTTP.Free;
+  end;
+
+end;
+
+function TContasReceberDAO.GetSN(pBoolean: Boolean): string;
+begin
+  Result := IfThen(pBoolean, 'S', 'N');
+end;
+
+procedure TContasReceberDAO.Incluir(pContasReceber: TContasReceber);
+var
+  lQuery: Tquery;
+begin
+  lQuery := Tquery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('INSERT INTO MC08CPAG (     ');
+    lQuery.SQL.Add('   AC08TIT                 ');
+    lQuery.SQL.Add(' , AC08EMPRESA             ');
+    lQuery.SQL.Add(' , AD08EMISSAO             ');
+    lQuery.SQL.Add(' , AN08FORNEC              ');
+    lQuery.SQL.Add(' , AN08VALOR               ');
+    lQuery.SQL.Add(' , AD08VCTO                ');
+    lQuery.SQL.Add(' , AD08FLUXO               ');
+    lQuery.SQL.Add(' , AN08VEND                ');
+    lQuery.SQL.Add(' , AC08BCOR                ');
+    lQuery.SQL.Add(' , AC08BCPG                ');
+    lQuery.SQL.Add(' , AC08SIT                 ');
+    lQuery.SQL.Add(' , AC08FRPGTO              ');
+    lQuery.SQL.Add(' , AN08JUROS               ');
+    lQuery.SQL.Add(' , AN08DESC                ');
+    lQuery.SQL.Add(' , AD08DTPGTO              ');
+    lQuery.SQL.Add(' , AN08VLPAGO              ');
+    lQuery.SQL.Add(' , AN08TOTALPAGO           ');
+    lQuery.SQL.Add(' , AC08DHCAD               ');
+    lQuery.SQL.Add(' , AC08DHPGTO              ');
+    lQuery.SQL.Add(' , AC08USUCAD              ');
+    lQuery.SQL.Add(' , AC08USUPGTO             ');
+    lQuery.SQL.Add(' , AC08DHALT               ');
+    lQuery.SQL.Add(' , AC08USUALT              ');
+    lQuery.SQL.Add(' , AC08ORIG                ');
+    lQuery.SQL.Add(' , AN089DESC               ');
+    lQuery.SQL.Add(' , AC08_ANO                ');
+    lQuery.SQL.Add(' , AC08_MES                ');
+    lQuery.SQL.Add(' , AC08_OBS1               ');
+    lQuery.SQL.Add(' , AC08_OBS2               ');
+    lQuery.SQL.Add(' , AC08_PARCIAL            ');
+    lQuery.SQL.Add(' , AN08_EMPRESA            ');
+    lQuery.SQL.Add(' , AC08_CTA                ');
+    lQuery.SQL.Add(' , AC08_COD_BARRAS         ');
+    lQuery.SQL.Add(' , AC08FRPGTO_BAIXARCP     ');
+    lQuery.SQL.Add(' )VALUES (                 ');
+    lQuery.SQL.Add('   :AC08TIT                ');
+    lQuery.SQL.Add(' , :AC08EMPRESA            ');
+    lQuery.SQL.Add(' , :AD08EMISSAO            ');
+    lQuery.SQL.Add(' , :AN08FORNEC             ');
+    lQuery.SQL.Add(' , :AN08VALOR              ');
+    lQuery.SQL.Add(' , :AD08VCTO               ');
+    lQuery.SQL.Add(' , :AD08FLUXO              ');
+    lQuery.SQL.Add(' , :AN08VEND               ');
+    lQuery.SQL.Add(' , :AC08BCOR               ');
+    lQuery.SQL.Add(' , :AC08BCPG               ');
+    lQuery.SQL.Add(' , :AC08SIT                ');
+    lQuery.SQL.Add(' , :AC08FRPGTO             ');
+    lQuery.SQL.Add(' , :AN08JUROS              ');
+    lQuery.SQL.Add(' , :AN08DESC               ');
+    lQuery.SQL.Add(' , :AD08DTPGTO             ');
+    lQuery.SQL.Add(' , :AN08VLPAGO             ');
+    lQuery.SQL.Add(' , :AN08TOTALPAGO          ');
+    lQuery.SQL.Add(' , :AC08DHCAD              ');
+    lQuery.SQL.Add(' , :AC08DHPGTO             ');
+    lQuery.SQL.Add(' , :AC08USUCAD             ');
+    lQuery.SQL.Add(' , :AC08USUPGTO            ');
+    lQuery.SQL.Add(' , :AC08DHALT              ');
+    lQuery.SQL.Add(' , :AC08USUALT             ');
+    lQuery.SQL.Add(' , :AC08ORIG               ');
+    lQuery.SQL.Add(' , :AN089DESC              ');
+    lQuery.SQL.Add(' , :AC08_ANO               ');
+    lQuery.SQL.Add(' , :AC08_MES               ');
+    lQuery.SQL.Add(' , :AC08_OBS1              ');
+    lQuery.SQL.Add(' , :AC08_OBS2              ');
+    lQuery.SQL.Add(' , :AC08_PARCIAL           ');
+    lQuery.SQL.Add(' , :AN08_EMPRESA           ');
+    lQuery.SQL.Add(' , :AC08_CTA               ');
+    lQuery.SQL.Add(' , :AC08_COD_BARRAS        ');
+    lQuery.SQL.Add(' , :AC08FRPGTO_BAIXARCP    ');
+    lQuery.SQL.Add('  )                        ');
+    lQuery.ParamByName('AC08TIT').AsString := copy(pContasReceber.Titulo, 1, 16);
+    lQuery.ParamByName('AC08EMPRESA').AsInteger := pContasReceber.Empresa;
+    lQuery.ParamByName('AD08EMISSAO').AsDate := pContasReceber.Emissao;
+    lQuery.ParamByName('AN08FORNEC').AsInteger := pContasReceber.Fornecedor;
+    lQuery.ParamByName('AN08VALOR').asfloat := pContasReceber.Valor;
+    lQuery.ParamByName('AD08VCTO').AsDate := pContasReceber.Vencimento;
+    lQuery.ParamByName('AD08FLUXO').AsDate := pContasReceber.FluxoCaixa;
+    lQuery.ParamByName('AC08BCOR').AsString := copy(pContasReceber.BancoCobranca, 1, 3);
+    lQuery.ParamByName('AC08BCPG').AsString := copy(pContasReceber.BancoPagamento, 1, 3);
+    lQuery.ParamByName('AC08SIT').AsString := copy(pContasReceber.Situacao, 1, 1);
+    lQuery.ParamByName('AC08FRPGTO').AsInteger := pContasReceber.FormaPagamento;
+    lQuery.ParamByName('AN08JUROS').asfloat := pContasReceber.Juros;
+    lQuery.ParamByName('AN08DESC').asfloat := pContasReceber.Desconto;
+    lQuery.ParamByName('AD08DTPGTO').AsDate := pContasReceber.DataPagamento;
+    lQuery.ParamByName('AN08VLPAGO').asfloat := pContasReceber.ValorPago;
+    lQuery.ParamByName('AN08TOTALPAGO').asfloat := pContasReceber.TotalPago;
+    lQuery.ParamByName('AC08DHCAD').AsDate := pContasReceber.DataHoraCadastro;
+    lQuery.ParamByName('AC08DHPGTO').AsDate := pContasReceber.DataHoraPagamento;
+    lQuery.ParamByName('AC08USUCAD').AsInteger := pContasReceber.UsuarioCadastro;
+    lQuery.ParamByName('AC08USUPGTO').AsInteger := pContasReceber.UsuarioPagamento;
+    lQuery.ParamByName('AC08DHALT').AsDate := pContasReceber.DataHoraAlteracao;
+    lQuery.ParamByName('AC08USUALT').AsInteger := pContasReceber.UsuarioAlteracao;
+    lQuery.ParamByName('AC08ORIG').AsString := copy(pContasReceber.Origem, 1, 2);
+    lQuery.ParamByName('AC08_ANO').AsString := copy(pContasReceber.Ano, 1, 4);
+    lQuery.ParamByName('AC08_MES').AsString := copy(pContasReceber.Mes, 1, 2);
+    lQuery.ParamByName('AC08_OBS1').AsString := copy(pContasReceber.OBS1, 1, 50);
+    lQuery.ParamByName('AC08_OBS2').AsString := copy(pContasReceber.OBS2, 1, 50);
+    lQuery.ParamByName('AC08_PARCIAL').AsString := copy(pContasReceber.Parcial, 1, 1);
+    lQuery.ParamByName('AN08_EMPRESA').AsInteger := pContasReceber.Empresa;
+    lQuery.ParamByName('AC08_CTA').AsString := copy(pContasReceber.Conta, 1, 3);
+    lQuery.ParamByName('AC08_COD_BARRAS').AsString := copy(pContasReceber.CodigoBarras, 1, 50);
+    lQuery.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := pContasReceber.FormaPagamentoBaixar;
+    lQuery.ExecSQL;
+    lQuery.Connection.commit;
+
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasReceberDAO.IncluirOuAltera(pContasReceber: TContasReceber): String;
+var
+  lQuery: Tquery;
+  lTitulo: string;
+begin
+  lTitulo := EmptyStr;
+  lQuery := Tquery.Create(nil);
+  try
+    if ExisteEmpresaTitulo(pContasReceber.EmpresaTitulo) then
+    begin
+      lTitulo := RetornaTituloPeloTituloEmpresa(copy(pContasReceber.EmpresaTitulo, 1, 30));
+
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('  UPDATE MC08CPAG SET                         ');
+      lQuery.SQL.Add('   AC08EMPRESA         =  :AC08EMPRESA        ');
+      lQuery.SQL.Add(' , AD08EMISSAO         =  :AD08EMISSAO        ');
+      lQuery.SQL.Add(' , AN08FORNEC          =  :AN08FORNEC         ');
+      lQuery.SQL.Add(' , AN08VALOR           =  :AN08VALOR          ');
+      lQuery.SQL.Add(' , AD08VCTO            =  :AD08VCTO           ');
+      lQuery.SQL.Add(' , AD08FLUXO           =  :AD08FLUXO          ');
+      lQuery.SQL.Add(' , AN08VEND            =  :AN08VEND           ');
+      lQuery.SQL.Add(' , AC08BCOR            =  :AC08BCOR           ');
+      lQuery.SQL.Add(' , AC08BCPG            =  :AC08BCPG           ');
+      lQuery.SQL.Add(' , AC08SIT             =  :AC08SIT            ');
+      lQuery.SQL.Add(' , AC08FRPGTO          =  :AC08FRPGTO         ');
+      lQuery.SQL.Add(' , AN08JUROS           =  :AN08JUROS          ');
+      lQuery.SQL.Add(' , AN08DESC            =  :AN08DESC           ');
+      lQuery.SQL.Add(' , AD08DTPGTO          =  :AD08DTPGTO         ');
+      lQuery.SQL.Add(' , AN08VLPAGO          =  :AN08VLPAGO         ');
+      lQuery.SQL.Add(' , AN08TOTALPAGO       =  :AN08TOTALPAGO      ');
+      lQuery.SQL.Add(' , AC08DHCAD           =  :AC08DHCAD          ');
+      lQuery.SQL.Add(' , AC08DHPGTO          =  :AC08DHPGTO         ');
+      lQuery.SQL.Add(' , AC08USUCAD          =  :AC08USUCAD         ');
+      lQuery.SQL.Add(' , AC08USUPGTO         =  :AC08USUPGTO        ');
+      lQuery.SQL.Add(' , AC08DHALT           =  :AC08DHALT          ');
+      lQuery.SQL.Add(' , AC08USUALT          =  :AC08USUALT         ');
+      lQuery.SQL.Add(' , AC08ORIG            =  :AC08ORIG           ');
+      lQuery.SQL.Add(' , AN089DESC           =  :AN089DESC          ');
+      lQuery.SQL.Add(' , AC08_ANO            =  :AC08_ANO           ');
+      lQuery.SQL.Add(' , AC08_MES            =  :AC08_MES           ');
+      lQuery.SQL.Add(' , AC08_OBS1           =  :AC08_OBS1          ');
+      lQuery.SQL.Add(' , AC08_OBS2           =  :AC08_OBS2          ');
+      lQuery.SQL.Add(' , AC08_PARCIAL        =  :AC08_PARCIAL       ');
+      lQuery.SQL.Add(' , AN08_EMPRESA        =  :AN08_EMPRESA       ');
+      lQuery.SQL.Add(' , AC08_CTA            =  :AC08_CTA           ');
+      lQuery.SQL.Add(' , AC08_COD_BARRAS     =  :AC08_COD_BARRAS    ');
+      lQuery.SQL.Add(' , AC08FRPGTO_BAIXARCP =  :AC08FRPGTO_BAIXARCP');
+      lQuery.SQL.Add(' , AC08EMP_TIT         =  :AC08EMP_TIT        ');
+      lQuery.SQL.Add('  WHERE AC08EMP_TIT    =  :AC08EMP_TIT        ');
+      lQuery.ParamByName('AC08EMPRESA').AsInteger := pContasReceber.Empresa;
+      lQuery.ParamByName('AD08EMISSAO').AsDate := pContasReceber.Emissao;
+      lQuery.ParamByName('AN08FORNEC').AsInteger := pContasReceber.Fornecedor;
+      lQuery.ParamByName('AN08VALOR').asfloat := pContasReceber.Valor;
+      lQuery.ParamByName('AD08VCTO').AsDate := pContasReceber.Vencimento;
+      lQuery.ParamByName('AD08FLUXO').AsDate := FFluxoCaixa;
+      lQuery.ParamByName('AC08BCOR').AsString := copy(pContasReceber.BancoCobranca, 1, 3);
+      lQuery.ParamByName('AC08BCPG').AsString := copy(pContasReceber.BancoPagamento, 1, 3);
+      lQuery.ParamByName('AC08SIT').AsString := copy(pContasReceber.Situacao, 1, 1);
+      lQuery.ParamByName('AC08FRPGTO').AsInteger := pContasReceber.FormaPagamento;
+      lQuery.ParamByName('AN08JUROS').asfloat := pContasReceber.Juros;
+      lQuery.ParamByName('AN08DESC').asfloat := pContasReceber.Desconto;
+      lQuery.ParamByName('AD08DTPGTO').AsDate := pContasReceber.DataPagamento;
+      lQuery.ParamByName('AN08VLPAGO').asfloat := pContasReceber.ValorPago;
+      lQuery.ParamByName('AN08TOTALPAGO').asfloat := pContasReceber.TotalPago;
+      lQuery.ParamByName('AC08DHCAD').AsDate := pContasReceber.DataHoraCadastro;
+      lQuery.ParamByName('AC08DHPGTO').AsDate := pContasReceber.DataHoraPagamento;
+      lQuery.ParamByName('AC08USUCAD').AsInteger := pContasReceber.UsuarioCadastro;
+      lQuery.ParamByName('AC08USUPGTO').AsInteger := pContasReceber.UsuarioPagamento;
+      lQuery.ParamByName('AC08DHALT').AsDate := pContasReceber.DataHoraAlteracao;
+      lQuery.ParamByName('AC08USUALT').AsInteger := pContasReceber.UsuarioAlteracao;
+      lQuery.ParamByName('AC08ORIG').AsString := copy(pContasReceber.Origem, 1, 2);
+      lQuery.ParamByName('AC08_ANO').AsString := copy(pContasReceber.Ano, 1, 4);
+      lQuery.ParamByName('AC08_MES').AsString := copy(pContasReceber.Mes, 1, 2);
+      lQuery.ParamByName('AC08_OBS1').AsString := copy(pContasReceber.OBS1, 1, 50);
+      lQuery.ParamByName('AC08_OBS2').AsString := copy(pContasReceber.OBS2, 1, 50);
+      lQuery.ParamByName('AC08_PARCIAL').AsString := copy(pContasReceber.Parcial, 1, 1);
+      lQuery.ParamByName('AN08_EMPRESA').AsInteger := pContasReceber.Empresa;
+      lQuery.ParamByName('AC08_CTA').AsString := copy(pContasReceber.Conta, 1, 3);
+      lQuery.ParamByName('AC08_COD_BARRAS').AsString := copy(pContasReceber.CodigoBarras, 1, 50);
+      lQuery.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := pContasReceber.FormaPagamentoBaixar;
+      lQuery.ParamByName('AC08EMP_TIT').AsString := copy(pContasReceber.EmpresaTitulo, 1, 30);
+      lQuery.ExecSQL;
+      lQuery.Connection.commit;
+
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (              ');
+      lQuery.SQL.Add(' TITULO, DATA_ATUALIZACAO, EXCLUIDO, ENVIADO)      ');
+      lQuery.SQL.Add(' VALUES (:TITULO, :DATA_ATUALIZACAO, ''N'', ''S'') ');
+      lQuery.SQL.Add(' MATCHING (TITULO)                                 ');
+      lQuery.ParamByName('TITULO').AsString := lTitulo;
+      lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := incminute(pContasReceber.DataUltimoSincronismo, -1);
+      lQuery.ExecSQL;
+      lQuery.Connection.commit;
+
+      Result := 'GET - Alterado o titulo: ' + lTitulo + ' - Titulo Empresa: ' + pContasReceber.EmpresaTitulo;
+    end
+    else if pEmpresaPrincipal then
+    begin
+      lTitulo := 'INT' + copy(pContasReceber.EmpresaTitulo, 1, 1) + '-' + GeraProximoTituloIntegracao;
+
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('  INSERT INTO MC08CPAG (        ');
+      lQuery.SQL.Add('   AC08TIT                       ');
+      lQuery.SQL.Add(' , AC08EMPRESA                   ');
+      lQuery.SQL.Add(' , AD08EMISSAO                   ');
+      lQuery.SQL.Add(' , AN08FORNEC                    ');
+      lQuery.SQL.Add(' , AN08VALOR                     ');
+      lQuery.SQL.Add(' , AD08VCTO                      ');
+      lQuery.SQL.Add(' , AD08FLUXO                     ');
+      lQuery.SQL.Add(' , AN08VEND                      ');
+      lQuery.SQL.Add(' , AC08BCOR                      ');
+      lQuery.SQL.Add(' , AC08BCPG                      ');
+      lQuery.SQL.Add(' , AC08SIT                       ');
+      lQuery.SQL.Add(' , AC08FRPGTO                    ');
+      lQuery.SQL.Add(' , AN08JUROS                     ');
+      lQuery.SQL.Add(' , AN08DESC                      ');
+      lQuery.SQL.Add(' , AD08DTPGTO                    ');
+      lQuery.SQL.Add(' , AN08VLPAGO                    ');
+      lQuery.SQL.Add(' , AN08TOTALPAGO                 ');
+      lQuery.SQL.Add(' , AC08DHCAD                     ');
+      lQuery.SQL.Add(' , AC08DHPGTO                    ');
+      lQuery.SQL.Add(' , AC08USUCAD                    ');
+      lQuery.SQL.Add(' , AC08USUPGTO                   ');
+      lQuery.SQL.Add(' , AC08DHALT                     ');
+      lQuery.SQL.Add(' , AC08USUALT                    ');
+      lQuery.SQL.Add(' , AC08ORIG                      ');
+      lQuery.SQL.Add(' , AN089DESC                     ');
+      lQuery.SQL.Add(' , AC08_ANO                      ');
+      lQuery.SQL.Add(' , AC08_MES                      ');
+      lQuery.SQL.Add(' , AC08_OBS1                     ');
+      lQuery.SQL.Add(' , AC08_OBS2                     ');
+      lQuery.SQL.Add(' , AC08_PARCIAL                  ');
+      lQuery.SQL.Add(' , AN08_EMPRESA                  ');
+      lQuery.SQL.Add(' , AC08_CTA                      ');
+      lQuery.SQL.Add(' , AC08_COD_BARRAS               ');
+      lQuery.SQL.Add(' , AC08FRPGTO_BAIXARCP           ');
+      lQuery.SQL.Add(' , AC08EMP_TIT                   ');
+      lQuery.SQL.Add(' )VALUES (                       ');
+      lQuery.SQL.Add('   :AC08TIT                      ');
+      lQuery.SQL.Add(' , :AC08EMPRESA                  ');
+      lQuery.SQL.Add(' , :AD08EMISSAO                  ');
+      lQuery.SQL.Add(' , :AN08FORNEC                   ');
+      lQuery.SQL.Add(' , :AN08VALOR                    ');
+      lQuery.SQL.Add(' , :AD08VCTO                     ');
+      lQuery.SQL.Add(' , :AD08FLUXO                    ');
+      lQuery.SQL.Add(' , :AN08VEND                     ');
+      lQuery.SQL.Add(' , :AC08BCOR                     ');
+      lQuery.SQL.Add(' , :AC08BCPG                     ');
+      lQuery.SQL.Add(' , :AC08SIT                      ');
+      lQuery.SQL.Add(' , :AC08FRPGTO                   ');
+      lQuery.SQL.Add(' , :AN08JUROS                    ');
+      lQuery.SQL.Add(' , :AN08DESC                     ');
+      lQuery.SQL.Add(' , :AD08DTPGTO                   ');
+      lQuery.SQL.Add(' , :AN08VLPAGO                   ');
+      lQuery.SQL.Add(' , :AN08TOTALPAGO                ');
+      lQuery.SQL.Add(' , :AC08DHCAD                    ');
+      lQuery.SQL.Add(' , :AC08DHPGTO                   ');
+      lQuery.SQL.Add(' , :AC08USUCAD                   ');
+      lQuery.SQL.Add(' , :AC08USUPGTO                  ');
+      lQuery.SQL.Add(' , :AC08DHALT                    ');
+      lQuery.SQL.Add(' , :AC08USUALT                   ');
+      lQuery.SQL.Add(' , :AC08ORIG                     ');
+      lQuery.SQL.Add(' , :AN089DESC                    ');
+      lQuery.SQL.Add(' , :AC08_ANO                     ');
+      lQuery.SQL.Add(' , :AC08_MES                     ');
+      lQuery.SQL.Add(' , :AC08_OBS1                    ');
+      lQuery.SQL.Add(' , :AC08_OBS2                    ');
+      lQuery.SQL.Add(' , :AC08_PARCIAL                 ');
+      lQuery.SQL.Add(' , :AN08_EMPRESA                 ');
+      lQuery.SQL.Add(' , :AC08_CTA                     ');
+      lQuery.SQL.Add(' , :AC08_COD_BARRAS              ');
+      lQuery.SQL.Add(' , :AC08FRPGTO_BAIXARCP          ');
+      lQuery.SQL.Add(' , :AC08EMP_TIT                  ');
+      lQuery.SQL.Add('  )                              ');
+      lQuery.ParamByName('AC08TIT').AsString := lTitulo;
+      lQuery.ParamByName('AC08EMPRESA').AsInteger := pContasReceber.Empresa;
+      lQuery.ParamByName('AD08EMISSAO').AsDate := pContasReceber.Emissao;
+      lQuery.ParamByName('AN08FORNEC').AsInteger := pContasReceber.Fornecedor;
+      lQuery.ParamByName('AN08VALOR').asfloat := pContasReceber.Valor;
+      lQuery.ParamByName('AD08VCTO').AsDate := pContasReceber.Vencimento;
+      lQuery.ParamByName('AD08FLUXO').AsDate := pContasReceber.FluxoCaixa;
+      lQuery.ParamByName('AC08BCOR').AsString := copy(pContasReceber.BancoCobranca, 1, 3);
+      lQuery.ParamByName('AC08BCPG').AsString := copy(pContasReceber.BancoPagamento, 1, 3);
+      lQuery.ParamByName('AC08SIT').AsString := copy(pContasReceber.Situacao, 1, 1);
+      lQuery.ParamByName('AC08FRPGTO').AsInteger := pContasReceber.FormaPagamento;
+      lQuery.ParamByName('AN08JUROS').asfloat := pContasReceber.Juros;
+      lQuery.ParamByName('AN08DESC').asfloat := pContasReceber.Desconto;
+      lQuery.ParamByName('AD08DTPGTO').AsDate := pContasReceber.DataPagamento;
+      lQuery.ParamByName('AN08VLPAGO').asfloat := pContasReceber.ValorPago;
+      lQuery.ParamByName('AN08TOTALPAGO').asfloat := pContasReceber.TotalPago;
+      lQuery.ParamByName('AC08DHCAD').AsDate := pContasReceber.DataHoraCadastro;
+      lQuery.ParamByName('AC08DHPGTO').AsDate := pContasReceber.DataHoraPagamento;
+      lQuery.ParamByName('AC08USUCAD').AsInteger := pContasReceber.UsuarioCadastro;
+      lQuery.ParamByName('AC08USUPGTO').AsInteger := pContasReceber.UsuarioPagamento;
+      lQuery.ParamByName('AC08DHALT').AsDate := pContasReceber.DataHoraAlteracao;
+      lQuery.ParamByName('AC08USUALT').AsInteger := pContasReceber.UsuarioAlteracao;
+      lQuery.ParamByName('AC08ORIG').AsString := copy(pContasReceber.Origem, 1, 2);
+      lQuery.ParamByName('AC08_ANO').AsString := copy(pContasReceber.Ano, 1, 4);
+      lQuery.ParamByName('AC08_MES').AsString := copy(pContasReceber.Mes, 1, 2);
+      lQuery.ParamByName('AC08_OBS1').AsString := copy(pContasReceber.OBS1, 1, 50);
+      lQuery.ParamByName('AC08_OBS2').AsString := copy(pContasReceber.OBS2, 1, 50);
+      lQuery.ParamByName('AC08_PARCIAL').AsString := copy(pContasReceber.Parcial, 1, 1);
+      lQuery.ParamByName('AN08_EMPRESA').AsInteger := pContasReceber.Empresa;
+      lQuery.ParamByName('AC08_CTA').AsString := copy(pContasReceber.Conta, 1, 3);
+      lQuery.ParamByName('AC08_COD_BARRAS').AsString := copy(pContasReceber.CodigoBarras, 1, 50);
+      lQuery.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := pContasReceber.FormaPagamentoBaixar;
+      lQuery.ParamByName('AC08EMP_TIT').AsString := copy(pContasReceber.EmpresaTitulo, 1, 30);
+      lQuery.ExecSQL;
+      lQuery.Connection.commit;
+
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (              ');
+      lQuery.SQL.Add(' TITULO, DATA_ATUALIZACAO, EXCLUIDO, ENVIADO)      ');
+      lQuery.SQL.Add(' VALUES (:TITULO, :DATA_ATUALIZACAO, ''N'', ''S'') ');
+      lQuery.SQL.Add(' MATCHING (TITULO)                                 ');
+      lQuery.ParamByName('TITULO').AsString := lTitulo;
+      lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := incminute(pContasReceber.DataUltimoSincronismo, -1);
+      lQuery.ExecSQL;
+      lQuery.Connection.commit;
+
+      Result := 'GET - Incluido o titulo: ' + lTitulo + ' - Titulo Empresa: ' + pContasReceber.EmpresaTitulo;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasReceberDAO.Post(pContasReceber: TContasReceber): string;
+begin
+
+end;
+
+function TContasReceberDAO.Put(pContasReceber: TContasReceber): string;
+begin
+
+end;
+
+class function TContasReceberDAO.RemoveCaracteresEspeciais(aTexto: string): string;
+const
+  // Lista de Caracteres Extras
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: integer;
+begin
+  xTexto := aTexto;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := StringReplace(xTexto, xCarExt[i], '', [rfReplaceAll]);
+  end;
+
+  Result := xTexto;
+end;
+
+function TContasReceberDAO.RetornaTituloPeloTituloEmpresa(pTituloEmp: String): string;
+var
+  lQuery: TFDquery;
+begin
+  lQuery := TFDquery.Create(nil);
+  try
+    Result := EmptyStr;
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT');
+    lQuery.ParamByName('AC08EMP_TIT').AsString := pTituloEmp;
+    lQuery.Open;
+    if lQuery.RecordCount > 0 then
+    begin
+      Result := lQuery.FieldByName('AC08TIT').AsString;
+    end;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+end.

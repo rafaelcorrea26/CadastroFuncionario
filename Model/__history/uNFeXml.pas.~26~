@@ -1,0 +1,82 @@
+unit uNFeXml;
+
+interface
+
+uses
+  System.JSON, REST.JSON, System.Generics.Collections, FireDAC.Comp.Client, uConexao,
+  System.SysUtils;
+
+type
+  TNFeXml = class;
+  TProductCfop = class;
+  TArrayProductCfop = array of TProductCfop;
+
+  TNFeXml = class
+  private
+    Fissue_date: string;
+    Fnumber: string;
+    Fserie: string;
+    FValue: string;
+    Fkey: string;
+    Flink: string;
+    Fxml_danfe: string;
+    FConsulta: TFDQuery;
+    FProductCfop: TArrayProductCfop;
+    procedure setProductCfop(const Value: TArrayProductCfop);
+
+  public
+    destructor Destroy; override;
+    property issue_date: string read Fissue_date write Fissue_date;
+    property number: string read Fnumber write Fnumber;
+    property serie: string read Fserie write Fserie;
+    property Value: string read FValue write FValue;
+    property key: string read Fkey write Fkey;
+    property link: string read Flink write Flink;
+    property xml_danfe: string read Fxml_danfe write Fxml_danfe;
+    function ToJson: TJSONObject;
+    property ListaProductCfop: TArrayProductCfop read FProductCfop write setProductCfop;
+    procedure AddProductCfop(pProductCfop: TProductCfop);
+
+    constructor Create;
+  end;
+
+  TProductCfop = class
+  private
+    Fproduct_id: string;
+    Fvariation_id: string;
+    Fcfop: string;
+
+  public
+    property product_id: string read Fproduct_id write Fproduct_id;
+    property variation_id: string read Fvariation_id write Fvariation_id;
+    property cfop: string read Fcfop write Fcfop;
+  end;
+
+implementation
+
+function TNFeXml.ToJson: TJSONObject;
+begin
+  // result := TJson.ObjectToJsonObject(self, [joIgnoreEmptyStrings]);
+  result := TJson.ObjectToJsonObject(self);
+end;
+
+procedure TNFeXml.AddProductCfop(pProductCfop: TProductCfop);
+begin
+  SetLength(FProductCfop, Length(FProductCfop) + 1);
+  FProductCfop[Length(FProductCfop) - 1] := pProductCfop;
+end;
+
+constructor TNFeXml.Create;
+begin
+end;
+
+destructor TNFeXml.Destroy;
+begin
+end;
+
+procedure TNFeXml.setProductCfop(const Value: TArrayProductCfop);
+begin
+  FProductCfop := Value;
+end;
+
+end.

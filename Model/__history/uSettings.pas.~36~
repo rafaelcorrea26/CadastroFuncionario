@@ -1,0 +1,423 @@
+unit uSettings;
+
+interface
+
+uses
+  uInterfaces,
+  uQuery, System.SysUtils, uFunctions, Vcl.Dialogs;
+
+type
+  TSettings = class;
+
+  TSettings = class(TInterfacedObject, iClassReceive)
+  private
+    FUrl: String;
+    FLogin: String;
+    FPassword: String;
+    FKeyCompanny: string;
+    FMainCompany: Boolean;
+    FAllowToUse: Boolean;
+    FAutomaticSend: Boolean;
+    FConfigAutoSend: Boolean;
+    FIntervalSend: integer;
+    FAllowsUpdatingDateConfig: Boolean;
+    FCodeCompany: string;
+    FRefresh_Token: string;
+    FAccess_Token: string;
+    FRefresh_Token_Expires: TDateTime;
+    FAccess_Token_Expires: TDateTime;
+    FLastSend: TDateTime;
+
+    class var FSettings: TSettings;
+
+  public
+    destructor Destroy; override;
+    constructor Create;
+
+    property Url: String read FUrl write FUrl;
+    property Login: string read FLogin write FLogin;
+    property Password: string read FPassword write FPassword;
+    property KeyCompanny: string read FKeyCompanny write FKeyCompanny;
+    property MainCompany: Boolean read FMainCompany write FMainCompany;
+    property AllowToUse: Boolean read FAllowToUse write FAllowToUse;
+    property AutomaticSend: Boolean read FAutomaticSend write FAutomaticSend;
+    property ConfigAutoSend: Boolean read FConfigAutoSend write FConfigAutoSend;
+    property IntervalSend: integer read FIntervalSend write FIntervalSend;
+    property AllowsUpdatingDateConfig: Boolean read FAllowsUpdatingDateConfig write FAllowsUpdatingDateConfig;
+    property CodeCompany: string read FCodeCompany write FCodeCompany;
+    property Refresh_Token: string read FRefresh_Token write FRefresh_Token;
+    property Access_Token: string read FAccess_Token write FAccess_Token;
+    property Refresh_Token_Expires: TDateTime read FRefresh_Token_Expires write FRefresh_Token_Expires;
+    property Access_Token_Expires: TDateTime read FAccess_Token_Expires write FAccess_Token_Expires;
+    property LastSend: TDateTime read FLastSend write FLastSend;
+    // Itens somente para CP
+
+    procedure Carrega;
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    procedure RodaScriptCP;
+
+    class procedure ReleaseMe;
+    class function GetConnectionAPI: TConnectionAPI; static;
+    class property Settings: TSettings read GetSettings write FSettings;
+  end;
+
+implementation
+
+class function TSettings.GetSettings: TSettings;
+begin
+  if NOT Assigned(FSettings) then
+  begin
+    FSettings := TSettings.Create;
+  end;
+
+  result := FSettings;
+end;
+
+procedure TSettings.Alterar(pEfetuarCommit: Boolean);
+begin
+
+end;
+
+procedure TSettings.Carrega;
+var
+  lQuery: TQuery;
+begin
+  try
+    lQuery := TQuery.Create(nil);
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' select * from TBL_CONFIGURACAO_CP ');
+      lQuery.SQL.Add(' where id = 1                      ');
+      lQuery.Open;
+      lQuery.FetchAll;
+
+      if lQuery.RecordCount = 0 then
+      begin
+        Incluir(true);
+      end
+      else
+      begin
+        FAccess_Token := lQuery.FieldByName('ACCESS_TOKEN').AsString;
+        FAccess_Token_Expires := lQuery.FieldByName('ACCESS_TOKEN_EXPIRES').AsDateTime;
+        FLastSend := lQuery.FieldByName('ULTIMA_SINC').AsDateTime;
+        FKeyCompanny := lQuery.FieldByName('CHAVE_EMPRESA').AsString;
+        FMainCompany := lQuery.FieldByName('EMPRESA_PRINCIPAL').AsString = 'S';
+        FAllowToUse := lQuery.FieldByName('LIBERADO_PARA_USO').AsString = 'S';
+        FAutomaticSend := lQuery.FieldByName('ENVIO_AUTOMATICO').AsString = 'S';
+        FIntervalSend := lQuery.FieldByName('INTERVALO_ENVIO').AsInteger;
+        FCodeCompany := lQuery.FieldByName('CODIGO_EMPRESA').AsString;
+      end;
+
+    finally
+      lQuery.Free;
+    end;
+
+  except
+    on e: Exception do
+  end;
+end;
+
+constructor TSettings.Create;
+begin
+  Url := 'https://webmc.com.br/api_cpagar/public/api'; // 'http://192.168.1.121:8080/api'; //
+  Login := 'mcsistemas@mcsistemas.eti.br';
+  Password := '@mc2021!';
+end;
+
+destructor TSettings.Destroy;
+begin
+end;
+
+procedure TSettings.Excluir(pEfetuarCommit: Boolean);
+begin
+
+end;
+
+procedure TSettings.Incluir(pEfetuarCommit: Boolean);
+var
+  lQuery: TQuery;
+begin
+  try
+    lQuery := TQuery.Create(nil);
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' update or insert into TBL_CONFIGURACAO_CP (       ');
+      lQuery.SQL.Add('  ID                                               ');
+      lQuery.SQL.Add(' ,ACCESS_TOKEN                                     ');
+      lQuery.SQL.Add(' ,ACCESS_TOKEN_EXPIRES                             ');
+      lQuery.SQL.Add(' ,ULTIMA_SINC                                      ');
+      lQuery.SQL.Add(' ,CHAVE_EMPRESA                                    ');
+      lQuery.SQL.Add(' ,EMPRESA_PRINCIPAL                                ');
+      lQuery.SQL.Add(' ,LIBERADO_PARA_USO                                ');
+      lQuery.SQL.Add(' ,ENVIO_AUTOMATICO                                 ');
+      lQuery.SQL.Add(' ,INTERVALO_ENVIO                                  ');
+      lQuery.SQL.Add(' ,CODIGO_EMPRESA                                   ');
+      lQuery.SQL.Add(' ) VALUES(                                         ');
+      lQuery.SQL.Add('  :ID                                              ');
+      lQuery.SQL.Add(' ,:ACCESS_TOKEN                                    ');
+      lQuery.SQL.Add(' ,:ACCESS_TOKEN_EXPIRES                            ');
+      lQuery.SQL.Add(' ,:ULTIMA_SINC                                     ');
+      lQuery.SQL.Add(' ,:CHAVE_EMPRESA                                   ');
+      lQuery.SQL.Add(' ,:EMPRESA_PRINCIPAL                               ');
+      lQuery.SQL.Add(' ,:LIBERADO_PARA_USO                               ');
+      lQuery.SQL.Add(' ,:ENVIO_AUTOMATICO                                ');
+      lQuery.SQL.Add(' ,:INTERVALO_ENVIO                                 ');
+      lQuery.SQL.Add(' ,:CODIGO_EMPRESA                                  ');
+      lQuery.SQL.Add(' ) MATCHING (ID)                                   ');
+      lQuery.ParamByName('ID').AsInteger := 1;
+      lQuery.ParamByName('ACCESS_TOKEN').AsString := FAccess_Token;
+      lQuery.ParamByName('ACCESS_TOKEN_EXPIRES').AsDateTime := FAccess_Token_Expires;
+      lQuery.ParamByName('ULTIMA_SINC').AsDateTime := FLastSend;
+      lQuery.ParamByName('CHAVE_EMPRESA').AsString := FKeyCompanny;
+      lQuery.ParamByName('EMPRESA_PRINCIPAL').AsString := TFunctions.GetSN(FMainCompany);
+      lQuery.ParamByName('LIBERADO_PARA_USO').AsString := TFunctions.GetSN(AllowToUse);
+      lQuery.ParamByName('ENVIO_AUTOMATICO').AsString := TFunctions.GetSN(FAutomaticSend);
+      lQuery.ParamByName('INTERVALO_ENVIO').AsInteger := FIntervalSend;
+      lQuery.ParamByName('CODIGO_EMPRESA').AsString := FCodeCompany;
+      lQuery.ExecSQL;
+
+      if pEfetuarCommit then
+      begin
+        lQuery.Connection.Commit;
+      end;
+
+    finally
+      lQuery.Free;
+    end;
+  except
+    on e: Exception do
+  end;
+end;
+
+procedure TSettings.RodaScriptCP;
+var
+  lQuery: TQuery;
+begin
+  try
+    lQuery := TQuery.Create(nil);
+    try
+      if not(TFunctions.TriggerValidation('TBL_INTEG_CP')) then
+      begin
+        lQuery.Close;
+        lQuery.SQL.Clear;
+        lQuery.SQL.Add(' CREATE OR ALTER TRIGGER TBL_INTEG_CP FOR MC08CPAG                                        ');
+        lQuery.SQL.Add(' ACTIVE AFTER INSERT OR UPDATE OR DELETE POSITION 0                                       ');
+        lQuery.SQL.Add(' AS                                                                                       ');
+        lQuery.SQL.Add(' DECLARE ATUALIZAR CHAR(1);                                                               ');
+        lQuery.SQL.Add(' BEGIN                                                                                    ');
+        lQuery.SQL.Add('     IF (INSERTING) THEN                                                                  ');
+        lQuery.SQL.Add('     BEGIN                                                                                ');
+        lQuery.SQL.Add('         INSERT INTO TBL_INTEG_CP (TITULO, DATA_ATUALIZACAO, EXCLUIDO)                    ');
+        lQuery.SQL.Add('         VALUES (NEW.AC08TIT, CURRENT_TIMESTAMP, ''N'') ;                                 ');
+        lQuery.SQL.Add('     END                                                                                  ');
+        lQuery.SQL.Add('     ELSE  IF (UPDATING) THEN                                                             ');
+        lQuery.SQL.Add('     BEGIN                                                                                ');
+        lQuery.SQL.Add('     ATUALIZAR = ''N'';                                                                   ');
+        lQuery.SQL.Add('     IF (OLD.AC08TIT            IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08TIT                ');
+        lQuery.SQL.Add('     <> NEW.AC08TIT )         THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08TIT IS NOT NULL) THEN ATUALIZAR = ''S'';    END      ');
+        lQuery.SQL.Add('     IF (OLD.AD08EMISSAO        IS NOT NULL) THEN  BEGIN  IF  (OLD.AD08EMISSAO            ');
+        lQuery.SQL.Add('     <> NEW.AD08EMISSAO )     THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AD08EMISSAO IS NOT NULL) THEN ATUALIZAR = ''S''; END     ');
+        lQuery.SQL.Add('     IF (OLD.AD08VCTO           IS NOT NULL) THEN  BEGIN  IF  (OLD.AD08VCTO               ');
+        lQuery.SQL.Add('     <> NEW.AD08VCTO)         THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AD08VCTO IS NOT NULL) THEN ATUALIZAR = ''S'';    END     ');
+        lQuery.SQL.Add('     IF (OLD.AD08FLUXO          IS NOT NULL) THEN  BEGIN  IF  (OLD.AD08FLUXO              ');
+        lQuery.SQL.Add('     <> NEW.AD08FLUXO)        THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AD08FLUXO IS NOT NULL) THEN ATUALIZAR = ''S'';  END      ');
+        lQuery.SQL.Add('     IF (OLD.AD08DTPGTO         IS NOT NULL) THEN  BEGIN  IF  (OLD.AD08DTPGTO             ');
+        lQuery.SQL.Add('     <> NEW.AD08DTPGTO)       THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AD08DTPGTO IS NOT NULL) THEN ATUALIZAR = ''S''; END      ');
+        lQuery.SQL.Add('     IF (OLD.AC08ORIG           IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08ORIG               ');
+        lQuery.SQL.Add('     <> NEW.AC08ORIG)         THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08ORIG IS NOT NULL) THEN ATUALIZAR = ''S'';   END      ');
+        lQuery.SQL.Add('     IF (OLD.AC08SIT            IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08SIT                ');
+        lQuery.SQL.Add('     <> NEW.AC08SIT)          THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08SIT IS NOT NULL) THEN ATUALIZAR = ''S'';    END      ');
+        lQuery.SQL.Add('     IF (OLD.AN08FORNEC         IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08FORNEC             ');
+        lQuery.SQL.Add('     <> NEW.AN08FORNEC)       THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08FORNEC IS NOT NULL) THEN ATUALIZAR = ''S''; END      ');
+        lQuery.SQL.Add('     IF (OLD.AC08FRPGTO         IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08FRPGTO             ');
+        lQuery.SQL.Add('     <> NEW.AC08FRPGTO)       THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08FRPGTO IS NOT NULL) THEN ATUALIZAR = ''S''; END      ');
+        lQuery.SQL.Add('     IF (OLD.AC08_CTA           IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08_CTA               ');
+        lQuery.SQL.Add('     <> NEW.AC08_CTA)         THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08_CTA IS NOT NULL) THEN ATUALIZAR = ''S'';   END      ');
+        lQuery.SQL.Add('     IF (OLD.AC08_COD_BARRAS    IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08_COD_BARRAS        ');
+        lQuery.SQL.Add('     <> NEW.AC08_COD_BARRAS)  THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08_COD_BARRAS IS NOT NULL) THEN ATUALIZAR = ''S''; END ');
+        lQuery.SQL.Add('     IF (OLD.AN08VALOR          IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08VALOR              ');
+        lQuery.SQL.Add('     <> NEW.AN08VALOR)        THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08VALOR IS NOT NULL) THEN ATUALIZAR = ''S'';       END ');
+        lQuery.SQL.Add('     IF (OLD.AN08TOTALPAGO      IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08TOTALPAGO          ');
+        lQuery.SQL.Add('     <> NEW.AN08TOTALPAGO)    THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08TOTALPAGO IS NOT NULL) THEN ATUALIZAR = ''S'';   END ');
+        lQuery.SQL.Add('     IF (OLD.AN08VLPAGO         IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08VLPAGO             ');
+        lQuery.SQL.Add('     <> NEW.AN08VLPAGO)       THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08VLPAGO IS NOT NULL) THEN ATUALIZAR = ''S'';      END ');
+        lQuery.SQL.Add('     IF (OLD.AN08DESC           IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08DESC               ');
+        lQuery.SQL.Add('     <> NEW.AN08DESC)         THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08DESC IS NOT NULL) THEN ATUALIZAR = ''S'';        END ');
+        lQuery.SQL.Add('     IF (OLD.AN08JUROS          IS NOT NULL) THEN  BEGIN  IF  (OLD.AN08JUROS              ');
+        lQuery.SQL.Add('     <> NEW.AN08JUROS)        THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AN08JUROS IS NOT NULL) THEN ATUALIZAR = ''S'';       END ');
+        lQuery.SQL.Add('     IF (OLD.AC08_OBS1          IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08_OBS1              ');
+        lQuery.SQL.Add('     <> NEW.AC08_OBS1)        THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08_OBS1 IS NOT NULL) THEN ATUALIZAR = ''S'';       END ');
+        lQuery.SQL.Add('     IF (OLD.AC08_OBS2          IS NOT NULL) THEN  BEGIN  IF  (OLD.AC08_OBS2              ');
+        lQuery.SQL.Add('     <> NEW.AC08_OBS2)        THEN  BEGIN ATUALIZAR = ''S'';                              ');
+        lQuery.SQL.Add('     END  END ELSE BEGIN IF (NEW.AC08_OBS2 IS NOT NULL) THEN ATUALIZAR = ''S'';       END ');
+        lQuery.SQL.Add('     IF (ATUALIZAR = ''S'') THEN                                                          ');
+        lQuery.SQL.Add('         BEGIN                                                                            ');
+        lQuery.SQL.Add('          UPDATE OR INSERT INTO TBL_INTEG_CP (TITULO, DATA_ATUALIZACAO, EXCLUIDO)         ');
+        lQuery.SQL.Add('          VALUES (OLD.AC08TIT, CURRENT_TIMESTAMP, ''N'')                                  ');
+        lQuery.SQL.Add('          MATCHING (TITULO);                                                              ');
+        lQuery.SQL.Add('         END                                                                              ');
+        lQuery.SQL.Add('    END                                                                                   ');
+        lQuery.SQL.Add('    ELSE IF (DELETING) THEN                                                               ');
+        lQuery.SQL.Add('    BEGIN                                                                                 ');
+        lQuery.SQL.Add('    UPDATE OR INSERT INTO TBL_INTEG_CP (TITULO, DATA_ATUALIZACAO, EXCLUIDO,EMPRESA_TITULO)');
+        lQuery.SQL.Add('    VALUES (OLD.AC08TIT, CURRENT_TIMESTAMP, ''S'',OLD.AC08EMP_TIT)                        ');
+        lQuery.SQL.Add('    MATCHING (TITULO);                                                                    ');
+        lQuery.SQL.Add('   END                                                                                    ');
+        lQuery.SQL.Add(' END                                                                                      ');
+        lQuery.ExecSQL;
+        lQuery.Connection.Commit;
+      end;
+
+      if not(TFunctions.TriggerValidation('TBL_INTEG_FN')) then
+      begin
+        lQuery.Close;
+        lQuery.SQL.Clear;
+        lQuery.SQL.Add(' CREATE OR ALTER TRIGGER TBL_INTEG_FN FOR MC02FORNEC                                      ');
+        lQuery.SQL.Add(' ACTIVE AFTER INSERT OR UPDATE OR DELETE POSITION 0                                       ');
+        lQuery.SQL.Add(' AS                                                                                       ');
+        lQuery.SQL.Add(' DECLARE ATUALIZAR CHAR(1);                                                               ');
+        lQuery.SQL.Add(' BEGIN                                                                                    ');
+        lQuery.SQL.Add('     IF (INSERTING) THEN                                                                  ');
+        lQuery.SQL.Add('     BEGIN                                                                                ');
+        lQuery.SQL.Add('         INSERT INTO TBL_INTEG_FN (CODIGO, DATA_ATUALIZACAO, EXCLUIDO,ENVIADO)            ');
+        lQuery.SQL.Add('         VALUES (NEW.MC02CODIGO, CURRENT_TIMESTAMP, ''N'',''N'') ;                        ');
+        lQuery.SQL.Add('     END                                                                                  ');
+        lQuery.SQL.Add('     ELSE  IF (UPDATING) THEN                                                             ');
+        lQuery.SQL.Add('     BEGIN                                                                                ');
+        lQuery.SQL.Add('         ATUALIZAR = ''N'';                                                               ');
+        lQuery.SQL.Add('         IF (OLD.MC02CODIGO          IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CODIGO        ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CODIGO )         THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CODIGO IS NOT NULL) THEN ATUALIZAR = ''S'';           END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CGC             IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CGC           ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CGC )            THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CGC IS NOT NULL) THEN ATUALIZAR = ''S'';              END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CPF             IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CPF           ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CPF)             THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CPF IS NOT NULL) THEN ATUALIZAR = ''S'';              END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02NOME            IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02NOME          ');
+        lQuery.SQL.Add(' 		<> NEW.MC02NOME)            THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02NOME IS NOT NULL) THEN ATUALIZAR = ''S'';             END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02FANTASIA        IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02FANTASIA      ');
+        lQuery.SQL.Add(' 		<> NEW.MC02FANTASIA)        THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02FANTASIA IS NOT NULL) THEN ATUALIZAR = ''S'';         END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02FISJUR          IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02FISJUR        ');
+        lQuery.SQL.Add(' 		<> NEW.MC02FISJUR)          THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02FISJUR IS NOT NULL) THEN ATUALIZAR = ''S'';           END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02ATIINATIVO      IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02ATIINATIVO    ');
+        lQuery.SQL.Add(' 		<> NEW.MC02ATIINATIVO)      THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02ATIINATIVO IS NOT NULL) THEN ATUALIZAR = ''S'';       END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02ENDERECO        IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02ENDERECO      ');
+        lQuery.SQL.Add(' 		<> NEW.MC02ENDERECO)        THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02ENDERECO IS NOT NULL) THEN ATUALIZAR = ''S'';         END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_NR             IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02_NR           ');
+        lQuery.SQL.Add(' 		<> NEW.MC02_NR)             THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_NR IS NOT NULL) THEN ATUALIZAR = ''S'';              END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02BAIRRO          IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02BAIRRO        ');
+        lQuery.SQL.Add(' 		<> NEW.MC02BAIRRO)          THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02BAIRRO IS NOT NULL) THEN ATUALIZAR = ''S'';           END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CIDADE          IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CIDADE        ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CIDADE)          THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CIDADE IS NOT NULL) THEN ATUALIZAR = ''S'';           END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02UF              IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02UF            ');
+        lQuery.SQL.Add(' 		<> NEW.MC02UF)              THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02UF IS NOT NULL) THEN ATUALIZAR = ''S'';               END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CEP             IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CEP           ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CEP)             THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CEP IS NOT NULL) THEN ATUALIZAR = ''S'';              END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_COD_SEFAZ      IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02_COD_SEFAZ    ');
+        lQuery.SQL.Add(' 		<> NEW.MC02_COD_SEFAZ)      THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_COD_SEFAZ IS NOT NULL) THEN ATUALIZAR = ''S'';       END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02FONE            IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02FONE          ');
+        lQuery.SQL.Add(' 		<> NEW.MC02FONE)            THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02FONE IS NOT NULL) THEN ATUALIZAR = ''S'';             END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CELULAR         IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CELULAR       ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CELULAR)         THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CELULAR IS NOT NULL) THEN ATUALIZAR = ''S'';          END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02EMAIL           IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02EMAIL         ');
+        lQuery.SQL.Add(' 		<> NEW.MC02EMAIL)           THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02EMAIL IS NOT NULL) THEN ATUALIZAR = ''S'';            END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CI              IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CI            ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CI)              THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CI IS NOT NULL) THEN ATUALIZAR = ''S'';               END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02IE              IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02IE            ');
+        lQuery.SQL.Add(' 		<> NEW.MC02IE)              THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02IE IS NOT NULL) THEN ATUALIZAR = ''S'';               END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_OBS1           IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02_OBS1         ');
+        lQuery.SQL.Add(' 		<> NEW.MC02_OBS1)           THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_OBS1 IS NOT NULL) THEN ATUALIZAR = ''S'';            END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_OBS2           IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02_OBS2         ');
+        lQuery.SQL.Add(' 		<> NEW.MC02_OBS2)           THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_OBS2 IS NOT NULL) THEN ATUALIZAR = ''S'';            END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_ALTERAR_CUSTOS IS NOT NULL) THEN  BEGIN  IF (OLD.MC02_ALTERAR_CUSTOS');
+        lQuery.SQL.Add(' 		<> NEW.MC02_ALTERAR_CUSTOS) THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_ALTERAR_CUSTOS IS NOT NULL) THEN ATUALIZAR = ''S'';  END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02_SPED_SN        IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02_SPED_SN      ');
+        lQuery.SQL.Add(' 		<> NEW.MC02_SPED_SN)        THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02_SPED_SN IS NOT NULL) THEN ATUALIZAR = ''S'';         END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02REGIME          IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02REGIME        ');
+        lQuery.SQL.Add(' 		<> NEW.MC02REGIME)          THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02REGIME IS NOT NULL) THEN ATUALIZAR = ''S'';           END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CRT             IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CRT           ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CRT)             THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CRT IS NOT NULL) THEN ATUALIZAR = ''S'';              END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CNAE            IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CNAE          ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CNAE)            THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CNAE IS NOT NULL) THEN ATUALIZAR = ''S'';             END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02CONTATO         IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02CONTATO       ');
+        lQuery.SQL.Add(' 		<> NEW.MC02CONTATO)         THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02CONTATO IS NOT NULL) THEN ATUALIZAR = ''S'';          END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02FONE_CONTATO    IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02FONE_CONTATO  ');
+        lQuery.SQL.Add(' 		<> NEW.MC02FONE_CONTATO)    THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02FONE_CONTATO IS NOT NULL) THEN ATUALIZAR = ''S'';     END          ');
+        lQuery.SQL.Add('         IF (OLD.MC02EMAIL_CONTATO   IS NOT NULL) THEN  BEGIN  IF  (OLD.MC02EMAIL_CONTATO ');
+        lQuery.SQL.Add(' 		<> NEW.MC02EMAIL_CONTATO)   THEN  BEGIN ATUALIZAR = ''S'';  END  END ELSE            ');
+        lQuery.SQL.Add(' 		BEGIN IF (NEW.MC02EMAIL_CONTATO IS NOT NULL) THEN ATUALIZAR = ''S'';    END          ');
+        lQuery.SQL.Add('         IF (ATUALIZAR = ''S'') THEN                                                      ');
+        lQuery.SQL.Add('         BEGIN                                                                            ');
+        lQuery.SQL.Add('          UPDATE OR INSERT INTO TBL_INTEG_FN (CODIGO, DATA_ATUALIZACAO, EXCLUIDO,ENVIADO) ');
+        lQuery.SQL.Add('          VALUES (OLD.MC02CODIGO, CURRENT_TIMESTAMP, ''N'',''N'')                         ');
+        lQuery.SQL.Add('          MATCHING (CODIGO);                                                              ');
+        lQuery.SQL.Add('         END                                                                              ');
+        lQuery.SQL.Add('     END                                                                                  ');
+        lQuery.SQL.Add('     ELSE IF (DELETING) THEN                                                              ');
+        lQuery.SQL.Add('     BEGIN                                                                                ');
+        lQuery.SQL.Add('         UPDATE OR INSERT INTO TBL_INTEG_FN (CODIGO, DATA_ATUALIZACAO, EXCLUIDO)          ');
+        lQuery.SQL.Add('         VALUES (OLD.MC02CODIGO, CURRENT_TIMESTAMP, ''S'')                                ');
+        lQuery.SQL.Add('         MATCHING (CODIGO);                                                               ');
+        lQuery.SQL.Add('     END                                                                                  ');
+        lQuery.SQL.Add(' END                                                                                     ');
+        lQuery.ExecSQL;
+        lQuery.Connection.Commit;
+      end;
+    finally
+      lQuery.Free;
+    end;
+
+  except
+    on e: Exception do
+      ShowMessage('Problemas ao salvar a configuração.');
+  end;
+end;
+
+end.

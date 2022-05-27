@@ -1,0 +1,328 @@
+object frmCadastroFuncionario: TfrmCadastroFuncionario
+  Left = 0
+  Top = 0
+  Caption = 'frmCadastroFuncionario'
+  ClientHeight = 600
+  ClientWidth = 800
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  OnShow = FormShow
+  PixelsPerInch = 96
+  TextHeight = 13
+  object pnlTitulo: TPanel
+    Left = 0
+    Top = 0
+    Width = 800
+    Height = 41
+    Align = alTop
+    Caption = 'Cadastro Funcionarios'
+    Color = 7098370
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWhite
+    Font.Height = -19
+    Font.Name = 'Arial'
+    Font.Style = []
+    ParentBackground = False
+    ParentFont = False
+    TabOrder = 0
+    object pnlModoAdm: TPanel
+      Left = 784
+      Top = 1
+      Width = 15
+      Height = 39
+      Align = alRight
+      BevelOuter = bvNone
+      TabOrder = 0
+    end
+  end
+  object pnlRodape: TPanel
+    Left = 0
+    Top = 560
+    Width = 800
+    Height = 40
+    Align = alBottom
+    Color = 7098370
+    ParentBackground = False
+    TabOrder = 1
+    object btnSalvar: TButton
+      Left = 1
+      Top = 1
+      Width = 125
+      Height = 38
+      Align = alLeft
+      Caption = 'Salvar'
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Arial'
+      Font.Style = [fsBold]
+      ImageIndex = 14
+      ParentFont = False
+      TabOrder = 0
+      OnClick = btnSalvarClick
+    end
+    object Button1: TButton
+      Left = 126
+      Top = 1
+      Width = 125
+      Height = 38
+      Align = alLeft
+      Caption = 'Sair'
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Arial'
+      Font.Style = [fsBold]
+      ImageIndex = 14
+      ParentFont = False
+      TabOrder = 1
+      OnClick = Button1Click
+    end
+  end
+  object pnlCentral: TPanel
+    Left = 0
+    Top = 41
+    Width = 800
+    Height = 519
+    Align = alClient
+    TabOrder = 2
+    object lblCodigo: TLabel
+      Left = 11
+      Top = 5
+      Width = 33
+      Height = 13
+      Caption = 'Codigo'
+    end
+    object Label1: TLabel
+      Left = 11
+      Top = 49
+      Width = 27
+      Height = 13
+      Caption = 'Nome'
+    end
+    object Label2: TLabel
+      Left = 11
+      Top = 136
+      Width = 45
+      Height = 13
+      Caption = 'Endereco'
+    end
+    object Label3: TLabel
+      Left = 226
+      Top = 136
+      Width = 28
+      Height = 13
+      Caption = 'Bairro'
+    end
+    object Label4: TLabel
+      Left = 442
+      Top = 136
+      Width = 37
+      Height = 13
+      Caption = 'Numero'
+    end
+    object Label5: TLabel
+      Left = 11
+      Top = 182
+      Width = 65
+      Height = 13
+      Caption = 'Complemento'
+    end
+    object Label6: TLabel
+      Left = 226
+      Top = 182
+      Width = 19
+      Height = 13
+      Caption = 'CEP'
+    end
+    object Label7: TLabel
+      Left = 11
+      Top = 226
+      Width = 19
+      Height = 13
+      Caption = 'CPF'
+    end
+    object Label8: TLabel
+      Left = 169
+      Top = 226
+      Width = 14
+      Height = 13
+      Caption = 'RG'
+    end
+    object Label9: TLabel
+      Left = 11
+      Top = 271
+      Width = 24
+      Height = 13
+      Caption = 'Fone'
+    end
+    object Label10: TLabel
+      Left = 169
+      Top = 271
+      Width = 33
+      Height = 13
+      Caption = 'Celular'
+    end
+    object Label11: TLabel
+      Left = 11
+      Top = 320
+      Width = 81
+      Height = 13
+      Caption = 'Data Nascimento'
+    end
+    object Label12: TLabel
+      Left = 11
+      Top = 91
+      Width = 24
+      Height = 13
+      Caption = 'Email'
+    end
+    object Label13: TLabel
+      Left = 393
+      Top = 47
+      Width = 32
+      Height = 13
+      Caption = 'Salario'
+    end
+    object Label14: TLabel
+      Left = 442
+      Top = 180
+      Width = 33
+      Height = 13
+      Caption = 'Cidade'
+    end
+    object edtCodigo: TEdit
+      Left = 11
+      Top = 22
+      Width = 121
+      Height = 24
+      Color = clActiveCaption
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clBlack
+      Font.Height = -13
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      ReadOnly = True
+      TabOrder = 0
+    end
+    object edtNome: TEdit
+      Left = 11
+      Top = 66
+      Width = 330
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 1
+    end
+    object edtEndereco: TEdit
+      Left = 11
+      Top = 155
+      Width = 200
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 4
+    end
+    object edtBairro: TEdit
+      Left = 226
+      Top = 153
+      Width = 200
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 5
+    end
+    object edtNumero: TEdit
+      Left = 442
+      Top = 153
+      Width = 145
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 6
+    end
+    object edtComplemento: TEdit
+      Left = 11
+      Top = 199
+      Width = 200
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 7
+    end
+    object edtCEP: TEdit
+      Left = 226
+      Top = 199
+      Width = 200
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 8
+    end
+    object edtCPF: TEdit
+      Left = 11
+      Top = 243
+      Width = 121
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 10
+    end
+    object edtRG: TEdit
+      Left = 169
+      Top = 243
+      Width = 121
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 11
+    end
+    object edtFone: TEdit
+      Left = 11
+      Top = 288
+      Width = 121
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 12
+    end
+    object edtCelular: TEdit
+      Left = 169
+      Top = 288
+      Width = 121
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 13
+    end
+    object dtpDataNasc: TDateTimePicker
+      Left = 11
+      Top = 339
+      Width = 121
+      Height = 21
+      Date = 44707.000000000000000000
+      Time = 0.010809039355081040
+      TabOrder = 14
+    end
+    object edtEmail: TEdit
+      Left = 11
+      Top = 108
+      Width = 330
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 3
+    end
+    object edtCidade: TEdit
+      Left = 442
+      Top = 199
+      Width = 145
+      Height = 21
+      CharCase = ecUpperCase
+      TabOrder = 9
+      OnKeyUp = edtCidadeKeyUp
+    end
+    object edtSalario: TEdit
+      Left = 393
+      Top = 66
+      Width = 194
+      Height = 21
+      TabOrder = 2
+    end
+  end
+end

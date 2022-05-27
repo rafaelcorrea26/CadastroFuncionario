@@ -1,0 +1,49 @@
+unit fAvisos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls;
+
+type
+  TfrmAvisos = class(TForm)
+    pnlTitulo: TPanel;
+    Panel1: TPanel;
+    Timer1: TTimer;
+    procedure Timer1Timer(Sender: TObject);
+  private
+    { Private declarations }
+    procedure AtualizaPainelAviso;
+
+  public
+    { Public declarations }
+  end;
+
+var
+  frmAvisos: TfrmAvisos;
+
+implementation
+
+{$R *.dfm}
+{ TfrmAvisos }
+
+procedure TfrmAvisos.AtualizaPainelAviso;
+begin
+  pnlTitulo.Caption := 'Conectando com API. Recebendo/Enviando Registros.';
+  pnlTitulo.update;
+
+  pnlTitulo.Caption := 'Conectando com API.. Recebendo/Enviando Registros..';
+  pnlTitulo.update;
+
+  pnlTitulo.Caption := 'Conectando com API... Recebendo/Enviando Registros...';
+  pnlTitulo.update;
+
+end;
+
+procedure TfrmAvisos.Timer1Timer(Sender: TObject);
+begin
+  AtualizaPainelAviso;
+end;
+
+end.

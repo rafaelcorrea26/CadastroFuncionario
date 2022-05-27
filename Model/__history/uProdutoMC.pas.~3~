@@ -1,0 +1,2177 @@
+unit uProdutoMC;
+
+interface
+
+uses
+  DB,
+  SysUtils,
+  mATH, FireDAC.Comp.Client;
+
+type
+  TProduto = class
+  private
+    FQuery: TFDQuery;
+    FDataSet: TFDQuery;
+
+    FCodigo: string; // AC03CODI   PRODUTO NOT NULL /* PRODUTO = CHAR(7) */,
+    FDescricao: string; // AC03DESC  VARCHAR(35),
+    FReferencia: string; // AC03REF VARCHAR(15),
+    FUnidade: string; // AC03UN  VARCHAR(4),
+    FCodigoBarras: string; // AC03CBR  VARCHAR(15),
+    FPrecoVista: Double; // AN03PRC1  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FPrecoPrazo: Double; // AN03_PR_PZ  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FSubGrupo: string; // AC03SBG  VARCHAR(6),
+    // FIcms: TIcms; // AC03TBICM  CHAR(2),
+    FCodigoIpi: Integer; // AN03_TB_IPI  INTEGER,
+    FLocalizacao: string; // AC03END   VARCHAR(10),
+    FDataHoraCadastro: TDateTime; // AD03DTCD   EMISSAO /* EMISSAO = DATE */,
+    FDataHoraAlteracao: TDateTime; // AD03DTAP   EMISSAO /* EMISSAO = DATE */,
+
+    FUsuarioCadastro: Integer;
+    FUsuarioAlteracao: Integer;
+    FClasse: string; // AC03CLAS                 VARCHAR(25),
+    FMarca: string; // AC03_MARCA               VARCHAR(25),
+    FSemComissao: Boolean; // AC03_PRO_SEM_COMISSAO    TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FComissaoDiferenciada: Double; // AN03_COMI_VAREJO         DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FvBCSTRet: Currency; // AN03_VBCSTRET            DINHEIRO DEFAULT 0 /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FvICMSSTRet: Currency; // AN03_VICMSSTRET          DINHEIRO DEFAULT 0 /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FNcm: string; // AC03_CODIGO_DCB          VARCHAR(15),
+    FCest: string; // AC03_CEST                VARCHAR(7),
+    FALIQ_ST_RET: Currency; // AN03_ALIQ_ST_RET         QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FValorIcmsSubstituto: Currency; // AN03_VICMSSUBSTITUTO     DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FDataVenda: TDate; // AD03DTVE   EMISSAO /* EMISSAO = DATE */,
+    FDataCompra: TDate; // AD03DTCO    EMISSAO /* EMISSAO = DATE */,
+    FSaldoAtual: Double; // AN03SLAM    DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FQuantidadeAtacado: Double; // AN03_QT_ATACADO          QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FCusto: Double; // AN03CTCO        DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FGrupo: String; // AC03GRUPO                CHAR(2),
+    FTQCF: Double; // AN03TQCF        DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCustoMedio: Double; // AN03CTME   DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCustoMedio2: Double; // AN03CTME2 DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FPrecoAtacado: Double; // AN03_PRECO2              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FValorPromocaoAtacado: Double; // AN03_PROMOCAO2           DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FValorPromocaoVenda: Double; // AN03PRC2  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FDataIniPromocaoAt: TDate; // AD03_DT_INI_PROMOCAO2    EMISSAO /* EMISSAO = DATE */,
+    FDataFimPromocaoAt: TDate; // AD03_DT_PROMOCAO2        EMISSAO /* EMISSAO = DATE */,
+    FDataIniPromocaoVenda: TDate; // AD03DTINIPROM            EMISSAO /* EMISSAO = DATE */,
+    FDataFimPromocaoVenda: TDate; // AD03DTPROM               EMISSAO /* EMISSAO = DATE */,
+    FProdutoEmPromocao: Boolean; // AC03PROM  TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPesoBruto: Double; // AN03PESOB  QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FPesoLiquido: Double; // AN03PESO  QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FCodigoGIA: string; // AC03CODIGO_GIA           VARCHAR(15),
+    // FANP: TANP; // AC03CODIGOANP            VARCHAR(10),
+    FReferenciaFornecedor: string; // AC03RFAB  VARCHAR(25),
+    FPrecoBaseST: Double; // AN03_BASE_SUBST          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FMVA: Double; // AN03_FT_BASE_RS          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FMVAUF: Double; // AN03_FT_BASE_UF          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FAliquotaICMSST: Double; // AN03_FT_VALOR_RS         DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FAliquotaICMSSTUF: Double; // AN03_FT_VALOR_UF         DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FSubstituicaoTributaria: Boolean; // AC03_SUBST_TRIB          TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FCodigoICMSST: string; // AC03_STB                 CHAR(3),
+    FCFOPConsumidorFinal: string; // AC03_CFOP_RS             CFOP /* CFOP = VARCHAR(6) */,
+    FCFOPConsumidorFinalUF: string; // AC03_CFOP_UF             CFOP /* CFOP = VARCHAR(6) */,
+    FCFOPRevenda: string; // AC03_CFOP_RS_REVENDA     VARCHAR(6),
+    FCFOPRevendaUF: string; // AC03_CFOP_UF_REVENDA     VARCHAR(6),
+    FObservacao: string; // AC03MEMO  BLOB SUB_TYPE 0 SEGMENT SIZE 80,
+
+    // --- novos
+
+    FCodigoUltimoFornecedor: string; // AC03CFAB  VARCHAR(15),
+    FMargem: Double; // AN03MARG  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FUltimaCompra: Double; // AN03UC  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FTabelaIpiOld: string; // AC03TBIPI  CHAR(2),
+    FISQN: Double; // AN03ISQN   QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FEstoqueMinimo: Double; // AN03SLMM DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FSaldoInicial: Double; // AN03SLIM  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCompras: Double; // AN03TQCM        DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FVendas: Double; // AN03TVM         DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+
+    FTDCM: Double; // AN03TDCM          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FTDVM: Double; // AN03TDVM          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FLiberadoParaVenda: Boolean; // AC03LTSN        TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPrazoMedioCompraEmDias: smallint; // AN03PZM    SMALLINT,
+    FQuantidadeUltimaCompra: Double; // AN03QUC     DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FUltimaNotaFiscal: string; // AC03NFUC          VARCHAR(10),
+    FUltimoPedido: string; // AC03PDUC              VARCHAR(10),
+
+    FSLMX: Double; // AN03SLMX DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FTR: smallint; // AN03TR   SMALLINT,
+    FQuantidadeCasasDecimaisVenda: string; // AC03PTENT TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FDataHoraInclusao: TDateTime; // AD03DTHORA               DATAHORA /* DATAHORA = TIMESTAMP */,
+    FCustoCompraNF: Double; // AN03CTNF  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+
+    FMargemAtualizada: Double; // AN03MARGEMA              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FAjusteEntrada: Double; // AN03AJUSTEE              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FAjusteSaida: Double; // AN03AJUSTES              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FEtiquetaUrano: string; // AC03_ET_URANO            VARCHAR(12),
+    FEtiquetaToledo: String; // AC03_ET_TOLEDO           VARCHAR(12),
+    FEtiquetaFilizola: string; // AC03_ET_FILIZ            VARCHAR(12),
+    FCor: string; // AC03_COR   VARCHAR(6),
+    FTamanho: string; // AC03_TAM    VARCHAR(6),
+    FCusto2: Double; // AN03_CTCO2  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCodigoFornecedor2: string; // AC03_CFAB2               VARCHAR(5),
+    FDataCompra2: TDate; // AD03_DTCO2               EMISSAO /* EMISSAO = DATE */,
+    FQuantidadeComp: Double; // AN03_QT_COMP             QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FUnidadeComp: string; // AC03_UN_COMP             CHAR(2),
+    FPermiteAlterarPrecoDuranteVenda: Boolean; // AC03_MOD_PRECO           TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FComissaoDiferenciadaAtacado: Double; // AN03_COMI_ATACADO        DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FQuantidadeCompra: Double; // AN03_QT_COMPRA           QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FUnidade2: string; // AC03_UN2                 CHAR(2),
+    FQuantidadeCompra2: Double; // AN03_QT_COMPRA2          QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FCusto02: Double; // AN03_CUSTO2              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FDescricaoAtacado: string; // AC03_DESC2               VARCHAR(35),
+    FReferenciaAtacado: string; // AC03_REF2                VARCHAR(15),
+    FCodigoBarrasAtacado: string; // AC03_CBR2                VARCHAR(15),
+    FSaldo2: Double; // AN03_SALDO2              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCustoCompra: Double; // AN03_CUSTO_COMPRA        DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FMargemAtacado: Double; // AN03_MARGEM2             DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FFoto: string; // AC03_FOTO                VARCHAR(45),
+    FValidade: Boolean; // AC03_VALIDADE            VERDFALSO /* VERDFALSO = CHAR(1) */,
+    FDataValidade: TDate; // AD03_DT_VALIDADE         DATE,
+    FDecimal3: Boolean; // AC03_DECIMAL3            TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FCodigoProdutoSimilar: string; // AC03_UNIR                VARCHAR(3),
+    FReservaSaida: Double; // AN03_RES_SAIDA           QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FReservaEntrada: Double; // AN03_RES_ENTRADA         QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FCodigoFabricante: Integer; // AC03_COD_FAB             CODIGO /* CODIGO = INTEGER */,
+    FPrecoVendaLiberado: Boolean; // AC03_LIBERARPRECO        TIPODIVERSO DEFAULT 'N' /* TIPODIVERSO = CHAR(1) */,
+    FImprimirNaListaPrecoAtacado: Boolean; // AC03_LISTA_ATACADO       TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPMCSugestao: Double; // AN03_PRECO_PMC           DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+
+    FNomeSite: string; // AC03_NOME_SITE           VARCHAR(150),
+    FNomeSiteResumido: string; // AC03_NOME_SITE_RESUMIDO  VARCHAR(50),
+    FDescricaoSite: string; // AC03_DESCRICAO_SITE      BLOB SUB_TYPE 0 SEGMENT SIZE 80,
+    FEspecificacaoSite: string; // AC03_ESPEFICICAO_SITE    BLOB SUB_TYPE 0 SEGMENT SIZE 80,
+    FDisponivelSite: Boolean; // AC03_DISPONIVEL_SITE     VERDFALSO /* VERDFALSO = CHAR(1) */,
+    FFotoAlteradaSite: Boolean; // AC03_FOTO_ALTERADA_SITE  VERDFALSO /* VERDFALSO = CHAR(1) */,
+    FEnviarSite: Boolean; // AC03_ENVIAR_SITE         VERDFALSO /* VERDFALSO = CHAR(1) */,
+    FEstoqueNegativo: Boolean; // AC03_ESTOQUE_NEGATIVO    VERDFALSO DEFAULT 'N' /* VERDFALSO = CHAR(1) */,
+    FUsuarioControlado: Boolean; // AC03_USU_CONTROLADO      VERDFALSO DEFAULT 'N' /* VERDFALSO = CHAR(1) */,
+    FTipoLista: string; // AC03_TIPO_LISTA          CHAR(4),
+    FReserva: Double; // AN03_RESERVA             QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FPedidoCompra: Double; // AN03_PED_COMPRA          QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FQuantidadeMultiplaVenda: Integer; // AN03_GIRO_DIAS           INTEGER,
+    FQuantidadeVendidaPartirUltimaCompra: Double;
+    // AN03_QTVENDA_UC          QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FQuantidadeMinimaVenda: Double; // AN03_GIRO_PERC           QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FObsoletos: Boolean; // AC03_OBSOLETOS           TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPrazoEntrega: Integer; // AN03_PRAZO_ENTREGA       INTEGER DEFAULT 0,
+    FDesconto: Double; // AN03DESCONTO             DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FPedidoMinimo: Double; // AN03PED_MIN              DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FQuantidadePromocao: Double; // AN03QT_PROMO             DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FFatorBasePremiacao: Double;
+    // AN03_PREMIACAO           QUANTIDADE DEFAULT 1 /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FFatorEntrada: Double; // AN03_FATORE              DOUBLE PRECISION,
+    FFatorSaida: Double; // AN03_FATORS              DOUBLE PRECISION,
+    FUnidadeEntrada: string; // AC03_UNIDE               CHAR(2),
+    FUnidadeSaida: string; // AC03_UNIDS               CHAR(2),
+
+    FGrade: string; // AC03_GRADE               VARCHAR(5),
+    FTabelaPreco: String; // AC03_TABPRECO            VARCHAR(5),
+    FFatorGelado: Double; // AN03_GELADO              QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FSPED: Boolean; // AC03_SPED_SN             TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FVendaPorDimensao: Boolean; // AC03VENDAPORDIMENSAO     TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPrecoVendaAuxiliar: Double; // AN03_PRECO_VENDA_AUX     DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FCustoAuxiliar: Double; // AN03_CTCO_AUX            DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FVendaKilo: string; // AC03_VENDA_KG            TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FSaldoAuxiliar: Double; // AN03_SALDO_AUX           QUANTIDADE /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FSKU: string; // AC03_SKU                 VARCHAR(25),
+    FCodigoGIARevenda: string; // AC03CODIGO_GIA_REVENDA   VARCHAR(15),
+    FInsumo: string; // AC03_INSUMO              CHAR(2),
+    FPrecoSite: Double; // AN03_PRECO_SITE          DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FPrecoPromocaoSite: Double; // AN03_PRECO_SITE_PROMO    DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */,
+    FprecoDiferenciadoSite: Boolean; // AN03_PRECO_DIFER_SITE    TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FDataInicialPromocaoSite: TDate; // AD03_DT_INI_PROM_SITE    EMISSAO /* EMISSAO = DATE */,
+    FDataFinalPromocaoSite: TDate; // AD03_DT_FIM_PROM_SITE    EMISSAO /* EMISSAO = DATE */,
+    FProdutoEmPromocaoSite: Boolean; // AC03_PROD_PROMO_SITE     TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FDataEnviadoSite: TDateTime; // AD03_DT_ENVIADO_SITE     TIMESTAMP,
+    FEnviadoSite: Boolean; // AC03_ENVIADO_SITE        TIPODIVERSO /* TIPODIVERSO = CHAR(1) */,
+    FPesoSiteGramas: Double;
+    // AN03PESO_GRAMAS          QUANTIDADE DEFAULT '0' /* QUANTIDADE = NUMERIC(15,4) DEFAULT 0 */,
+    FIdSite: string; // ID_SITE                  VARCHAR(35),
+    FIdCategoriaSite: Integer;
+
+    // ID_CATEGORIA_SITE        INTEGER
+
+  public
+    destructor Destroy; override;
+
+    property Codigo: string read FCodigo write FCodigo;
+    property Descricao: string read FDescricao write FDescricao;
+    property Referencia: string read FReferencia write FReferencia;
+    property Unidade: string read FUnidade write FUnidade;
+    property CodigoBarras: string read FCodigoBarras write FCodigoBarras;
+    property PrecoVista: Double read FPrecoVista write FPrecoVista;
+    property PrecoPrazo: Double read FPrecoPrazo write FPrecoPrazo;
+    property SubGrupo: string read FSubGrupo write FSubGrupo;
+    // property CodigoIcms: string read FCodigoIcms write FCodigoIcms;
+    // property Icms: TIcms read FIcms write FIcms;
+    property CodigoIpi: Integer read FCodigoIpi write FCodigoIpi;
+    property Localizacao: string read FLocalizacao write FLocalizacao;
+    property DataHoraCadastro: TDateTime read FDataHoraCadastro write FDataHoraCadastro;
+    property DataHoraAlteracao: TDateTime read FDataHoraAlteracao write FDataHoraAlteracao;
+    property Classe: string read FClasse write FClasse;
+    property Marca: string read FMarca write FMarca;
+    property SaldoAtual: Double read FSaldoAtual write FSaldoAtual;
+    // SM2791 // HS-80
+
+    property SemComissao: Boolean read FSemComissao write FSemComissao;
+    property ComissaoDiferenciada: Double read FComissaoDiferenciada write FComissaoDiferenciada;
+
+    property vBCSTRet: Currency read FvBCSTRet write FvBCSTRet;
+    property vICMSSTRet: Currency read FvICMSSTRet write FvICMSSTRet;
+    // MC Pediu 28/05/2019
+    property ALIQ_ST_RET: Currency read FALIQ_ST_RET write FALIQ_ST_RET;
+
+    // 10/12/19 - Graziele
+    property ValorIcmsSubstituto: Currency read FValorIcmsSubstituto write FValorIcmsSubstituto;
+
+    property Ncm: string read FNcm write FNcm;
+    property Cest: string read FCest write FCest;
+
+    property DataVenda: TDate read FDataVenda write FDataVenda;
+    property DataCompra: TDate read FDataCompra write FDataCompra;
+
+    property QuantidadeAtacado: Double read FQuantidadeAtacado write FQuantidadeAtacado; // HS-100 // Vagner Oliveira
+    property Custo: Double read FCusto write FCusto;
+    property Grupo: String read FGrupo write FGrupo;
+    property TQCF: Double read FTQCF write FTQCF;
+    property CustoMedio: Double read FCustoMedio write FCustoMedio;
+    property CustoMedio2: Double read FCustoMedio2 write FCustoMedio2;
+
+    // HS-165 e HS-166 - Rafael - 13/08/2020
+    property PrecoAtacado: Double read FPrecoAtacado write FPrecoAtacado;
+    property ValorPromocaoAtacado: Double read FValorPromocaoAtacado write FValorPromocaoAtacado;
+    property ValorPromocaoVenda: Double read FValorPromocaoVenda write FValorPromocaoVenda;
+    property DataIniPromocaoAt: TDate read FDataIniPromocaoAt write FDataIniPromocaoAt;
+    property DataFimPromocaoAt: TDate read FDataFimPromocaoAt write FDataFimPromocaoAt;
+    property DataIniPromocaoVenda: TDate read FDataIniPromocaoVenda write FDataIniPromocaoVenda;
+    property DataFimPromocaoVenda: TDate read FDataFimPromocaoVenda write FDataFimPromocaoVenda;
+    property ProdutoEmPromocao: Boolean read FProdutoEmPromocao write FProdutoEmPromocao;
+
+    property PesoBruto: Double read FPesoBruto write FPesoBruto;
+    property PesoLiquido: Double read FPesoLiquido write FPesoLiquido;
+
+    property CodigoGIA: string read FCodigoGIA write FCodigoGIA; // HS-605 // Vagner
+    // property ANP: TANP read FANP write FANP; // HS-605 // Vagner
+    property ReferenciaFornecedor: string read FReferenciaFornecedor write FReferenciaFornecedor; // HS-605 // Vagner
+    property PrecoBaseST: Double read FPrecoBaseST write FPrecoBaseST; // HS-605 // Vagner
+    property MVA: Double read FMVA write FMVA; // HS-605 // Vagner
+    property MVAUF: Double read FMVAUF write FMVAUF; // HS-605 // Vagner
+    property AliquotaICMSST: Double read FAliquotaICMSST write FAliquotaICMSST; // HS-605 // Vagner
+    property AliquotaICMSSTUF: Double read FAliquotaICMSSTUF write FAliquotaICMSSTUF; // HS-605 // Vagner
+    property SubstituicaoTributaria: Boolean read FSubstituicaoTributaria write FSubstituicaoTributaria;
+    // HS-605 // Vagner // AC03_SUBST_TRIB
+    property CodigoICMSST: string read FCodigoICMSST write FCodigoICMSST; // HS-605 // Vagner // AC03_STB
+    property CFOPConsumidorFinal: string read FCFOPConsumidorFinal write FCFOPConsumidorFinal;
+    // HS-605 // Vagner  // AC03_CFOP_RS
+    property CFOPConsumidorFinalUF: string read FCFOPConsumidorFinalUF write FCFOPConsumidorFinalUF;
+    // HS-605 // Vagner  // AC03_CFOP_UF
+    property CFOPRevenda: string read FCFOPRevenda write FCFOPRevenda; // HS-605 // Vagner  // AC03_CFOP_RS_REVENDA
+    property CFOPRevendaUF: string read FCFOPRevendaUF write FCFOPRevendaUF;
+    // HS-605 // Vagner  // AC03_CFOP_UF_REVENDA
+    property Observacao: string read FObservacao write FObservacao; // ac03memo
+
+
+    // --- Vagner 21.06.00                                                                                      //
+
+    property CodigoUltimoFornecedor: string read FCodigoUltimoFornecedor write FCodigoUltimoFornecedor;
+    property Margem: Double read FMargem write FMargem;
+    property UltimaCompra: Double read FUltimaCompra write FUltimaCompra;
+    property TabelaIpiOld: string read FTabelaIpiOld write FTabelaIpiOld;
+    property ISQN: Double read FISQN write FISQN;
+    property EstoqueMinimo: Double read FEstoqueMinimo write FEstoqueMinimo;
+    property SaldoInicial: Double read FSaldoInicial write FSaldoInicial;
+    property Compras: Double read FCompras write FCompras;
+    property Vendas: Double read FVendas write FVendas;
+    property TDCM: Double read FTDCM write FTDCM;
+    property TDVM: Double read FTDVM write FTDVM;
+    property LiberadoParaVenda: Boolean read FLiberadoParaVenda write FLiberadoParaVenda;
+    property PrazoMedioCompraEmDias: smallint read FPrazoMedioCompraEmDias write FPrazoMedioCompraEmDias;
+    property QuantidadeUltimaCompra: Double read FQuantidadeUltimaCompra write FQuantidadeUltimaCompra;
+    property UltimaNotaFiscal: string read FUltimaNotaFiscal write FUltimaNotaFiscal;
+    property UltimoPedido: string read FUltimoPedido write FUltimoPedido;
+    property SLMX: Double read FSLMX write FSLMX;
+    property TR: smallint read FTR write FTR;
+    property QuantidadeCasasDecimaisVenda: string read FQuantidadeCasasDecimaisVenda
+      write FQuantidadeCasasDecimaisVenda;
+    property DataHoraInclusao: TDateTime read FDataHoraInclusao write FDataHoraInclusao;
+    property CustoCompraNF: Double read FCustoCompraNF write FCustoCompraNF;
+    property MargemAtualizada: Double read FMargemAtualizada write FMargemAtualizada;
+    property AjusteEntrada: Double read FAjusteEntrada write FAjusteEntrada;
+    property AjusteSaida: Double read FAjusteSaida write FAjusteSaida;
+    property EtiquetaUrano: string read FEtiquetaUrano write FEtiquetaUrano;
+    property EtiquetaToledo: String read FEtiquetaToledo write FEtiquetaToledo;
+    property EtiquetaFilizola: string read FEtiquetaFilizola write FEtiquetaFilizola;
+    property Cor: string read FCor write FCor;
+    property Tamanho: string read FTamanho write FTamanho;
+    property Custo2: Double read FCusto2 write FCusto2;
+    property CodigoFornecedor2: string read FCodigoFornecedor2 write FCodigoFornecedor2;
+    property DataCompra2: TDate read FDataCompra2 write FDataCompra2;
+    property QuantidadeComp: Double read FQuantidadeComp write FQuantidadeComp;
+    property UnidadeComp: string read FUnidadeComp write FUnidadeComp;
+    property PermiteAlterarPrecoDuranteVenda: Boolean read FPermiteAlterarPrecoDuranteVenda
+      write FPermiteAlterarPrecoDuranteVenda;
+    property ComissaoDiferenciadaAtacado: Double read FComissaoDiferenciadaAtacado write FComissaoDiferenciadaAtacado;
+    property QuantidadeCompra: Double read FQuantidadeCompra write FQuantidadeCompra;
+    property Unidade2: string read FUnidade2 write FUnidade2;
+    property QuantidadeCompra2: Double read FQuantidadeCompra2 write FQuantidadeCompra2;
+    property Custo02: Double read FCusto02 write FCusto02;
+    property DescricaoAtacado: string read FDescricaoAtacado write FDescricaoAtacado;
+    property ReferenciaAtacado: string read FReferenciaAtacado write FReferenciaAtacado;
+    property CodigoBarrasAtacado: string read FCodigoBarrasAtacado write FCodigoBarrasAtacado;
+    property Saldo2: Double read FSaldo2 write FSaldo2;
+    property CustoCompra: Double read FCustoCompra write FCustoCompra;
+    property MargemAtacado: Double read FMargemAtacado write FMargemAtacado;
+    property Foto: string read FFoto write FFoto;
+    property Validade: Boolean read FValidade write FValidade;
+    property DataValidade: TDate read FDataValidade write FDataValidade;
+    property Decimal3: Boolean read FDecimal3 write FDecimal3;
+    property CodigoProdutoSimilar: string read FCodigoProdutoSimilar write FCodigoProdutoSimilar;
+    property ReservaSaida: Double read FReservaSaida write FReservaSaida;
+    property ReservaEntrada: Double read FReservaEntrada write FReservaEntrada;
+    property CodigoFabricante: Integer read FCodigoFabricante write FCodigoFabricante;
+    property PrecoVendaLiberado: Boolean read FPrecoVendaLiberado write FPrecoVendaLiberado;
+    property ImprimirNaListaPrecoAtacado: Boolean read FImprimirNaListaPrecoAtacado write FImprimirNaListaPrecoAtacado;
+    property PMCSugestao: Double read FPMCSugestao write FPMCSugestao;
+    property NomeSite: string read FNomeSite write FNomeSite;
+    property NomeSiteResumido: string read FNomeSiteResumido write FNomeSiteResumido;
+    property DescricaoSite: string read FDescricaoSite write FDescricaoSite;
+    property EspecificacaoSite: string read FEspecificacaoSite write FEspecificacaoSite;
+    property DisponivelSite: Boolean read FDisponivelSite write FDisponivelSite;
+    property FotoAlteradaSite: Boolean read FFotoAlteradaSite write FFotoAlteradaSite;
+    property EnviarSite: Boolean read FEnviarSite write FEnviarSite;
+    property EstoqueNegativo: Boolean read FEstoqueNegativo write FEstoqueNegativo;
+    property UsuarioControlado: Boolean read FUsuarioControlado write FUsuarioControlado;
+    property TipoLista: string read FTipoLista write FTipoLista;
+    property Reserva: Double read FReserva write FReserva;
+    property PedidoCompra: Double read FPedidoCompra write FPedidoCompra;
+    property QuantidadeMultiplaVenda: Integer read FQuantidadeMultiplaVenda write FQuantidadeMultiplaVenda;
+    property QuantidadeVendidaPartirUltimaCompra: Double read FQuantidadeVendidaPartirUltimaCompra
+      write FQuantidadeVendidaPartirUltimaCompra;
+    property QuantidadeMinimaVenda: Double read FQuantidadeMinimaVenda write FQuantidadeMinimaVenda;
+    property Obsoletos: Boolean read FObsoletos write FObsoletos;
+    property PrazoEntrega: Integer read FPrazoEntrega write FPrazoEntrega;
+    property Desconto: Double read FDesconto write FDesconto;
+    property PedidoMinimo: Double read FPedidoMinimo write FPedidoMinimo;
+    property QuantidadePromocao: Double read FQuantidadePromocao write FQuantidadePromocao;
+    property FatorBasePremiacao: Double read FFatorBasePremiacao write FFatorBasePremiacao;
+    property FatorEntrada: Double read FFatorEntrada write FFatorEntrada;
+    property FatorSaida: Double read FFatorSaida write FFatorSaida;
+    property UnidadeEntrada: string read FUnidadeEntrada write FUnidadeEntrada;
+    property UnidadeSaida: string read FUnidadeSaida write FUnidadeSaida;
+    property Grade: string read FGrade write FGrade;
+    property TabelaPreco: String read FTabelaPreco write FTabelaPreco;
+    property FatorGelado: Double read FFatorGelado write FFatorGelado;
+    property SPED: Boolean read FSPED write FSPED;
+    property VendaPorDimensao: Boolean read FVendaPorDimensao write FVendaPorDimensao;
+    property PrecoVendaAuxiliar: Double read FPrecoVendaAuxiliar write FPrecoVendaAuxiliar;
+    property CustoAuxiliar: Double read FCustoAuxiliar write FCustoAuxiliar;
+    property VendaKilo: string read FVendaKilo write FVendaKilo;
+    property SaldoAuxiliar: Double read FSaldoAuxiliar write FSaldoAuxiliar;
+    property SKU: string read FSKU write FSKU;
+    property CodigoGIARevenda: string read FCodigoGIARevenda write FCodigoGIARevenda;
+    property Insumo: string read FInsumo write FInsumo;
+    property PrecoSite: Double read FPrecoSite write FPrecoSite;
+    property PrecoPromocaoSite: Double read FPrecoPromocaoSite write FPrecoPromocaoSite;
+    property precoDiferenciadoSite: Boolean read FprecoDiferenciadoSite write FprecoDiferenciadoSite;
+    property DataInicialPromocaoSite: TDate read FDataInicialPromocaoSite write FDataInicialPromocaoSite;
+    property DataFinalPromocaoSite: TDate read FDataFinalPromocaoSite write FDataFinalPromocaoSite;
+    property ProdutoEmPromocaoSite: Boolean read FProdutoEmPromocaoSite write FProdutoEmPromocaoSite;
+    property DataEnviadoSite: TDateTime read FDataEnviadoSite write FDataEnviadoSite;
+    property EnviadoSite: Boolean read FEnviadoSite write FEnviadoSite;
+    property PesoSiteGramas: Double read FPesoSiteGramas write FPesoSiteGramas;
+    property IdSite: string read FIdSite write FIdSite;
+    property IdCategoriaSite: Integer read FIdCategoriaSite write FIdCategoriaSite;
+
+    // --------------------- -------------- --------------------- //
+
+    procedure Carrega(pTipoBusca: Ansichar);
+    procedure CarregaDadosComplementares(pDataSet: TDataSet); virtual;
+    // procedure AtualizaSaldo(pCfop: TCfop; pQuantidade: Double; pOperacaoNota: string = ''; pExclusao: Boolean = false);
+    function CarregaSemTipoBusca(pCampo: string): Boolean;
+    function VerificaSeExisteBuscaPeloCodigo(pCampo: string): Boolean;
+    function VerificaSeExisteBuscaPelaDescricao(pCampo: string): Boolean;
+    function VerificaSeExisteBuscaPeloCBarras(pCampo: string): Boolean;
+    function VerificaSeExisteBuscaPelaReferencia(pCampo: string): Boolean;
+    function VerificaSeExisteBuscaPelaFabricante(pCampo: string): Boolean;
+
+    procedure AlterarDadosDaCompraDoProdutoAposExclusaoDaNotaDeCompra(pCustoOk: Boolean);
+
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+
+    class function BuscaProdutoPelasInformacoesDoXml(pFornecedor: Integer; pCodigo, pEAN: string): string;
+    // HS-165 e HS-166 - Rafael - 13/08/2020
+    class function MontaValorPromocao(pCodProduto, pTipoVenda: string; pPermiteUsaPromocao: Boolean): Double;
+    constructor Create;
+
+  end;
+
+implementation
+
+{ TProduto }
+
+procedure TProduto.Alterar(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  try
+    if (TSistema.ValidaCaminhoBanco) then
+    begin
+      FDataSet.close;
+      FDataSet.SQL.Clear;
+      FDataSet.SQL.Add('UPDATE MC03PRO SET                                        ');
+      FDataSet.SQL.Add('    AC03DESC                 = :AC03DESC                  ');
+      FDataSet.SQL.Add('  , AC03REF                  = :AC03REF                   ');
+      FDataSet.SQL.Add('  , AC03SBG                  = :AC03SBG                   ');
+      FDataSet.SQL.Add('  , AC03CBR                  = :AC03CBR                   ');
+      FDataSet.SQL.Add('  , AC03UN                   = :AC03UN                    ');
+      FDataSet.SQL.Add('  , AC03RFAB                 = :AC03RFAB                  ');
+      FDataSet.SQL.Add('  , AC03CFAB                 = :AC03CFAB                  ');
+      FDataSet.SQL.Add('  , AC03END                  = :AC03END                   ');
+      FDataSet.SQL.Add('  , AC03CLAS                 = :AC03CLAS                  ');
+      FDataSet.SQL.Add('  , AN03MARG                 = :AN03MARG                  ');
+      FDataSet.SQL.Add('  , AN03UC                   = :AN03UC                    ');
+      FDataSet.SQL.Add('  , AD03DTCD                 = :AD03DTCD                  ');
+      FDataSet.SQL.Add('  , AC03TBICM                = :AC03TBICM                 ');
+      FDataSet.SQL.Add('  , AC03TBIPI                = :AC03TBIPI                 ');
+      FDataSet.SQL.Add('  , AN03ISQN                 = :AN03ISQN                  ');
+      FDataSet.SQL.Add('  , AD03DTVE                 = :AD03DTVE                  ');
+      FDataSet.SQL.Add('  , AD03DTCO                 = :AD03DTCO                  ');
+      FDataSet.SQL.Add('  , AN03PRC1                 = :AN03PRC1                  ');
+      FDataSet.SQL.Add('  , AN03PRC2                 = :AN03PRC2                  ');
+      FDataSet.SQL.Add('  , AN03CTCO                 = :AN03CTCO                  ');
+      FDataSet.SQL.Add('  , AN03CTME                 = :AN03CTME                  ');
+      FDataSet.SQL.Add('  , AN03SLMM                 = :AN03SLMM                  ');
+      FDataSet.SQL.Add('  , AN03SLIM                 = :AN03SLIM                  ');
+      FDataSet.SQL.Add('  , AN03TQCM                 = :AN03TQCM                  ');
+      FDataSet.SQL.Add('  , AN03TVM                  = :AN03TVM                   ');
+      FDataSet.SQL.Add('  , AN03SLAM                 = :AN03SLAM                  ');
+      FDataSet.SQL.Add('  , AN03TDCM                 = :AN03TDCM                  ');
+      FDataSet.SQL.Add('  , AN03TDVM                 = :AN03TDVM                  ');
+      FDataSet.SQL.Add('  , AC03LTSN                 = :AC03LTSN                  ');
+      FDataSet.SQL.Add('  , AN03TQCF                 = :AN03TQCF                  ');
+      FDataSet.SQL.Add('  , AN03CTME2                = :AN03CTME2                 ');
+      FDataSet.SQL.Add('  , AN03PZM                  = :AN03PZM                   ');
+      FDataSet.SQL.Add('  , AN03QUC                  = :AN03QUC                   ');
+      FDataSet.SQL.Add('  , AC03NFUC                 = :AC03NFUC                  ');
+      FDataSet.SQL.Add('  , AC03PDUC                 = :AC03PDUC                  ');
+      FDataSet.SQL.Add('  , AN03SLMX                 = :AN03SLMX                  ');
+      FDataSet.SQL.Add('  , AN03TR                   = :AN03TR                    ');
+      FDataSet.SQL.Add('  , AC03PTENT                = :AC03PTENT                 ');
+      FDataSet.SQL.Add('  , AN03PESO                 = :AN03PESO                  ');
+      FDataSet.SQL.Add('  , AN03PESOB                = :AN03PESOB                 ');
+      FDataSet.SQL.Add('  , AC03MEMO                 = :AC03MEMO                  ');
+      FDataSet.SQL.Add('  , AC03GRUPO                = :AC03GRUPO                 ');
+      FDataSet.SQL.Add('  , AD03DTHORA               = :AD03DTHORA                ');
+      FDataSet.SQL.Add('  , AC03PROM                 = :AC03PROM                  ');
+      FDataSet.SQL.Add('  , AD03DTPROM               = :AD03DTPROM                ');
+      FDataSet.SQL.Add('  , AN03CTNF                 = :AN03CTNF                  ');
+      FDataSet.SQL.Add('  , AN03MARGEMA              = :AN03MARGEMA               ');
+      FDataSet.SQL.Add('  , AN03AJUSTEE              = :AN03AJUSTEE               ');
+      FDataSet.SQL.Add('  , AN03AJUSTES              = :AN03AJUSTES               ');
+      FDataSet.SQL.Add('  , AC03_ET_URANO            = :AC03_ET_URANO             ');
+      FDataSet.SQL.Add('  , AC03_ET_TOLEDO           = :AC03_ET_TOLEDO            ');
+      FDataSet.SQL.Add('  , AC03_ET_FILIZ            = :AC03_ET_FILIZ             ');
+      FDataSet.SQL.Add('  , AN03_TB_IPI              = :AN03_TB_IPI               ');
+      FDataSet.SQL.Add('  , AC03_COR                 = :AC03_COR                  ');
+      FDataSet.SQL.Add('  , AC03_TAM                 = :AC03_TAM                  ');
+      FDataSet.SQL.Add('  , AN03_PR_PZ               = :AN03_PR_PZ                ');
+      FDataSet.SQL.Add('  , AN03_CTCO2               = :AN03_CTCO2                ');
+      FDataSet.SQL.Add('  , AC03_CFAB2               = :AC03_CFAB2                ');
+      FDataSet.SQL.Add('  , AD03_DTCO2               = :AD03_DTCO2                ');
+      FDataSet.SQL.Add('  , AN03_QT_COMP             = :AN03_QT_COMP              ');
+      FDataSet.SQL.Add('  , AC03_UN_COMP             = :AC03_UN_COMP              ');
+      FDataSet.SQL.Add('  , AC03_MOD_PRECO           = :AC03_MOD_PRECO            ');
+      FDataSet.SQL.Add('  , AN03_COMI_VAREJO         = :AN03_COMI_VAREJO          ');
+      FDataSet.SQL.Add('  , AN03_COMI_ATACADO        = :AN03_COMI_ATACADO         ');
+      FDataSet.SQL.Add('  , AN03_QT_COMPRA           = :AN03_QT_COMPRA            ');
+      FDataSet.SQL.Add('  , AN03_QT_ATACADO          = :AN03_QT_ATACADO           ');
+      FDataSet.SQL.Add('  , AC03_UN2                 = :AC03_UN2                  ');
+      FDataSet.SQL.Add('  , AN03_QT_COMPRA2          = :AN03_QT_COMPRA2           ');
+      FDataSet.SQL.Add('  , AN03_CUSTO2              = :AN03_CUSTO2               ');
+      FDataSet.SQL.Add('  , AN03_PRECO2              = :AN03_PRECO2               ');
+      FDataSet.SQL.Add('  , AC03_DESC2               = :AC03_DESC2                ');
+      FDataSet.SQL.Add('  , AC03_REF2                = :AC03_REF2                 ');
+      FDataSet.SQL.Add('  , AC03_CBR2                = :AC03_CBR2                 ');
+      FDataSet.SQL.Add('  , AN03_SALDO2              = :AN03_SALDO2               ');
+      FDataSet.SQL.Add('  , AN03_CUSTO_COMPRA        = :AN03_CUSTO_COMPRA         ');
+      FDataSet.SQL.Add('  , AN03_MARGEM2             = :AN03_MARGEM2              ');
+      FDataSet.SQL.Add('  , AC03_SUBST_TRIB          = :AC03_SUBST_TRIB           ');
+      FDataSet.SQL.Add('  , AC03_STB                 = :AC03_STB                  ');
+      FDataSet.SQL.Add('  , AN03_FT_BASE_RS          = :AN03_FT_BASE_RS           ');
+      FDataSet.SQL.Add('  , AN03_FT_BASE_UF          = :AN03_FT_BASE_UF           ');
+      FDataSet.SQL.Add('  , AN03_FT_VALOR_RS         = :AN03_FT_VALOR_RS          ');
+      FDataSet.SQL.Add('  , AN03_FT_VALOR_UF         = :AN03_FT_VALOR_UF          ');
+      FDataSet.SQL.Add('  , AC03_CFOP_RS             = :AC03_CFOP_RS              ');
+      FDataSet.SQL.Add('  , AC03_CFOP_UF             = :AC03_CFOP_UF              ');
+      FDataSet.SQL.Add('  , AC03_FOTO                = :AC03_FOTO                 ');
+      FDataSet.SQL.Add('  , AC03_VALIDADE            = :AC03_VALIDADE             ');
+      FDataSet.SQL.Add('  , AD03_DT_VALIDADE         = :AD03_DT_VALIDADE          ');
+      FDataSet.SQL.Add('  , AC03_DECIMAL3            = :AC03_DECIMAL3             ');
+      FDataSet.SQL.Add('  , AC03_UNIR                = :AC03_UNIR                 ');
+      FDataSet.SQL.Add('  , AN03_RES_SAIDA           = :AN03_RES_SAIDA            ');
+      FDataSet.SQL.Add('  , AN03_RES_ENTRADA         = :AN03_RES_ENTRADA          ');
+      FDataSet.SQL.Add('  , AC03_COD_FAB             = :AC03_COD_FAB              ');
+      FDataSet.SQL.Add('  , AC03_LIBERARPRECO        = :AC03_LIBERARPRECO         ');
+      FDataSet.SQL.Add('  , AN03_BASE_SUBST          = :AN03_BASE_SUBST           ');
+      FDataSet.SQL.Add('  , AC03_LISTA_ATACADO       = :AC03_LISTA_ATACADO        ');
+      FDataSet.SQL.Add('  , AN03_PRECO_PMC           = :AN03_PRECO_PMC            ');
+      FDataSet.SQL.Add('  , AN03_PROMOCAO2           = :AN03_PROMOCAO2            ');
+      FDataSet.SQL.Add('  , AD03_DT_PROMOCAO2        = :AD03_DT_PROMOCAO2         ');
+      FDataSet.SQL.Add('  , AC03_NOME_SITE           = :AC03_NOME_SITE            ');
+      FDataSet.SQL.Add('  , AC03_NOME_SITE_RESUMIDO  = :AC03_NOME_SITE_RESUMIDO   ');
+      FDataSet.SQL.Add('  , AC03_DESCRICAO_SITE      = :AC03_DESCRICAO_SITE       ');
+      FDataSet.SQL.Add('  , AC03_ESPEFICICAO_SITE    = :AC03_ESPEFICICAO_SITE     ');
+      FDataSet.SQL.Add('  , AC03_DISPONIVEL_SITE     = :AC03_DISPONIVEL_SITE      ');
+      FDataSet.SQL.Add('  , AC03_FOTO_ALTERADA_SITE  = :AC03_FOTO_ALTERADA_SITE   ');
+      FDataSet.SQL.Add('  , AC03_ENVIAR_SITE         = :AC03_ENVIAR_SITE          ');
+      FDataSet.SQL.Add('  , AC03_ESTOQUE_NEGATIVO    = :AC03_ESTOQUE_NEGATIVO     ');
+      FDataSet.SQL.Add('  , AC03_USU_CONTROLADO      = :AC03_USU_CONTROLADO       ');
+      FDataSet.SQL.Add('  , AC03_TIPO_LISTA          = :AC03_TIPO_LISTA           ');
+      FDataSet.SQL.Add('  , AC03_CODIGO_DCB          = :AC03_CODIGO_DCB           ');
+      FDataSet.SQL.Add('  , AN03_RESERVA             = :AN03_RESERVA              ');
+      FDataSet.SQL.Add('  , AN03_PED_COMPRA          = :AN03_PED_COMPRA           ');
+      FDataSet.SQL.Add('  , AN03_GIRO_DIAS           = :AN03_GIRO_DIAS            ');
+      FDataSet.SQL.Add('  , AN03_QTVENDA_UC          = :AN03_QTVENDA_UC           ');
+      FDataSet.SQL.Add('  , AN03_GIRO_PERC           = :AN03_GIRO_PERC            ');
+      FDataSet.SQL.Add('  , AC03_OBSOLETOS           = :AC03_OBSOLETOS            ');
+      FDataSet.SQL.Add('  , AN03_PRAZO_ENTREGA       = :AN03_PRAZO_ENTREGA        ');
+      FDataSet.SQL.Add('  , AN03DESCONTO             = :AN03DESCONTO              ');
+      FDataSet.SQL.Add('  , AN03PED_MIN              = :AN03PED_MIN               ');
+      FDataSet.SQL.Add('  , AN03QT_PROMO             = :AN03QT_PROMO              ');
+      FDataSet.SQL.Add('  , AN03_PREMIACAO           = :AN03_PREMIACAO            ');
+      FDataSet.SQL.Add('  , AN03_FATORE              = :AN03_FATORE               ');
+      FDataSet.SQL.Add('  , AN03_FATORS              = :AN03_FATORS               ');
+      FDataSet.SQL.Add('  , AC03_UNIDE               = :AC03_UNIDE                ');
+      FDataSet.SQL.Add('  , AC03_UNIDS               = :AC03_UNIDS                ');
+      FDataSet.SQL.Add('  , AC03_GRADE               = :AC03_GRADE                ');
+      FDataSet.SQL.Add('  , AC03_TABPRECO            = :AC03_TABPRECO             ');
+      FDataSet.SQL.Add('  , AN03_GELADO              = :AN03_GELADO               ');
+      FDataSet.SQL.Add('  , AC03_SPED_SN             = :AC03_SPED_SN              ');
+      FDataSet.SQL.Add('  , AC03_CEST                = :AC03_CEST                 ');
+      FDataSet.SQL.Add('  , AC03_CFOP_RS_REVENDA     = :AC03_CFOP_RS_REVENDA      ');
+      FDataSet.SQL.Add('  , AC03_CFOP_UF_REVENDA     = :AC03_CFOP_UF_REVENDA      ');
+      FDataSet.SQL.Add('  , AC03CODIGOANP            = :AC03CODIGOANP             ');
+      FDataSet.SQL.Add('  , AC03VENDAPORDIMENSAO     = :AC03VENDAPORDIMENSAO      ');
+      FDataSet.SQL.Add('  , AC03_MARCA               = :AC03_MARCA                ');
+      FDataSet.SQL.Add('  , AN03_PRECO_VENDA_AUX     = :AN03_PRECO_VENDA_AUX      ');
+      FDataSet.SQL.Add('  , AN03_CTCO_AUX            = :AN03_CTCO_AUX             ');
+      FDataSet.SQL.Add('  , AC03_VENDA_KG            = :AC03_VENDA_KG             ');
+      FDataSet.SQL.Add('  , AN03_SALDO_AUX           = :AN03_SALDO_AUX            ');
+      FDataSet.SQL.Add('  , AC03_PRO_SEM_COMISSAO    = :AC03_PRO_SEM_COMISSAO     ');
+      FDataSet.SQL.Add('  , AC03_SKU                 = :AC03_SKU                  ');
+      FDataSet.SQL.Add('  , AC03CODIGO_GIA           = :AC03CODIGO_GIA            ');
+      FDataSet.SQL.Add('  , AN03_VBCSTRET            = :AN03_VBCSTRET             ');
+      FDataSet.SQL.Add('  , AN03_VICMSSTRET          = :AN03_VICMSSTRET           ');
+      FDataSet.SQL.Add('  , AN03_ALIQ_ST_RET         = :AN03_ALIQ_ST_RET          ');
+      FDataSet.SQL.Add('  , AN03_VICMSSUBSTITUTO     = :AN03_VICMSSUBSTITUTO      ');
+      FDataSet.SQL.Add('  , AC03CODIGO_GIA_REVENDA   = :AC03CODIGO_GIA_REVENDA    ');
+      FDataSet.SQL.Add('  , AC03_INSUMO              = :AC03_INSUMO               ');
+      FDataSet.SQL.Add('  , AD03DTINIPROM            = :AD03DTINIPROM             ');
+      FDataSet.SQL.Add('  , AD03_DT_INI_PROMOCAO2    = :AD03_DT_INI_PROMOCAO2     ');
+      FDataSet.SQL.Add('  , AN03_PRECO_SITE          = :AN03_PRECO_SITE           ');
+      FDataSet.SQL.Add('  , AN03_PRECO_SITE_PROMO    = :AN03_PRECO_SITE_PROMO     ');
+      FDataSet.SQL.Add('  , AN03_PRECO_DIFER_SITE    = :AN03_PRECO_DIFER_SITE     ');
+      FDataSet.SQL.Add('  , AD03_DT_INI_PROM_SITE    = :AD03_DT_INI_PROM_SITE     ');
+      FDataSet.SQL.Add('  , AD03_DT_FIM_PROM_SITE    = :AD03_DT_FIM_PROM_SITE     ');
+      FDataSet.SQL.Add('  , AC03_PROD_PROMO_SITE     = :AC03_PROD_PROMO_SITE      ');
+      FDataSet.SQL.Add('  , AD03_DT_ENVIADO_SITE     = :AD03_DT_ENVIADO_SITE      ');
+      FDataSet.SQL.Add('  , AC03_ENVIADO_SITE        = :AC03_ENVIADO_SITE         ');
+      FDataSet.SQL.Add('  , AN03PESO_GRAMAS          = :AN03PESO_GRAMAS           ');
+      FDataSet.SQL.Add('  , ID_SITE                  = :ID_SITE                   ');
+      FDataSet.SQL.Add('  , ID_CATEGORIA_SITE        = :ID_CATEGORIA_SITE         ');
+      FDataSet.SQL.Add('  , AD03DTAP                 = :AD03DTAP                  ');
+
+      FDataSet.SQL.Add('WHERE AC03CODI               = :AC03CODI                  ');
+
+      FDataSet.ParamByName('AC03DESC').AsString := FDescricao;
+      FDataSet.ParamByName('AC03REF').AsString := FReferencia;
+      FDataSet.ParamByName('AC03SBG').AsString := FSubGrupo;
+      FDataSet.ParamByName('AC03CBR').AsString := FCodigoBarras;
+      FDataSet.ParamByName('AC03UN').AsString := FUnidade;
+      FDataSet.ParamByName('AC03RFAB').AsString := FReferenciaFornecedor;
+      FDataSet.ParamByName('AC03CFAB').AsString := FCodigoUltimoFornecedor;
+      FDataSet.ParamByName('AC03END').AsString := FLocalizacao;
+      FDataSet.ParamByName('AC03CLAS').AsString := FClasse;
+      FDataSet.ParamByName('AN03MARG').AsFloat := FMargem;
+      FDataSet.ParamByName('AN03UC').AsFloat := FUltimaCompra;
+      FDataSet.ParamByName('AD03DTCD').AsDAte := FDataHoraCadastro;
+      FDataSet.ParamByName('AC03TBICM').AsString := FIcms.Codigo;
+      FDataSet.ParamByName('AC03TBIPI').AsString := FTabelaIpiOld;
+      FDataSet.ParamByName('AN03ISQN').AsFloat := FISQN;
+      FDataSet.ParamByName('AD03DTVE').AsDAte := FDataVenda;
+      FDataSet.ParamByName('AD03DTCO').AsDAte := FDataCompra;
+      FDataSet.ParamByName('AN03PRC1').AsFloat := FPrecoVista;
+      FDataSet.ParamByName('AN03PRC2').AsFloat := FValorPromocaoVenda;
+      FDataSet.ParamByName('AN03CTCO').AsFloat := FCusto;
+      FDataSet.ParamByName('AN03CTME').AsFloat := FCustoMedio;
+      FDataSet.ParamByName('AN03SLMM').AsFloat := FEstoqueMinimo;
+      FDataSet.ParamByName('AN03SLIM').AsFloat := FSaldoInicial;
+      FDataSet.ParamByName('AN03TQCM').AsFloat := FCompras;
+      FDataSet.ParamByName('AN03TVM').AsFloat := FVendas;
+      FDataSet.ParamByName('AN03SLAM').AsFloat := FSaldoAtual;
+      FDataSet.ParamByName('AN03TDCM').AsFloat := FTDCM;
+      FDataSet.ParamByName('AN03TDVM').AsFloat := FTDVM;
+      FDataSet.ParamByName('AC03LTSN').AsString := TFuncoesGerais.GetSN(FLiberadoParaVenda);
+      FDataSet.ParamByName('AN03TQCF').AsFloat := FTQCF;
+      FDataSet.ParamByName('AN03CTME2').AsFloat := FCustoMedio2;
+      FDataSet.ParamByName('AN03PZM').AsFloat := FPrazoMedioCompraEmDias;
+      FDataSet.ParamByName('AN03QUC').AsFloat := FQuantidadeUltimaCompra;
+      FDataSet.ParamByName('AC03NFUC').AsString := FUltimaNotaFiscal;
+      FDataSet.ParamByName('AC03PDUC').AsString := FUltimoPedido;
+      FDataSet.ParamByName('AN03SLMX').AsFloat := FSLMX;
+      FDataSet.ParamByName('AN03TR').AsSmallInt := FTR;
+      FDataSet.ParamByName('AC03PTENT').AsString := FQuantidadeCasasDecimaisVenda;
+      FDataSet.ParamByName('AN03PESO').AsFloat := FPesoLiquido;
+      FDataSet.ParamByName('AN03PESOB').AsFloat := FPesoBruto;
+      FDataSet.ParamByName('AC03MEMO').AsString := FObservacao;
+      FDataSet.ParamByName('AC03GRUPO').AsString := FGrupo;
+      FDataSet.ParamByName('AD03DTHORA').AsDateTime := FDataHoraInclusao;
+      FDataSet.ParamByName('AC03PROM').AsString := TFuncoesGerais.GetSN(FProdutoEmPromocao);
+      FDataSet.ParamByName('AD03DTPROM').AsDAte := FDataFimPromocaoVenda;
+      FDataSet.ParamByName('AN03CTNF').AsFloat := FCustoCompraNF;
+      FDataSet.ParamByName('AN03MARGEMA').AsFloat := FMargemAtualizada;
+      FDataSet.ParamByName('AN03AJUSTEE').AsFloat := FAjusteEntrada;
+      FDataSet.ParamByName('AN03AJUSTES').AsFloat := FAjusteSaida;
+      FDataSet.ParamByName('AC03_ET_URANO').AsString := FEtiquetaUrano;
+      FDataSet.ParamByName('AC03_ET_TOLEDO').AsString := FEtiquetaToledo;
+      FDataSet.ParamByName('AC03_ET_FILIZ').AsString := FEtiquetaFilizola;
+      FDataSet.ParamByName('AN03_TB_IPI').AsInteger := FCodigoIpi;
+      FDataSet.ParamByName('AC03_COR').AsString := FCor;
+      FDataSet.ParamByName('AC03_TAM').AsString := FTamanho;
+      FDataSet.ParamByName('AN03_PR_PZ').AsFloat := FPrecoPrazo;
+      FDataSet.ParamByName('AN03_CTCO2').AsFloat := FCusto2;
+      FDataSet.ParamByName('AC03_CFAB2').AsString := FCodigoFornecedor2;
+      FDataSet.ParamByName('AD03_DTCO2').AsDAte := FDataCompra2;
+      FDataSet.ParamByName('AN03_QT_COMP').AsFloat := FQuantidadeComp;
+      FDataSet.ParamByName('AC03_UN_COMP').AsString := FUnidadeComp;
+      FDataSet.ParamByName('AC03_MOD_PRECO').AsString := TFuncoesGerais.GetSN(FPermiteAlterarPrecoDuranteVenda);
+      FDataSet.ParamByName('AN03_COMI_VAREJO').AsFloat := FComissaoDiferenciada;
+      FDataSet.ParamByName('AN03_COMI_ATACADO').AsFloat := FComissaoDiferenciadaAtacado;
+      FDataSet.ParamByName('AN03_QT_COMPRA').AsFloat := FQuantidadeCompra;
+      FDataSet.ParamByName('AN03_QT_ATACADO').AsFloat := FQuantidadeAtacado;
+      FDataSet.ParamByName('AC03_UN2').AsString := FUnidade2;
+      FDataSet.ParamByName('AN03_QT_COMPRA2').AsFloat := FQuantidadeCompra2;
+      FDataSet.ParamByName('AN03_CUSTO2').AsFloat := FCusto02;
+      FDataSet.ParamByName('AN03_PRECO2').AsFloat := FPrecoAtacado;
+      FDataSet.ParamByName('AC03_DESC2').AsString := FDescricaoAtacado;
+      FDataSet.ParamByName('AC03_REF2').AsString := FReferenciaAtacado;
+      FDataSet.ParamByName('AC03_CBR2').AsString := FCodigoBarrasAtacado;
+      FDataSet.ParamByName('AN03_SALDO2').AsFloat := FSaldo2;
+      FDataSet.ParamByName('AN03_CUSTO_COMPRA').AsFloat := FCustoCompra;
+      FDataSet.ParamByName('AN03_MARGEM2').AsFloat := FMargemAtacado;
+      FDataSet.ParamByName('AC03_SUBST_TRIB').AsString := TFuncoesGerais.GetSN(FSubstituicaoTributaria);
+      FDataSet.ParamByName('AC03_STB').AsString := FCodigoICMSST;
+      FDataSet.ParamByName('AN03_FT_BASE_RS').AsFloat := FMVA;
+      FDataSet.ParamByName('AN03_FT_BASE_UF').AsFloat := FMVAUF;
+      FDataSet.ParamByName('AN03_FT_VALOR_RS').AsFloat := FAliquotaICMSST;
+      FDataSet.ParamByName('AN03_FT_VALOR_UF').AsFloat := FAliquotaICMSSTUF;
+      FDataSet.ParamByName('AC03_CFOP_RS').AsString := FCFOPConsumidorFinal;
+      FDataSet.ParamByName('AC03_CFOP_UF').AsString := FCFOPConsumidorFinalUF;
+      FDataSet.ParamByName('AC03_FOTO').AsString := FFoto;
+      FDataSet.ParamByName('AC03_VALIDADE').AsString := TFuncoesGerais.GetSN(FValidade);
+      FDataSet.ParamByName('AD03_DT_VALIDADE').AsDAte := FDataValidade;
+      FDataSet.ParamByName('AC03_DECIMAL3').AsString := TFuncoesGerais.GetSN(FDecimal3);
+      FDataSet.ParamByName('AC03_UNIR').AsString := FCodigoProdutoSimilar;
+      FDataSet.ParamByName('AN03_RES_SAIDA').AsFloat := FReservaSaida;
+      FDataSet.ParamByName('AN03_RES_ENTRADA').AsFloat := FReservaEntrada;
+      FDataSet.ParamByName('AC03_COD_FAB').AsInteger := FCodigoFabricante;
+      FDataSet.ParamByName('AC03_LIBERARPRECO').AsString := TFuncoesGerais.GetSN(FPrecoVendaLiberado);
+      FDataSet.ParamByName('AN03_BASE_SUBST').AsFloat := FPrecoBaseST;
+      FDataSet.ParamByName('AC03_LISTA_ATACADO').AsString := TFuncoesGerais.GetSN(FImprimirNaListaPrecoAtacado);
+      FDataSet.ParamByName('AN03_PRECO_PMC').AsFloat := FPMCSugestao;
+      FDataSet.ParamByName('AN03_PROMOCAO2').AsFloat := FValorPromocaoAtacado;
+      FDataSet.ParamByName('AD03_DT_PROMOCAO2').AsDAte := FDataFimPromocaoAt;
+      FDataSet.ParamByName('AC03_NOME_SITE').AsString := FNomeSite;
+      FDataSet.ParamByName('AC03_NOME_SITE_RESUMIDO').AsString := FNomeSiteResumido;
+      FDataSet.ParamByName('AC03_DESCRICAO_SITE').AsString := FDescricaoSite;
+      FDataSet.ParamByName('AC03_ESPEFICICAO_SITE').AsString := FEspecificacaoSite;
+      FDataSet.ParamByName('AC03_DISPONIVEL_SITE').AsString := TFuncoesGerais.GetSN(FDisponivelSite);
+      FDataSet.ParamByName('AC03_FOTO_ALTERADA_SITE').AsString := TFuncoesGerais.GetSN(FFotoAlteradaSite);
+      FDataSet.ParamByName('AC03_ENVIAR_SITE').AsString := TFuncoesGerais.GetSN(FEnviarSite);
+      FDataSet.ParamByName('AC03_ESTOQUE_NEGATIVO').AsString := TFuncoesGerais.GetSN(FEstoqueNegativo);
+      FDataSet.ParamByName('AC03_USU_CONTROLADO').AsString := TFuncoesGerais.GetSN(FUsuarioControlado);
+      FDataSet.ParamByName('AC03_TIPO_LISTA').AsString := FTipoLista;
+      FDataSet.ParamByName('AC03_CODIGO_DCB').AsString := FNcm;
+      FDataSet.ParamByName('AN03_RESERVA').AsFloat := FReserva;
+      FDataSet.ParamByName('AN03_PED_COMPRA').AsFloat := FPedidoCompra;
+      FDataSet.ParamByName('AN03_GIRO_DIAS').AsInteger := FQuantidadeMultiplaVenda;
+      FDataSet.ParamByName('AN03_QTVENDA_UC').AsFloat := FQuantidadeVendidaPartirUltimaCompra;
+      FDataSet.ParamByName('AN03_GIRO_PERC').AsFloat := FQuantidadeMinimaVenda;
+      FDataSet.ParamByName('AC03_OBSOLETOS').AsString := TFuncoesGerais.GetSN(FObsoletos);
+      FDataSet.ParamByName('AN03_PRAZO_ENTREGA').AsInteger := FPrazoEntrega;
+      FDataSet.ParamByName('AN03DESCONTO').AsFloat := FDesconto;
+      FDataSet.ParamByName('AN03PED_MIN').AsFloat := FPedidoMinimo;
+      FDataSet.ParamByName('AN03QT_PROMO').AsFloat := FQuantidadePromocao;
+      FDataSet.ParamByName('AN03_PREMIACAO').AsFloat := FFatorBasePremiacao;
+      FDataSet.ParamByName('AN03_FATORE').AsFloat := FFatorEntrada;
+      FDataSet.ParamByName('AN03_FATORS').AsFloat := FFatorSaida;
+      FDataSet.ParamByName('AC03_UNIDE').AsString := FUnidadeEntrada;
+      FDataSet.ParamByName('AC03_UNIDS').AsString := FUnidadeSaida;
+      FDataSet.ParamByName('AC03_GRADE').AsString := FGrade;
+      FDataSet.ParamByName('AC03_TABPRECO').AsString := FTabelaPreco;
+      FDataSet.ParamByName('AN03_GELADO').AsFloat := FFatorGelado;
+      FDataSet.ParamByName('AC03_SPED_SN').AsString := TFuncoesGerais.GetSN(FSPED);
+      FDataSet.ParamByName('AC03_CEST').AsString := FCest;
+      FDataSet.ParamByName('AC03_CFOP_RS_REVENDA').AsString := FCFOPRevenda;
+      FDataSet.ParamByName('AC03_CFOP_UF_REVENDA').AsString := FCFOPRevendaUF;
+      FDataSet.ParamByName('AC03CODIGOANP').AsString := FANP.CodigoANP;
+      FDataSet.ParamByName('AC03VENDAPORDIMENSAO').AsString := TFuncoesGerais.GetSN(FVendaPorDimensao);
+      FDataSet.ParamByName('AC03_MARCA').AsString := FMarca;
+      FDataSet.ParamByName('AN03_PRECO_VENDA_AUX').AsFloat := FPrecoVendaAuxiliar;
+      FDataSet.ParamByName('AN03_CTCO_AUX').AsFloat := FCustoAuxiliar;
+      FDataSet.ParamByName('AC03_VENDA_KG').AsString := FVendaKilo;
+      FDataSet.ParamByName('AN03_SALDO_AUX').AsFloat := FSaldoAuxiliar;
+      FDataSet.ParamByName('AC03_PRO_SEM_COMISSAO').AsString := TFuncoesGerais.GetSN(FSemComissao);
+      FDataSet.ParamByName('AC03_SKU').AsString := FSKU;
+      FDataSet.ParamByName('AC03CODIGO_GIA').AsString := FCodigoGIA;
+      FDataSet.ParamByName('AN03_VBCSTRET').AsFloat := FvBCSTRet;
+      FDataSet.ParamByName('AN03_VICMSSTRET').AsFloat := FvICMSSTRet;
+      FDataSet.ParamByName('AN03_ALIQ_ST_RET').AsFloat := FALIQ_ST_RET;
+      FDataSet.ParamByName('AN03_VICMSSUBSTITUTO').AsFloat := FValorIcmsSubstituto;
+      FDataSet.ParamByName('AC03CODIGO_GIA_REVENDA').AsString := FCodigoGIARevenda;
+      FDataSet.ParamByName('AC03_INSUMO').AsString := FInsumo;
+      FDataSet.ParamByName('AD03DTINIPROM').AsDAte := FDataIniPromocaoVenda;
+      FDataSet.ParamByName('AD03_DT_INI_PROMOCAO2').AsDAte := FDataIniPromocaoAt;
+      FDataSet.ParamByName('AN03_PRECO_SITE').AsFloat := FPrecoSite;
+      FDataSet.ParamByName('AN03_PRECO_SITE_PROMO').AsFloat := FPrecoPromocaoSite;
+      FDataSet.ParamByName('AN03_PRECO_DIFER_SITE').AsString := TFuncoesGerais.GetSN(FprecoDiferenciadoSite);
+      FDataSet.ParamByName('AD03_DT_INI_PROM_SITE').AsDAte := FDataInicialPromocaoSite;
+      FDataSet.ParamByName('AD03_DT_FIM_PROM_SITE').AsDAte := FDataFinalPromocaoSite;
+      FDataSet.ParamByName('AC03_PROD_PROMO_SITE').AsString := TFuncoesGerais.GetSN(FProdutoEmPromocaoSite);
+      FDataSet.ParamByName('AD03_DT_ENVIADO_SITE').AsDateTime := FDataEnviadoSite;
+      FDataSet.ParamByName('AC03_ENVIADO_SITE').AsString := TFuncoesGerais.GetSN(FEnviadoSite);
+      FDataSet.ParamByName('AN03PESO_GRAMAS').AsFloat := FPesoSiteGramas;
+      FDataSet.ParamByName('ID_SITE').AsString := FIdSite;
+      FDataSet.ParamByName('ID_CATEGORIA_SITE').AsInteger := FIdCategoriaSite;
+      FDataSet.ParamByName('AD03DTAP').AsDateTime := FDataHoraAlteracao;
+      FDataSet.ParamByName('AC03CODI').AsString := FCodigo;
+
+      FDataSet.ExecSql;
+      if (pEfetuarCommit) then
+      begin
+        TSistema.GravarNoBanco(FDataSet, false);
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+procedure TProduto.AlterarDadosDaCompraDoProdutoAposExclusaoDaNotaDeCompra(pCustoOk: Boolean);
+begin
+  // HS-572 // Vagner
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('UPDATE MC03PRO SET ');
+
+  // 29.08.2006 - Lili
+  if pCustoOk then
+  begin
+    FDataSet.SQL.Add(' AN03CTCO    = AN03_CTCO2 , ');
+    FDataSet.SQL.Add(' AD03DTCO    = AD03_DTCO2 , ');
+    FDataSet.SQL.Add(' AC03CFAB    = AC03_CFAB2 , ');
+  end;
+
+  FDataSet.SQL.Add('   AC03NFUC    = :CAPAGA      ');
+  FDataSet.SQL.Add('WHERE AC03CODI = :PRODUTO     ');
+  FDataSet.ParamByName('CAPAGA').AsString := 'Apagada';
+  FDataSet.ParamByName('PRODUTO').AsString := FCodigo;
+
+  FDataSet.ExecSql;
+end;
+
+procedure TProduto.AtualizaSaldo(pCfop: TCfop; pQuantidade: Double; pOperacaoNota: string = '';
+  pExclusao: Boolean = false);
+var
+  lOperacao: string;
+  lFator: Integer;
+begin
+  lFator := 1;
+  lOperacao := '';
+  if (pOperacaoNota = 'V') then
+  begin
+    lOperacao := 'Venda';
+  end
+  else if (pOperacaoNota = 'E') then
+  begin
+    lOperacao := 'Compra';
+  end
+  else if (pOperacaoNota = 'C') then
+  begin
+    lOperacao := 'Cancelada';
+  end
+  else if (pOperacaoNota = 'D') then
+  begin
+    lOperacao := 'Denegada';
+  end;
+
+  // Aqui fazemos o primeiro update, que é direto no cadastro do produto
+  // Utilizado para clientes que não utilizam rotina multi empresa
+
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('UPDATE MC03PRO SET ');
+
+  // Primeiro verificamos se a operação é de Cancelamento (C) ou Denegada (D)
+  // Estas situações vem dos Documentos Fiscais Eletrônicos (NF-e,NFC-e, etc...)
+  if (pOperacaoNota = 'C') or (pOperacaoNota = 'D') then
+  begin
+    FDataSet.SQL.Add(' AD03DTVE  = :DTVENDA ,          ');
+    FDataSet.ParamByName('DTVENDA').AsDAte := FDataVenda;
+
+    FDataSet.SQL.Add(' AN03SLAM  = AN03SLAM - :SALDO , ');
+    FDataSet.SQL.Add(' AN03TVM   = AN03TVM + :SALDO2   ');
+
+    // Aqui verificamos se o tipo deo CFOP é de Devolução (D)
+    if (pCfop.Tipo = 'D') then
+    begin
+      if (pCfop.Movimento = 'S') then // Se o movimento do CFOP for Saída (S)
+      begin
+        lFator := -1;
+      end;
+
+      if (pCfop.Movimento = 'E') then
+      // Se o movimento do CFOP for Entrada (E)
+      begin
+        lFator := 1;
+      end;
+    end
+    else // Se o tipo de CFOP não for de Devolução (D)
+    begin
+      if (pCfop.Movimento = 'S') then
+      // Se o movimento do CFOP for de Saída (S)
+      begin
+        lFator := -1;
+      end;
+
+      if (pCfop.Movimento = 'E') then
+      // Se o movimento do CFOP for de Entrada (E)
+      begin
+        lFator := 1;
+      end;
+    end;
+
+    // 21.05.00 // Vagner // Inversão do fator final quando for exlusão de registro
+    if pExclusao then
+    begin
+      lFator := lFator * -1;
+    end;
+
+    FDataSet.ParamByName('SALDO').AsFloat := pQuantidade * lFator;
+    FDataSet.ParamByName('SALDO2').AsFloat := pQuantidade * lFator;
+  end
+  else // Se NÃO for operação de Cancelamento ou Denegada
+  begin
+
+    // 21.05.00 // Vagner // Inversão do fator final quando for exlusão de registro
+    if pExclusao then
+    begin
+      lFator := lFator * -1;
+    end;
+
+    if (pCfop.Movimento = 'S') then
+    // Se o movimento do CFOP for de Saída (S) // Exemplo: Venda Comércio
+    begin
+      FDataSet.SQL.Add(' AN03SLAM = AN03SLAM - :SALDO , ');
+      FDataSet.SQL.Add(' AN03TVM  = AN03TVM + :SALDO2   ');
+      FDataSet.ParamByName('SALDO').AsFloat := pQuantidade * lFator;
+      // 21.05.00 // Vagner // Multiplico agora pelo fator, para quando for exclusão de registro
+      FDataSet.ParamByName('SALDO2').AsFloat := pQuantidade * lFator;
+      // 21.05.00 // Vagner // Multiplico agora pelo fator, para quando for exclusão de registro
+    end;
+
+    if (pCfop.Movimento = 'E') then
+    // Se o movimento do CFOP for de Entrada (E) // Exemplo: Compra de Mercadorias
+    begin
+      // voltei para o lugar de origem ( frmAtualizaProdutos ) //   TBusca.Consulta.SQL.Add(' AD03DTCO  = :AD03DTCO ,         ');
+      FDataSet.SQL.Add(' AN03SLAM  = AN03SLAM + :SALDO , ');
+      FDataSet.SQL.Add(' AN03TQCM  = AN03TQCM + :SALDO2  ');
+      // TBusca.Consulta.ParamByName('AD03DTCO').AsDAte := FDataCompra;
+      FDataSet.ParamByName('SALDO').AsFloat := pQuantidade * lFator;
+      // 21.05.00 // Vagner // Multiplico agora pelo fator, para quando for exclusão de registro
+      FDataSet.ParamByName('SALDO2').AsFloat := pQuantidade * lFator;
+      // 21.05.00 // Vagner // Multiplico agora pelo fator, para quando for exclusão de registro
+    end;
+  end;
+
+  FDataSet.SQL.Add('WHERE AC03CODI = :PRODUTO             ');
+  FDataSet.ParamByName('PRODUTO').AsString := FCodigo;
+
+  FDataSet.ExecSql;
+
+  // Aqui abaixo alteramos o saldo na rotina de múltiplas empresas
+
+  // Se o tipo de CFOP for Devolução (D) ou Entrada(E) e a operação da nota for Cancelamento(C) ou Denegada(D)
+  if ((pCfop.Tipo = 'D') or (pCfop.Tipo = 'E')) and ((pOperacaoNota = 'C') or (pOperacaoNota = 'D')) then
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpCompra);
+    TSaldoProduto.SaldoProduto.Data := FDataCompra;
+  end
+  // Se o tipo do CFOP for Entrada(E) e a operação de Entrada(E)
+  else if (pCfop.Tipo = 'E') and (Trim(pOperacaoNota) = 'E') then
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpCompra);
+    TSaldoProduto.SaldoProduto.Data := FDataCompra;
+  end
+  // Se for Transferência
+  else if (pCfop.Tipo = 'T') and (Trim(pOperacaoNota) = '') then
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpCompra);
+    TSaldoProduto.SaldoProduto.Data := FDataCompra;
+  end
+  else if (pCfop.Tipo = 'E') and (Trim(pOperacaoNota) = '') then
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpCompra);
+    TSaldoProduto.SaldoProduto.Data := FDataCompra;
+  end
+  else if (pCfop.Tipo = 'D') and (pCfop.Movimento = 'E') and (Trim(pOperacaoNota) = '') then
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpCompra);
+    TSaldoProduto.SaldoProduto.Data := FDataCompra;
+  end
+  else
+  begin
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpVenda);
+    TSaldoProduto.SaldoProduto.Data := FDataVenda;
+  end;
+
+  // 21.05.00 // Vagner // Nova flag para quando for exclusão de registro, a validação é feita dentro da classe TSaldoProduto no método MontaSqlAlteraDados
+  TSaldoProduto.SaldoProduto.Exclusao := pExclusao;
+
+  TSaldoProduto.SaldoProduto.TipoDeMovimentacao := pOperacaoNota;
+  TSaldoProduto.SaldoProduto.CodigoDaEmpresa := TSistema.Usuario.CodigoDaEmpresa;
+  TSaldoProduto.SaldoProduto.CodigoDoProduto := FCodigo;
+  TSaldoProduto.SaldoProduto.Quantidade := pQuantidade;
+  TSaldoProduto.SaldoProduto.Salvar;
+
+  TLogSistema.GravaLog(TSistema.Usuario.Codigo, 'TProduto.AtualizaSaldo - Op:' + lOperacao + ' - Produto: ' +
+    FCodigo, Self);
+end;
+
+class function TProduto.BuscaProdutoPelasInformacoesDoXml(pFornecedor: Integer; pCodigo, pEAN: string): string;
+var
+  lQueryProduto, lQueryIndex: TMCQuery;
+  lEncontrouProduto: Boolean;
+begin
+  // // HS-100 // Vagner Oliveira
+  // Result := false;
+  //
+  // {
+  //
+  // Usar  preferencialmente o código do fornecedor
+  // Usar  preferencialmente o código de barras
+  // Usar apenas a busca pelo código do fornecedor
+  // NF-e uso interno: Utilizar mesmo código do produto MC
+  //
+  // }
+  //
+  // // Primeiro busca na tabela de indexação
+  // // Se não achou, busca pelo código de barras do produto
+  // // Se não achou, busca pelo código de barras da caixa
+  // // Se não achou, busca pela referência
+  // // Se não achou, busca pela referência do fabricante
+  // // Se não achou, busca pelo código interno MC
+  //
+  // // Parâmetros de busca na indexação: Código interno MC, Fornecedor e Código Fornecedor 2
+  //
+  // lQueryIndex := TMCQuery.Create(nil);
+  // try
+  // lQueryIndex.SQL.Add('select * FROM MC_INDEX_PRODUTOS ');
+  // lQueryIndex.SQL.Add(' where FORNECEDOR = :FORNECEDOR ');
+  // lQueryIndex.SQL.Add(' and CODI_PRO_FORNEC2 = :CODIGO_PRODUTO_XML ');
+  // lQueryIndex.ParamByName('FORNECEDOR').AsInteger:=pFornecedor;
+  // lQueryIndex.ParamByName('CODIGO_PRODUTO_XML').AsString:=pCodigo;
+  // lQueryIndex.Open;
+  // finally
+  // lQueryIndex.Free;
+  // end;
+  //
+  // lQueryProduto := TMCQuery.Create(nil);
+  // try
+  //
+  // finally
+  // lQueryProduto.Free;
+  // end;
+  // HS-100 // Vagner Oliveira
+  Result := '';
+
+  lQueryIndex := TMCQuery.Create(nil);
+  try
+    lQueryIndex.SQL.Add('SELECT * FROM MC_INDEX_PRODUTOS             ');
+    lQueryIndex.SQL.Add(' WHERE FORNECEDOR     = :FORNECEDOR         ');
+    lQueryIndex.SQL.Add(' AND CODI_PRO_FORNEC2 = :CODIGO_PRODUTO_XML ');
+    lQueryIndex.ParamByName('FORNECEDOR').AsInteger := pFornecedor;
+    lQueryIndex.ParamByName('CODIGO_PRODUTO_XML').AsString := pCodigo;
+    lQueryIndex.Open;
+
+    lEncontrouProduto := lQueryIndex.RecordCount > 0;
+
+    if (lEncontrouProduto) then
+    begin
+      Result := lQueryIndex.FieldByName('CODI_PRO_MC').AsString;
+    end;
+
+  finally
+    lQueryIndex.Free;
+  end;
+
+  if not(lEncontrouProduto) then
+  begin
+    lQueryProduto := TMCQuery.Create(nil);
+    try
+      // Busca pelo código de barras do produto
+      if (length(Trim(pEAN)) > 0) and not(lEncontrouProduto) then
+      begin
+        lQueryProduto.close;
+        lQueryProduto.SQL.Clear;
+        lQueryProduto.SQL.Add('SELECT * FROM MC03PRO     ');
+        lQueryProduto.SQL.Add('  WHERE AC03CBR = :EAN    ');
+        lQueryProduto.ParamByName('EAN').AsString := pEAN;
+        lQueryProduto.Open;
+
+        lEncontrouProduto := lQueryProduto.RecordCount > 0;
+      end;
+
+      // Busca pelo código de barras da caixa
+      if (length(Trim(pEAN)) > 0) and not(lEncontrouProduto) then
+      begin
+        lQueryProduto.close;
+        lQueryProduto.SQL.Clear;
+        lQueryProduto.SQL.Add('SELECT * FROM MC03PRO      ');
+        lQueryProduto.SQL.Add('  WHERE AC03_CBR2 = :EAN2  ');
+        lQueryProduto.ParamByName('EAN2').AsString := pEAN;
+        lQueryProduto.Open;
+
+        lEncontrouProduto := lQueryProduto.RecordCount > 0;
+      end;
+
+      // Busca pela referência do produto
+      if (length(Trim(pCodigo)) > 0) and not(lEncontrouProduto) then
+      begin
+        lQueryProduto.close;
+        lQueryProduto.SQL.Clear;
+        lQueryProduto.SQL.Add('SELECT * FROM MC03PRO            ');
+        lQueryProduto.SQL.Add('  WHERE AC03REF = :REFERENCIA    ');
+        lQueryProduto.ParamByName('REFERENCIA').AsString := copy(pCodigo, 1, 15);
+        lQueryProduto.Open;
+
+        lEncontrouProduto := lQueryProduto.RecordCount > 0;
+      end;
+
+      // Busca pela referência do fabricante do produto
+      if (length(Trim(pCodigo)) > 0) and not(lEncontrouProduto) then
+      begin
+        lQueryProduto.close;
+        lQueryProduto.SQL.Clear;
+        lQueryProduto.SQL.Add('SELECT * FROM MC03PRO            ');
+        lQueryProduto.SQL.Add('  WHERE AC03RFAB = :REFERENCIA_FORNECEDOR    ');
+        lQueryProduto.ParamByName('REFERENCIA_FORNECEDOR').AsString := pCodigo;
+        lQueryProduto.Open;
+
+        lEncontrouProduto := lQueryProduto.RecordCount > 0;
+      end;
+
+      if (lEncontrouProduto) then
+      begin
+        Result := lQueryProduto.FieldByName('AC03CODI').AsString;
+      end;
+
+    finally
+      lQueryProduto.Free;
+    end;
+  end;
+end;
+
+procedure TProduto.Carrega(pTipoBusca: Ansichar);
+var
+  lCodigoBusca, lValorBusca: string;
+begin
+
+  lCodigoBusca := '';
+  lValorBusca := '';
+
+  if not(pTipoBusca in ['C', 'B', 'R', 'F', 'D']) then
+  begin
+    raise Exception.Create('Tipo de busca não permitida!' + slinebreak +
+      'São permitidas apenas as buscas por: C (Código), B (Cod. Barras), R (Referência), F (Ref. Fabricante) e D (Descrição)');
+  end
+  else if (TSistema.ValidaCaminhoBanco) then
+  begin
+    if (Trim(pTipoBusca) = 'C') then
+    begin
+      lCodigoBusca := 'AC03CODI';
+      lValorBusca := FCodigo;
+    end
+    else if (Trim(pTipoBusca) = 'B') then
+    begin
+      lCodigoBusca := 'AC03CBR';
+      lValorBusca := FCodigoBarras;
+    end
+    else if (Trim(pTipoBusca) = 'R') then
+    begin
+      lCodigoBusca := 'AC03REF';
+      lValorBusca := FReferencia;
+    end
+    else if not(TSistema.Configuracao.BloqueiaVendaPorReferenciaFabricante) and (Trim(pTipoBusca) = 'F') then
+    begin
+      // 20.06.00 // HS-86 // Adicionada a validação por flag de bloqueio específica para esta busca
+      lCodigoBusca := 'AC03RFAB';
+      // lValorBusca:= FReferencia;
+    end
+    else if (Trim(pTipoBusca) = 'D') then
+    begin
+      lCodigoBusca := 'AC03DESC';
+      lValorBusca := FDescricao;
+    end;
+
+    // TBusca.LimpaLista;
+    FQuery.close;
+    FQuery.SQL.Clear;
+    FQuery.SQL.Add('SELECT * FROM MC03PRO WHERE ' + lCodigoBusca + ' = :' + lCodigoBusca);
+    FQuery.ParamByName(lCodigoBusca).AsString := lValorBusca;
+    FQuery.Open;
+
+    // TBusca.Consulta := TBusca.BuscaDados(TTabela.Create(['MC03PRO'], ['*'], [lCodigoBusca], [''], ['']), QuotedStr(FCodigo), True);
+    // carrega dados
+    FCodigo := FQuery.FieldByName('AC03CODI').AsString;
+    FDescricao := FQuery.FieldByName('AC03DESC').AsString;
+    FReferencia := FQuery.FieldByName('AC03REF').AsString;
+    FUnidade := FQuery.FieldByName('AC03UN').AsString;
+    FCodigoBarras := FQuery.FieldByName('AC03CBR').AsString;
+    FPrecoVista := FQuery.FieldByName('AN03PRC1').AsFloat;
+    FPrecoPrazo := FQuery.FieldByName('AN03_PR_PZ').AsFloat;
+    FSubGrupo := FQuery.FieldByName('AC03SBG').AsString;
+    FGrupo := FQuery.FieldByName('AC03GRUPO').AsString;
+    FIcms.Codigo := FQuery.FieldByName('AC03TBICM').AsString;
+    if (length(Trim(FIcms.Codigo)) > 0) then
+    begin
+      FIcms.Carrega; // HS-100 // Vagner Oliveira // Agora carrega o objeto ao invés de trazer só o código
+    end;
+    FCodigoIpi := FQuery.FieldByName('AN03_TB_IPI').AsInteger;
+    FLocalizacao := FQuery.FieldByName('AC03END').AsString;
+    FDataHoraCadastro := FQuery.FieldByName('AD03DTCD').AsDateTime;
+    FDataHoraAlteracao := FQuery.FieldByName('AD03DTAP').AsDateTime;
+    FClasse := FQuery.FieldByName('AC03CLAS').AsString;
+    FMarca := FQuery.FieldByName('AC03_MARCA').AsString;
+    FSaldoAtual := FQuery.FieldByName('AN03SLAM').AsFloat;
+
+    FSemComissao := FQuery.FieldByName('AC03_PRO_SEM_COMISSAO').AsString = 'S';
+    FComissaoDiferenciada := FQuery.FieldByName('AN03_COMI_VAREJO').AsFloat;
+
+    FvBCSTRet := FQuery.FieldByName('AN03_VBCSTRET').AsFloat;
+    FvICMSSTRet := FQuery.FieldByName('AN03_VICMSSTRET').AsFloat;
+    // MC Pediu 28/05/2019
+    FALIQ_ST_RET := FQuery.FieldByName('AN03_ALIQ_ST_RET').AsFloat;
+
+    // 10/12/19 - Graziele
+    FValorIcmsSubstituto := FQuery.FieldByName('AN03_VICMSSUBSTITUTO').AsFloat;
+
+    FNcm := FQuery.FieldByName('AC03_CODIGO_DCB').AsString;
+    FCest := FQuery.FieldByName('AC03_CEST').AsString;
+
+    FDataCompra := FQuery.FieldByName('AD03DTCO').AsDateTime;
+    FDataVenda := FQuery.FieldByName('AD03DTVE').AsDateTime;
+
+    FQuantidadeAtacado := FQuery.FieldByName('AN03_QT_ATACADO').AsFloat;
+    FCusto := FQuery.FieldByName('AN03CTCO').AsFloat;
+    FTQCF := FQuery.FieldByName('AN03TQCF').AsFloat;
+
+    FCustoMedio := FQuery.FieldByName('AN03ctme').AsFloat;
+    FCustoMedio2 := FQuery.FieldByName('AN03ctme2').AsFloat;
+
+    // HS-165 e HS-166 - Rafael - 13/08/2020
+
+    FProdutoEmPromocao := FQuery.FieldByName('Ac03Prom').Value = 'S';
+
+    if not(FQuery.FieldByName('An03_preco2').isnull) then
+    begin
+      FPrecoAtacado := FQuery.FieldByName('An03_preco2').Value;
+    end
+    else
+    begin
+      FPrecoAtacado := 0;
+    end;
+    if not(FQuery.FieldByName('AN03_PROMOCAO2').isnull) then
+    begin
+      FValorPromocaoAtacado := FQuery.FieldByName('AN03_PROMOCAO2').Value;
+    end
+    else
+    begin
+      FValorPromocaoAtacado := 0;
+    end;
+    if not(FQuery.FieldByName('AN03PRC2').isnull) then
+    begin
+      FValorPromocaoVenda := FQuery.FieldByName('AN03PRC2').Value;
+    end
+    else
+    begin
+      FValorPromocaoVenda := 0;
+    end;
+
+    if not(FQuery.FieldByName('AD03_DT_INI_PROMOCAO2').isnull) then
+    begin
+      FDataIniPromocaoAt := FQuery.FieldByName('AD03_DT_INI_PROMOCAO2').Value;
+    end
+    else
+    begin
+      FDataIniPromocaoAt := 0;
+    end;
+
+    if not(FQuery.FieldByName('AD03_DT_PROMOCAO2').isnull) then
+    begin
+      FDataFimPromocaoAt := FQuery.FieldByName('AD03_DT_PROMOCAO2').Value;
+    end
+    else
+    begin
+      FDataFimPromocaoAt := 0;
+    end;
+
+    if not(FQuery.FieldByName('AD03DTINIPROM').isnull) then
+    begin
+      FDataIniPromocaoVenda := FQuery.FieldByName('AD03DTINIPROM').Value;
+    end
+    else
+    begin
+      FDataIniPromocaoVenda := 0;
+    end;
+
+    if not(FQuery.FieldByName('AD03DTPROM').isnull) then
+    begin
+      FDataFimPromocaoVenda := FQuery.FieldByName('AD03DTPROM').Value;
+    end
+    else
+    begin
+      FDataFimPromocaoVenda := 0;
+    end;
+
+    FPesoBruto := FQuery.FieldByName('AN03PESOB').AsFloat;
+    FPesoLiquido := FQuery.FieldByName('AN03PESO').AsFloat;
+    FCodigoGIA := FQuery.FieldByName('AC03CODIGO_GIA').AsString; // HS-605 // Vagner
+    FANP.CodigoANP := FQuery.FieldByName('AC03CODIGOANP').AsString; // HS-605 // Vagner
+
+    if length(Trim(FANP.CodigoANP)) > 0 then
+    begin
+      FANP.Carrega;
+    end;
+
+    FReferenciaFornecedor := FQuery.FieldByName('AC03RFAB').AsString; // HS-605 // Vagner
+    FPrecoBaseST := FQuery.FieldByName('AN03_BASE_SUBST').AsFloat; // HS-605 // Vagner
+
+    FMVA := FQuery.FieldByName('AN03_FT_BASE_RS').AsFloat; // HS-605 // Vagner
+    FMVAUF := FQuery.FieldByName('AN03_FT_BASE_UF').AsFloat; // HS-605 // Vagner
+    FAliquotaICMSST := FQuery.FieldByName('AN03_FT_VALOR_RS').AsFloat; // HS-605 // Vagner
+    FAliquotaICMSSTUF := FQuery.FieldByName('AN03_FT_VALOR_UF').AsFloat; // HS-605 // Vagner
+
+    FCFOPConsumidorFinal := FQuery.FieldByName('AC03_CFOP_RS').AsString; // HS-605 // Vagner
+    FCFOPConsumidorFinalUF := FQuery.FieldByName('AC03_CFOP_UF').AsString; // HS-605 // Vagner
+    FCFOPRevenda := FQuery.FieldByName('AC03_CFOP_RS_REVENDA').AsString; // HS-605 // Vagner
+    FCFOPRevendaUF := FQuery.FieldByName('AC03_CFOP_UF_REVENDA').AsString; // HS-605 // Vagner
+
+    FObservacao := FQuery.FieldByName('AC03MEMO').AsString; // HS-605 // Vagner
+
+
+    // ---  Vagner 21.06.00 -------------------------------------------------------------  //
+
+    FCodigoUltimoFornecedor := FQuery.FieldByName('AC03CFAB').AsString;
+    FMargem := FQuery.FieldByName('AN03MARG').AsFloat;
+    FUltimaCompra := FQuery.FieldByName('AN03UC').AsFloat;
+    FTabelaIpiOld := FQuery.FieldByName('AC03TBIPI').AsString;
+    FISQN := FQuery.FieldByName('AN03ISQN').AsFloat;
+    FEstoqueMinimo := FQuery.FieldByName('AN03SLMM').AsFloat;
+    FSaldoInicial := FQuery.FieldByName('AN03SLIM').AsFloat;
+    FCompras := FQuery.FieldByName('AN03TQCM').AsFloat;
+    FVendas := FQuery.FieldByName('AN03TVM').AsFloat;
+    FTDCM := FQuery.FieldByName('AN03TDCM').AsFloat;
+    FTDVM := FQuery.FieldByName('AN03TDVM').AsFloat;
+    FLiberadoParaVenda := FQuery.FieldByName('AC03LTSN').AsString = 'S';
+    FPrazoMedioCompraEmDias := FQuery.FieldByName('AN03PZM').AsInteger;
+    FQuantidadeUltimaCompra := FQuery.FieldByName('AN03QUC').AsFloat;
+    FUltimaNotaFiscal := FQuery.FieldByName('AC03NFUC').AsString;
+    FUltimoPedido := FQuery.FieldByName('AC03PDUC').AsString;
+    FSLMX := FQuery.FieldByName('AN03SLMX').AsFloat;
+    FTR := FQuery.FieldByName('AN03TR').AsInteger;
+    FQuantidadeCasasDecimaisVenda := FQuery.FieldByName('AC03PTENT').AsString;
+    FDataHoraInclusao := FQuery.FieldByName('AD03DTHORA').AsDateTime;
+    FCustoCompraNF := FQuery.FieldByName('AN03CTNF').AsFloat;
+    FMargemAtualizada := FQuery.FieldByName('AN03MARGEMA').AsFloat;
+    FAjusteEntrada := FQuery.FieldByName('AN03AJUSTEE').AsFloat;
+    FAjusteSaida := FQuery.FieldByName('AN03AJUSTES').AsFloat;
+    FEtiquetaUrano := FQuery.FieldByName('AC03_ET_URANO').AsString;
+    FEtiquetaToledo := FQuery.FieldByName('AC03_ET_TOLEDO').AsString;
+    FEtiquetaFilizola := FQuery.FieldByName('AC03_ET_FILIZ').AsString;
+    FCor := FQuery.FieldByName('AC03_COR').AsString;
+    FTamanho := FQuery.FieldByName('AC03_TAM').AsString;
+    FCusto2 := FQuery.FieldByName('AN03_CTCO2').AsFloat;
+    FCodigoFornecedor2 := FQuery.FieldByName('AC03_CFAB2').AsString;
+    FDataCompra2 := FQuery.FieldByName('AD03_DTCO2').AsDateTime;
+    FQuantidadeComp := FQuery.FieldByName('AN03_QT_COMP').AsFloat;
+    FUnidadeComp := FQuery.FieldByName('AC03_UN_COMP').AsString;
+    FPermiteAlterarPrecoDuranteVenda := FQuery.FieldByName('AC03_MOD_PRECO').AsString = 'S';
+    FComissaoDiferenciadaAtacado := FQuery.FieldByName('AN03_COMI_ATACADO').AsFloat;
+    FQuantidadeCompra := FQuery.FieldByName('AN03_QT_COMPRA').AsFloat;
+    FUnidade2 := FQuery.FieldByName('AC03_UN2').AsString;
+    FQuantidadeCompra2 := FQuery.FieldByName('AN03_QT_COMPRA2').AsFloat;
+    FCusto02 := FQuery.FieldByName('AN03_CUSTO2').AsFloat;
+    FDescricaoAtacado := FQuery.FieldByName('AC03_DESC2').AsString;
+    FReferenciaAtacado := FQuery.FieldByName('AC03_REF2').AsString;
+    FCodigoBarrasAtacado := FQuery.FieldByName('AC03_CBR2').AsString;
+    FSaldo2 := FQuery.FieldByName('AN03_SALDO2').AsFloat;
+    FCustoCompra := FQuery.FieldByName('AN03_CUSTO_COMPRA').AsFloat;
+    FMargemAtacado := FQuery.FieldByName('AN03_MARGEM2').AsFloat;
+    FFoto := FQuery.FieldByName('AC03_FOTO').AsString;
+    FValidade := FQuery.FieldByName('AC03_VALIDADE').AsString = 'S';
+    FDataValidade := FQuery.FieldByName('AD03_DT_VALIDADE').AsDateTime;
+    FDecimal3 := FQuery.FieldByName('AC03_DECIMAL3').AsString = 'S';
+    FCodigoProdutoSimilar := FQuery.FieldByName('AC03_UNIR').AsString;
+    FReservaSaida := FQuery.FieldByName('AN03_RES_SAIDA').AsFloat;
+    FReservaEntrada := FQuery.FieldByName('AN03_RES_ENTRADA').AsFloat;
+    FCodigoFabricante := FQuery.FieldByName('AC03_COD_FAB').AsInteger;
+    FPrecoVendaLiberado := FQuery.FieldByName('AC03_LIBERARPRECO').AsString = 'S';
+    FImprimirNaListaPrecoAtacado := FQuery.FieldByName('AC03_LISTA_ATACADO').AsString = 'S';
+    FPMCSugestao := FQuery.FieldByName('AN03_PRECO_PMC').AsFloat;
+    FNomeSite := FQuery.FieldByName('AC03_NOME_SITE').AsString;
+    FNomeSiteResumido := FQuery.FieldByName('AC03_NOME_SITE_RESUMIDO').AsString;
+    FDescricaoSite := FQuery.FieldByName('AC03_DESCRICAO_SITE').AsString;
+    FEspecificacaoSite := FQuery.FieldByName('AC03_ESPEFICICAO_SITE').AsString;
+    FDisponivelSite := FQuery.FieldByName('AC03_DISPONIVEL_SITE').AsString = 'S';
+    FFotoAlteradaSite := FQuery.FieldByName('AC03_FOTO_ALTERADA_SITE').AsString = 'S';
+    FEnviarSite := FQuery.FieldByName('AC03_ENVIAR_SITE').AsString = 'S';
+    FEstoqueNegativo := FQuery.FieldByName('AC03_ESTOQUE_NEGATIVO').AsString = 'S';
+    FUsuarioControlado := FQuery.FieldByName('AC03_USU_CONTROLADO').AsString = 'S';
+    FTipoLista := FQuery.FieldByName('AC03_TIPO_LISTA').AsString;
+    FReserva := FQuery.FieldByName('AN03_RESERVA').AsFloat;
+    FPedidoCompra := FQuery.FieldByName('AN03_PED_COMPRA').AsFloat;
+    FQuantidadeMultiplaVenda := FQuery.FieldByName('AN03_GIRO_DIAS').AsInteger;
+    FQuantidadeVendidaPartirUltimaCompra := FQuery.FieldByName('AN03_QTVENDA_UC').AsFloat;
+    FQuantidadeMinimaVenda := FQuery.FieldByName('AN03_GIRO_PERC').AsFloat;
+    FObsoletos := FQuery.FieldByName('AC03_OBSOLETOS').AsString = 'S';
+    FPrazoEntrega := FQuery.FieldByName('AN03_PRAZO_ENTREGA').AsInteger;
+    FDesconto := FQuery.FieldByName('AN03DESCONTO').AsFloat;
+    FPedidoMinimo := FQuery.FieldByName('AN03PED_MIN').AsFloat;
+    FQuantidadePromocao := FQuery.FieldByName('AN03QT_PROMO').AsFloat;
+    FFatorBasePremiacao := FQuery.FieldByName('AN03_PREMIACAO').AsFloat;
+    FFatorEntrada := FQuery.FieldByName('AN03_FATORE').AsFloat;
+    FFatorSaida := FQuery.FieldByName('AN03_FATORS').AsFloat;
+    FUnidadeEntrada := FQuery.FieldByName('AC03_UNIDE').AsString;
+    FUnidadeSaida := FQuery.FieldByName('AC03_UNIDS').AsString;
+    FGrade := FQuery.FieldByName('AC03_GRADE').AsString;
+    FTabelaPreco := FQuery.FieldByName('AC03_TABPRECO').AsString;
+    FFatorGelado := FQuery.FieldByName('AN03_GELADO').AsFloat;
+    FSPED := FQuery.FieldByName('AC03_SPED_SN').AsString = 'S';
+    FVendaPorDimensao := FQuery.FieldByName('AC03VENDAPORDIMENSAO').AsString = 'S';
+    FPrecoVendaAuxiliar := FQuery.FieldByName('AN03_PRECO_VENDA_AUX').AsFloat;
+    FCustoAuxiliar := FQuery.FieldByName('AN03_CTCO_AUX').AsFloat;
+    FVendaKilo := FQuery.FieldByName('AC03_VENDA_KG').AsString;
+    FSaldoAuxiliar := FQuery.FieldByName('AN03_SALDO_AUX').AsFloat;
+    FSKU := FQuery.FieldByName('AC03_SKU').AsString;
+    FCodigoGIARevenda := FQuery.FieldByName('AC03CODIGO_GIA_REVENDA').AsString;
+    FInsumo := FQuery.FieldByName('AC03_INSUMO').AsString;
+    FPrecoSite := FQuery.FieldByName('AN03_PRECO_SITE').AsFloat;
+    FPrecoPromocaoSite := FQuery.FieldByName('AN03_PRECO_SITE_PROMO').AsFloat;
+    FprecoDiferenciadoSite := FQuery.FieldByName('AN03_PRECO_DIFER_SITE').AsString = 'S';
+    FDataInicialPromocaoSite := FQuery.FieldByName('AD03_DT_INI_PROM_SITE').AsDateTime;
+    FDataFinalPromocaoSite := FQuery.FieldByName('AD03_DT_FIM_PROM_SITE').AsDateTime;
+    FProdutoEmPromocaoSite := FQuery.FieldByName('AC03_PROD_PROMO_SITE').AsString = 'S';
+    FDataEnviadoSite := FQuery.FieldByName('AD03_DT_ENVIADO_SITE').AsDateTime;
+    FEnviadoSite := FQuery.FieldByName('AC03_ENVIADO_SITE').AsString = 'S';
+    FPesoSiteGramas := FQuery.FieldByName('AN03PESO_GRAMAS').AsFloat;
+    FIdSite := FQuery.FieldByName('ID_SITE').AsString;
+    FIdCategoriaSite := FQuery.FieldByName('ID_CATEGORIA_SITE').AsInteger;
+    // --                                                                                 //
+
+    CarregaDadosComplementares(FQuery);
+
+  end;
+
+end;
+
+procedure TProduto.CarregaDadosComplementares(pDataSet: TDataSet);
+begin
+  // implementar em classes filhas
+end;
+
+constructor TProduto.Create;
+begin
+  FQuery := TMCQuery.Create(nil);
+  FDataSet := TMCQuery.Create(nil);
+  FIcms := TIcms.Create;
+  FANP := TANP.Create;
+end;
+
+destructor TProduto.Destroy;
+begin
+  FANP.Free;
+  FIcms.Free;
+  FDataSet.Free;
+  FQuery.Free;
+  inherited;
+end;
+
+procedure TProduto.Excluir(pEfetuarCommit: Boolean);
+var
+  lLogCancelamentos: TLogCancelamentos;
+begin
+  // HS-540 // Vagner
+  lLogCancelamentos := TLogCancelamentos.Create;
+  try
+    lLogCancelamentos.Inicializar;
+    lLogCancelamentos.Codigo := '03';
+    lLogCancelamentos.Documento := FCodigo;
+    lLogCancelamentos.Valor := FSaldoAtual;
+    lLogCancelamentos.Emissao := now;
+    lLogCancelamentos.Tipo := 'MC03PRO';
+    lLogCancelamentos.Motivo := 'Exclusao de Produtos :' + FCodigo + ' ' + FDescricao + ' ' + FReferencia;
+    lLogCancelamentos.Incluir(false);
+
+    if TSistema.Configuracao.TipoDaVersao = 'M' then
+    begin
+      FDataSet.close;
+      FDataSet.SQL.Clear;
+      FDataSet.SQL.Add('DELETE FROM MS03PRO WHERE AC03CODI = :AC03CODI ');
+      FDataSet.ParamByName('AC03CODI').AsString := FCodigo;
+      FDataSet.ExecSql;
+    end;
+
+    FDataSet.close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('DELETE FROM MC03PRO WHERE AC03CODI = :AC03CODI ');
+    FDataSet.ParamByName('AC03CODI').AsString := FCodigo;
+    FDataSet.ExecSql;
+
+    TSaldoProduto.SaldoProduto.CarregaTipoDeOperacao(tpExcluir);
+    TSaldoProduto.SaldoProduto.CodigoDoProduto := FCodigo;
+    TSaldoProduto.SaldoProduto.Salvar;
+
+    if (pEfetuarCommit) then
+    begin
+      TSistema.GravarNoBanco(FDataSet, false);
+    end;
+  finally
+    lLogCancelamentos.Free;
+  end;
+end;
+
+procedure TProduto.Incluir(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  try
+    if (TSistema.ValidaCaminhoBanco) then
+    begin
+      FDataSet.close;
+      FDataSet.SQL.Clear;
+      FDataSet.SQL.Add('INSERT INTO MC03PRO (         ');
+      FDataSet.SQL.Add('    AC03CODI                  ');
+      FDataSet.SQL.Add('  , AC03DESC                  ');
+      FDataSet.SQL.Add('  , AC03REF                   ');
+      FDataSet.SQL.Add('  , AC03SBG                   ');
+      FDataSet.SQL.Add('  , AC03CBR                   ');
+      FDataSet.SQL.Add('  , AC03UN                    ');
+      FDataSet.SQL.Add('  , AC03RFAB                  ');
+      FDataSet.SQL.Add('  , AC03CFAB                  ');
+      FDataSet.SQL.Add('  , AC03END                   ');
+      FDataSet.SQL.Add('  , AC03CLAS                  ');
+      FDataSet.SQL.Add('  , AN03MARG                  ');
+      FDataSet.SQL.Add('  , AN03UC                    ');
+      FDataSet.SQL.Add('  , AD03DTCD                  ');
+      FDataSet.SQL.Add('  , AC03TBICM                 ');
+      FDataSet.SQL.Add('  , AC03TBIPI                 ');
+      FDataSet.SQL.Add('  , AN03ISQN                  ');
+      FDataSet.SQL.Add('  , AD03DTVE                  ');
+      FDataSet.SQL.Add('  , AD03DTCO                  ');
+      FDataSet.SQL.Add('  , AN03PRC1                  ');
+      FDataSet.SQL.Add('  , AN03PRC2                  ');
+      FDataSet.SQL.Add('  , AN03CTCO                  ');
+      FDataSet.SQL.Add('  , AN03CTME                  ');
+      FDataSet.SQL.Add('  , AN03SLMM                  ');
+      FDataSet.SQL.Add('  , AN03SLIM                  ');
+      FDataSet.SQL.Add('  , AN03TQCM                  ');
+      FDataSet.SQL.Add('  , AN03TVM                   ');
+      FDataSet.SQL.Add('  , AN03SLAM                  ');
+      FDataSet.SQL.Add('  , AN03TDCM                  ');
+      FDataSet.SQL.Add('  , AN03TDVM                  ');
+      FDataSet.SQL.Add('  , AC03LTSN                  ');
+      FDataSet.SQL.Add('  , AN03TQCF                  ');
+      FDataSet.SQL.Add('  , AN03CTME2                 ');
+      FDataSet.SQL.Add('  , AN03PZM                   ');
+      FDataSet.SQL.Add('  , AN03QUC                   ');
+      FDataSet.SQL.Add('  , AC03NFUC                  ');
+      FDataSet.SQL.Add('  , AC03PDUC                  ');
+      FDataSet.SQL.Add('  , AN03SLMX                  ');
+      FDataSet.SQL.Add('  , AN03TR                    ');
+      FDataSet.SQL.Add('  , AC03PTENT                 ');
+      FDataSet.SQL.Add('  , AN03PESO                  ');
+      FDataSet.SQL.Add('  , AN03PESOB                 ');
+      FDataSet.SQL.Add('  , AC03MEMO                  ');
+      FDataSet.SQL.Add('  , AC03GRUPO                 ');
+      FDataSet.SQL.Add('  , AD03DTHORA                ');
+      FDataSet.SQL.Add('  , AC03PROM                  ');
+      FDataSet.SQL.Add('  , AD03DTPROM                ');
+      FDataSet.SQL.Add('  , AN03CTNF                  ');
+      FDataSet.SQL.Add('  , AN03MARGEMA               ');
+      FDataSet.SQL.Add('  , AN03AJUSTEE               ');
+      FDataSet.SQL.Add('  , AN03AJUSTES               ');
+      FDataSet.SQL.Add('  , AC03_ET_URANO             ');
+      FDataSet.SQL.Add('  , AC03_ET_TOLEDO            ');
+      FDataSet.SQL.Add('  , AC03_ET_FILIZ             ');
+      FDataSet.SQL.Add('  , AN03_TB_IPI               ');
+      FDataSet.SQL.Add('  , AC03_COR                  ');
+      FDataSet.SQL.Add('  , AC03_TAM                  ');
+      FDataSet.SQL.Add('  , AN03_PR_PZ                ');
+      FDataSet.SQL.Add('  , AN03_CTCO2                ');
+      FDataSet.SQL.Add('  , AC03_CFAB2                ');
+      FDataSet.SQL.Add('  , AD03_DTCO2                ');
+      FDataSet.SQL.Add('  , AN03_QT_COMP              ');
+      FDataSet.SQL.Add('  , AC03_UN_COMP              ');
+      FDataSet.SQL.Add('  , AC03_MOD_PRECO            ');
+      FDataSet.SQL.Add('  , AN03_COMI_VAREJO          ');
+      FDataSet.SQL.Add('  , AN03_COMI_ATACADO         ');
+      FDataSet.SQL.Add('  , AN03_QT_COMPRA            ');
+      FDataSet.SQL.Add('  , AN03_QT_ATACADO           ');
+      FDataSet.SQL.Add('  , AC03_UN2                  ');
+      FDataSet.SQL.Add('  , AN03_QT_COMPRA2           ');
+      FDataSet.SQL.Add('  , AN03_CUSTO2               ');
+      FDataSet.SQL.Add('  , AN03_PRECO2               ');
+      FDataSet.SQL.Add('  , AC03_DESC2                ');
+      FDataSet.SQL.Add('  , AC03_REF2                 ');
+      FDataSet.SQL.Add('  , AC03_CBR2                 ');
+      FDataSet.SQL.Add('  , AN03_SALDO2               ');
+      FDataSet.SQL.Add('  , AN03_CUSTO_COMPRA         ');
+      FDataSet.SQL.Add('  , AN03_MARGEM2              ');
+      FDataSet.SQL.Add('  , AC03_SUBST_TRIB           ');
+      FDataSet.SQL.Add('  , AC03_STB                  ');
+      FDataSet.SQL.Add('  , AN03_FT_BASE_RS           ');
+      FDataSet.SQL.Add('  , AN03_FT_BASE_UF           ');
+      FDataSet.SQL.Add('  , AN03_FT_VALOR_RS          ');
+      FDataSet.SQL.Add('  , AN03_FT_VALOR_UF          ');
+      FDataSet.SQL.Add('  , AC03_CFOP_RS              ');
+      FDataSet.SQL.Add('  , AC03_CFOP_UF              ');
+      FDataSet.SQL.Add('  , AC03_FOTO                 ');
+      FDataSet.SQL.Add('  , AC03_VALIDADE             ');
+      FDataSet.SQL.Add('  , AD03_DT_VALIDADE          ');
+      FDataSet.SQL.Add('  , AC03_DECIMAL3             ');
+      FDataSet.SQL.Add('  , AC03_UNIR                 ');
+      FDataSet.SQL.Add('  , AN03_RES_SAIDA            ');
+      FDataSet.SQL.Add('  , AN03_RES_ENTRADA          ');
+      FDataSet.SQL.Add('  , AC03_COD_FAB              ');
+      FDataSet.SQL.Add('  , AC03_LIBERARPRECO         ');
+      FDataSet.SQL.Add('  , AN03_BASE_SUBST           ');
+      FDataSet.SQL.Add('  , AC03_LISTA_ATACADO        ');
+      FDataSet.SQL.Add('  , AN03_PRECO_PMC            ');
+      FDataSet.SQL.Add('  , AN03_PROMOCAO2            ');
+      FDataSet.SQL.Add('  , AD03_DT_PROMOCAO2         ');
+      FDataSet.SQL.Add('  , AC03_NOME_SITE            ');
+      FDataSet.SQL.Add('  , AC03_NOME_SITE_RESUMIDO   ');
+      FDataSet.SQL.Add('  , AC03_DESCRICAO_SITE       ');
+      FDataSet.SQL.Add('  , AC03_ESPEFICICAO_SITE     ');
+      FDataSet.SQL.Add('  , AC03_DISPONIVEL_SITE      ');
+      FDataSet.SQL.Add('  , AC03_FOTO_ALTERADA_SITE   ');
+      FDataSet.SQL.Add('  , AC03_ENVIAR_SITE          ');
+      FDataSet.SQL.Add('  , AC03_ESTOQUE_NEGATIVO     ');
+      FDataSet.SQL.Add('  , AC03_USU_CONTROLADO       ');
+      FDataSet.SQL.Add('  , AC03_TIPO_LISTA           ');
+      FDataSet.SQL.Add('  , AC03_CODIGO_DCB           ');
+      FDataSet.SQL.Add('  , AN03_RESERVA              ');
+      FDataSet.SQL.Add('  , AN03_PED_COMPRA           ');
+      FDataSet.SQL.Add('  , AN03_GIRO_DIAS            ');
+      FDataSet.SQL.Add('  , AN03_QTVENDA_UC           ');
+      FDataSet.SQL.Add('  , AN03_GIRO_PERC            ');
+      FDataSet.SQL.Add('  , AC03_OBSOLETOS            ');
+      FDataSet.SQL.Add('  , AN03_PRAZO_ENTREGA        ');
+      FDataSet.SQL.Add('  , AN03DESCONTO              ');
+      FDataSet.SQL.Add('  , AN03PED_MIN               ');
+      FDataSet.SQL.Add('  , AN03QT_PROMO              ');
+      FDataSet.SQL.Add('  , AN03_PREMIACAO            ');
+      FDataSet.SQL.Add('  , AN03_FATORE               ');
+      FDataSet.SQL.Add('  , AN03_FATORS               ');
+      FDataSet.SQL.Add('  , AC03_UNIDE                ');
+      FDataSet.SQL.Add('  , AC03_UNIDS                ');
+      FDataSet.SQL.Add('  , AC03_GRADE                ');
+      FDataSet.SQL.Add('  , AC03_TABPRECO             ');
+      FDataSet.SQL.Add('  , AN03_GELADO               ');
+      FDataSet.SQL.Add('  , AC03_SPED_SN              ');
+      FDataSet.SQL.Add('  , AC03_CEST                 ');
+      FDataSet.SQL.Add('  , AC03_CFOP_RS_REVENDA      ');
+      FDataSet.SQL.Add('  , AC03_CFOP_UF_REVENDA      ');
+      FDataSet.SQL.Add('  , AC03CODIGOANP             ');
+      FDataSet.SQL.Add('  , AC03VENDAPORDIMENSAO      ');
+      FDataSet.SQL.Add('  , AC03_MARCA                ');
+      FDataSet.SQL.Add('  , AN03_PRECO_VENDA_AUX      ');
+      FDataSet.SQL.Add('  , AN03_CTCO_AUX             ');
+      FDataSet.SQL.Add('  , AC03_VENDA_KG             ');
+      FDataSet.SQL.Add('  , AN03_SALDO_AUX            ');
+      FDataSet.SQL.Add('  , AC03_PRO_SEM_COMISSAO     ');
+      FDataSet.SQL.Add('  , AC03_SKU                  ');
+      FDataSet.SQL.Add('  , AC03CODIGO_GIA            ');
+      FDataSet.SQL.Add('  , AN03_VBCSTRET             ');
+      FDataSet.SQL.Add('  , AN03_VICMSSTRET           ');
+      FDataSet.SQL.Add('  , AN03_ALIQ_ST_RET          ');
+      FDataSet.SQL.Add('  , AN03_VICMSSUBSTITUTO      ');
+      FDataSet.SQL.Add('  , AC03CODIGO_GIA_REVENDA    ');
+      FDataSet.SQL.Add('  , AC03_INSUMO               ');
+      FDataSet.SQL.Add('  , AD03DTINIPROM             ');
+      FDataSet.SQL.Add('  , AD03_DT_INI_PROMOCAO2     ');
+      FDataSet.SQL.Add('  , AN03_PRECO_SITE           ');
+      FDataSet.SQL.Add('  , AN03_PRECO_SITE_PROMO     ');
+      FDataSet.SQL.Add('  , AN03_PRECO_DIFER_SITE     ');
+      FDataSet.SQL.Add('  , AD03_DT_INI_PROM_SITE     ');
+      FDataSet.SQL.Add('  , AD03_DT_FIM_PROM_SITE     ');
+      FDataSet.SQL.Add('  , AC03_PROD_PROMO_SITE      ');
+      FDataSet.SQL.Add('  , AD03_DT_ENVIADO_SITE      ');
+      FDataSet.SQL.Add('  , AC03_ENVIADO_SITE         ');
+      FDataSet.SQL.Add('  , AN03PESO_GRAMAS           ');
+      FDataSet.SQL.Add('  , ID_SITE                   ');
+      FDataSet.SQL.Add('  , ID_CATEGORIA_SITE         ');
+      FDataSet.SQL.Add('  ) values (                  ');
+      FDataSet.SQL.Add('    :AC03CODI                 ');
+      FDataSet.SQL.Add('  , :AC03DESC                 ');
+      FDataSet.SQL.Add('  , :AC03REF                  ');
+      FDataSet.SQL.Add('  , :AC03SBG                  ');
+      FDataSet.SQL.Add('  , :AC03CBR                  ');
+      FDataSet.SQL.Add('  , :AC03UN                   ');
+      FDataSet.SQL.Add('  , :AC03RFAB                 ');
+      FDataSet.SQL.Add('  , :AC03CFAB                 ');
+      FDataSet.SQL.Add('  , :AC03END                  ');
+      FDataSet.SQL.Add('  , :AC03CLAS                 ');
+      FDataSet.SQL.Add('  , :AN03MARG                 ');
+      FDataSet.SQL.Add('  , :AN03UC                   ');
+      FDataSet.SQL.Add('  , :AD03DTCD                 ');
+      FDataSet.SQL.Add('  , :AC03TBICM                ');
+      FDataSet.SQL.Add('  , :AC03TBIPI                ');
+      FDataSet.SQL.Add('  , :AN03ISQN                 ');
+      FDataSet.SQL.Add('  , :AD03DTVE                 ');
+      FDataSet.SQL.Add('  , :AD03DTCO                 ');
+      FDataSet.SQL.Add('  , :AN03PRC1                 ');
+      FDataSet.SQL.Add('  , :AN03PRC2                 ');
+      FDataSet.SQL.Add('  , :AN03CTCO                 ');
+      FDataSet.SQL.Add('  , :AN03CTME                 ');
+      FDataSet.SQL.Add('  , :AN03SLMM                 ');
+      FDataSet.SQL.Add('  , :AN03SLIM                 ');
+      FDataSet.SQL.Add('  , :AN03TQCM                 ');
+      FDataSet.SQL.Add('  , :AN03TVM                  ');
+      FDataSet.SQL.Add('  , :AN03SLAM                 ');
+      FDataSet.SQL.Add('  , :AN03TDCM                 ');
+      FDataSet.SQL.Add('  , :AN03TDVM                 ');
+      FDataSet.SQL.Add('  , :AC03LTSN                 ');
+      FDataSet.SQL.Add('  , :AN03TQCF                 ');
+      FDataSet.SQL.Add('  , :AN03CTME2                ');
+      FDataSet.SQL.Add('  , :AN03PZM                  ');
+      FDataSet.SQL.Add('  , :AN03QUC                  ');
+      FDataSet.SQL.Add('  , :AC03NFUC                 ');
+      FDataSet.SQL.Add('  , :AC03PDUC                 ');
+      FDataSet.SQL.Add('  , :AN03SLMX                 ');
+      FDataSet.SQL.Add('  , :AN03TR                   ');
+      FDataSet.SQL.Add('  , :AC03PTENT                ');
+      FDataSet.SQL.Add('  , :AN03PESO                 ');
+      FDataSet.SQL.Add('  , :AN03PESOB                ');
+      FDataSet.SQL.Add('  , :AC03MEMO                 ');
+      FDataSet.SQL.Add('  , :AC03GRUPO                ');
+      FDataSet.SQL.Add('  , :AD03DTHORA               ');
+      FDataSet.SQL.Add('  , :AC03PROM                 ');
+      FDataSet.SQL.Add('  , :AD03DTPROM               ');
+      FDataSet.SQL.Add('  , :AN03CTNF                 ');
+      FDataSet.SQL.Add('  , :AN03MARGEMA              ');
+      FDataSet.SQL.Add('  , :AN03AJUSTEE              ');
+      FDataSet.SQL.Add('  , :AN03AJUSTES              ');
+      FDataSet.SQL.Add('  , :AC03_ET_URANO            ');
+      FDataSet.SQL.Add('  , :AC03_ET_TOLEDO           ');
+      FDataSet.SQL.Add('  , :AC03_ET_FILIZ            ');
+      FDataSet.SQL.Add('  , :AN03_TB_IPI              ');
+      FDataSet.SQL.Add('  , :AC03_COR                 ');
+      FDataSet.SQL.Add('  , :AC03_TAM                 ');
+      FDataSet.SQL.Add('  , :AN03_PR_PZ               ');
+      FDataSet.SQL.Add('  , :AN03_CTCO2               ');
+      FDataSet.SQL.Add('  , :AC03_CFAB2               ');
+      FDataSet.SQL.Add('  , :AD03_DTCO2               ');
+      FDataSet.SQL.Add('  , :AN03_QT_COMP             ');
+      FDataSet.SQL.Add('  , :AC03_UN_COMP             ');
+      FDataSet.SQL.Add('  , :AC03_MOD_PRECO           ');
+      FDataSet.SQL.Add('  , :AN03_COMI_VAREJO         ');
+      FDataSet.SQL.Add('  , :AN03_COMI_ATACADO        ');
+      FDataSet.SQL.Add('  , :AN03_QT_COMPRA           ');
+      FDataSet.SQL.Add('  , :AN03_QT_ATACADO          ');
+      FDataSet.SQL.Add('  , :AC03_UN2                 ');
+      FDataSet.SQL.Add('  , :AN03_QT_COMPRA2          ');
+      FDataSet.SQL.Add('  , :AN03_CUSTO2              ');
+      FDataSet.SQL.Add('  , :AN03_PRECO2              ');
+      FDataSet.SQL.Add('  , :AC03_DESC2               ');
+      FDataSet.SQL.Add('  , :AC03_REF2                ');
+      FDataSet.SQL.Add('  , :AC03_CBR2                ');
+      FDataSet.SQL.Add('  , :AN03_SALDO2              ');
+      FDataSet.SQL.Add('  , :AN03_CUSTO_COMPRA        ');
+      FDataSet.SQL.Add('  , :AN03_MARGEM2             ');
+      FDataSet.SQL.Add('  , :AC03_SUBST_TRIB          ');
+      FDataSet.SQL.Add('  , :AC03_STB                 ');
+      FDataSet.SQL.Add('  , :AN03_FT_BASE_RS          ');
+      FDataSet.SQL.Add('  , :AN03_FT_BASE_UF          ');
+      FDataSet.SQL.Add('  , :AN03_FT_VALOR_RS         ');
+      FDataSet.SQL.Add('  , :AN03_FT_VALOR_UF         ');
+      FDataSet.SQL.Add('  , :AC03_CFOP_RS             ');
+      FDataSet.SQL.Add('  , :AC03_CFOP_UF             ');
+      FDataSet.SQL.Add('  , :AC03_FOTO                ');
+      FDataSet.SQL.Add('  , :AC03_VALIDADE            ');
+      FDataSet.SQL.Add('  , :AD03_DT_VALIDADE         ');
+      FDataSet.SQL.Add('  , :AC03_DECIMAL3            ');
+      FDataSet.SQL.Add('  , :AC03_UNIR                ');
+      FDataSet.SQL.Add('  , :AN03_RES_SAIDA           ');
+      FDataSet.SQL.Add('  , :AN03_RES_ENTRADA         ');
+      FDataSet.SQL.Add('  , :AC03_COD_FAB             ');
+      FDataSet.SQL.Add('  , :AC03_LIBERARPRECO        ');
+      FDataSet.SQL.Add('  , :AN03_BASE_SUBST          ');
+      FDataSet.SQL.Add('  , :AC03_LISTA_ATACADO       ');
+      FDataSet.SQL.Add('  , :AN03_PRECO_PMC           ');
+      FDataSet.SQL.Add('  , :AN03_PROMOCAO2           ');
+      FDataSet.SQL.Add('  , :AD03_DT_PROMOCAO2        ');
+      FDataSet.SQL.Add('  , :AC03_NOME_SITE           ');
+      FDataSet.SQL.Add('  , :AC03_NOME_SITE_RESUMIDO  ');
+      FDataSet.SQL.Add('  , :AC03_DESCRICAO_SITE      ');
+      FDataSet.SQL.Add('  , :AC03_ESPEFICICAO_SITE    ');
+      FDataSet.SQL.Add('  , :AC03_DISPONIVEL_SITE     ');
+      FDataSet.SQL.Add('  , :AC03_FOTO_ALTERADA_SITE  ');
+      FDataSet.SQL.Add('  , :AC03_ENVIAR_SITE         ');
+      FDataSet.SQL.Add('  , :AC03_ESTOQUE_NEGATIVO    ');
+      FDataSet.SQL.Add('  , :AC03_USU_CONTROLADO      ');
+      FDataSet.SQL.Add('  , :AC03_TIPO_LISTA          ');
+      FDataSet.SQL.Add('  , :AC03_CODIGO_DCB          ');
+      FDataSet.SQL.Add('  , :AN03_RESERVA             ');
+      FDataSet.SQL.Add('  , :AN03_PED_COMPRA          ');
+      FDataSet.SQL.Add('  , :AN03_GIRO_DIAS           ');
+      FDataSet.SQL.Add('  , :AN03_QTVENDA_UC          ');
+      FDataSet.SQL.Add('  , :AN03_GIRO_PERC           ');
+      FDataSet.SQL.Add('  , :AC03_OBSOLETOS           ');
+      FDataSet.SQL.Add('  , :AN03_PRAZO_ENTREGA       ');
+      FDataSet.SQL.Add('  , :AN03DESCONTO             ');
+      FDataSet.SQL.Add('  , :AN03PED_MIN              ');
+      FDataSet.SQL.Add('  , :AN03QT_PROMO             ');
+      FDataSet.SQL.Add('  , :AN03_PREMIACAO           ');
+      FDataSet.SQL.Add('  , :AN03_FATORE              ');
+      FDataSet.SQL.Add('  , :AN03_FATORS              ');
+      FDataSet.SQL.Add('  , :AC03_UNIDE               ');
+      FDataSet.SQL.Add('  , :AC03_UNIDS               ');
+      FDataSet.SQL.Add('  , :AC03_GRADE               ');
+      FDataSet.SQL.Add('  , :AC03_TABPRECO            ');
+      FDataSet.SQL.Add('  , :AN03_GELADO              ');
+      FDataSet.SQL.Add('  , :AC03_SPED_SN             ');
+      FDataSet.SQL.Add('  , :AC03_CEST                ');
+      FDataSet.SQL.Add('  , :AC03_CFOP_RS_REVENDA     ');
+      FDataSet.SQL.Add('  , :AC03_CFOP_UF_REVENDA     ');
+      FDataSet.SQL.Add('  , :AC03CODIGOANP            ');
+      FDataSet.SQL.Add('  , :AC03VENDAPORDIMENSAO     ');
+      FDataSet.SQL.Add('  , :AC03_MARCA               ');
+      FDataSet.SQL.Add('  , :AN03_PRECO_VENDA_AUX     ');
+      FDataSet.SQL.Add('  , :AN03_CTCO_AUX            ');
+      FDataSet.SQL.Add('  , :AC03_VENDA_KG            ');
+      FDataSet.SQL.Add('  , :AN03_SALDO_AUX           ');
+      FDataSet.SQL.Add('  , :AC03_PRO_SEM_COMISSAO    ');
+      FDataSet.SQL.Add('  , :AC03_SKU                 ');
+      FDataSet.SQL.Add('  , :AC03CODIGO_GIA           ');
+      FDataSet.SQL.Add('  , :AN03_VBCSTRET            ');
+      FDataSet.SQL.Add('  , :AN03_VICMSSTRET          ');
+      FDataSet.SQL.Add('  , :AN03_ALIQ_ST_RET         ');
+      FDataSet.SQL.Add('  , :AN03_VICMSSUBSTITUTO     ');
+      FDataSet.SQL.Add('  , :AC03CODIGO_GIA_REVENDA   ');
+      FDataSet.SQL.Add('  , :AC03_INSUMO              ');
+      FDataSet.SQL.Add('  , :AD03DTINIPROM            ');
+      FDataSet.SQL.Add('  , :AD03_DT_INI_PROMOCAO2    ');
+      FDataSet.SQL.Add('  , :AN03_PRECO_SITE          ');
+      FDataSet.SQL.Add('  , :AN03_PRECO_SITE_PROMO    ');
+      FDataSet.SQL.Add('  , :AN03_PRECO_DIFER_SITE    ');
+      FDataSet.SQL.Add('  , :AD03_DT_INI_PROM_SITE    ');
+      FDataSet.SQL.Add('  , :AD03_DT_FIM_PROM_SITE    ');
+      FDataSet.SQL.Add('  , :AC03_PROD_PROMO_SITE     ');
+      FDataSet.SQL.Add('  , :AD03_DT_ENVIADO_SITE     ');
+      FDataSet.SQL.Add('  , :AC03_ENVIADO_SITE        ');
+      FDataSet.SQL.Add('  , :AN03PESO_GRAMAS          ');
+      FDataSet.SQL.Add('  , :ID_SITE                  ');
+      FDataSet.SQL.Add('  , :ID_CATEGORIA_SITE        ');
+      FDataSet.SQL.Add('  )                           ');
+
+      FDataSet.ParamByName('AC03CODI').AsString := FCodigo;
+      FDataSet.ParamByName('AC03DESC').AsString := FDescricao;
+      FDataSet.ParamByName('AC03REF').AsString := FReferencia;
+      FDataSet.ParamByName('AC03SBG').AsString := FSubGrupo;
+      FDataSet.ParamByName('AC03CBR').AsString := FCodigoBarras;
+      FDataSet.ParamByName('AC03UN').AsString := FUnidade;
+      FDataSet.ParamByName('AC03RFAB').AsString := FReferenciaFornecedor;
+      FDataSet.ParamByName('AC03CFAB').AsString := FCodigoUltimoFornecedor;
+      FDataSet.ParamByName('AC03END').AsString := FLocalizacao;
+      FDataSet.ParamByName('AC03CLAS').AsString := FClasse;
+      FDataSet.ParamByName('AN03MARG').AsFloat := FMargem;
+      FDataSet.ParamByName('AN03UC').AsFloat := FUltimaCompra;
+      FDataSet.ParamByName('AD03DTCD').AsDAte := FDataHoraCadastro;
+      FDataSet.ParamByName('AC03TBICM').AsString := FIcms.Codigo;
+      FDataSet.ParamByName('AC03TBIPI').AsString := FTabelaIpiOld;
+      FDataSet.ParamByName('AN03ISQN').AsFloat := FISQN;
+      FDataSet.ParamByName('AD03DTVE').AsDAte := FDataVenda;
+      FDataSet.ParamByName('AD03DTCO').AsDAte := FDataCompra;
+      FDataSet.ParamByName('AN03PRC1').AsFloat := FPrecoVista;
+      FDataSet.ParamByName('AN03PRC2').AsFloat := FValorPromocaoVenda;
+      FDataSet.ParamByName('AN03CTCO').AsFloat := FCusto;
+      FDataSet.ParamByName('AN03CTME').AsFloat := FCustoMedio;
+      FDataSet.ParamByName('AN03SLMM').AsFloat := FEstoqueMinimo;
+      FDataSet.ParamByName('AN03SLIM').AsFloat := FSaldoInicial;
+      FDataSet.ParamByName('AN03TQCM').AsFloat := FCompras;
+      FDataSet.ParamByName('AN03TVM').AsFloat := FVendas;
+      FDataSet.ParamByName('AN03SLAM').AsFloat := FSaldoAtual;
+      FDataSet.ParamByName('AN03TDCM').AsFloat := FTDCM;
+      FDataSet.ParamByName('AN03TDVM').AsFloat := FTDVM;
+      FDataSet.ParamByName('AC03LTSN').AsString := TFuncoesGerais.GetSN(FLiberadoParaVenda);
+      FDataSet.ParamByName('AN03TQCF').AsFloat := FTQCF;
+      FDataSet.ParamByName('AN03CTME2').AsFloat := FCustoMedio2;
+      FDataSet.ParamByName('AN03PZM').AsFloat := FPrazoMedioCompraEmDias;
+      FDataSet.ParamByName('AN03QUC').AsFloat := FQuantidadeUltimaCompra;
+      FDataSet.ParamByName('AC03NFUC').AsString := FUltimaNotaFiscal;
+      FDataSet.ParamByName('AC03PDUC').AsString := FUltimoPedido;
+      FDataSet.ParamByName('AN03SLMX').AsFloat := FSLMX;
+      FDataSet.ParamByName('AN03TR').AsSmallInt := FTR;
+      FDataSet.ParamByName('AC03PTENT').AsString := FQuantidadeCasasDecimaisVenda;
+      FDataSet.ParamByName('AN03PESO').AsFloat := FPesoLiquido;
+      FDataSet.ParamByName('AN03PESOB').AsFloat := FPesoBruto;
+      FDataSet.ParamByName('AC03MEMO').AsString := FObservacao;
+      FDataSet.ParamByName('AC03GRUPO').AsString := FGrupo;
+      FDataSet.ParamByName('AD03DTHORA').AsDateTime := FDataHoraInclusao;
+      FDataSet.ParamByName('AC03PROM').AsString := TFuncoesGerais.GetSN(FProdutoEmPromocao);
+      FDataSet.ParamByName('AD03DTPROM').AsDAte := FDataFimPromocaoVenda;
+      FDataSet.ParamByName('AN03CTNF').AsFloat := FCustoCompraNF;
+      FDataSet.ParamByName('AN03MARGEMA').AsFloat := FMargemAtualizada;
+      FDataSet.ParamByName('AN03AJUSTEE').AsFloat := FAjusteEntrada;
+      FDataSet.ParamByName('AN03AJUSTES').AsFloat := FAjusteSaida;
+      FDataSet.ParamByName('AC03_ET_URANO').AsString := FEtiquetaUrano;
+      FDataSet.ParamByName('AC03_ET_TOLEDO').AsString := FEtiquetaToledo;
+      FDataSet.ParamByName('AC03_ET_FILIZ').AsString := FEtiquetaFilizola;
+      FDataSet.ParamByName('AN03_TB_IPI').AsInteger := FCodigoIpi;
+      FDataSet.ParamByName('AC03_COR').AsString := FCor;
+      FDataSet.ParamByName('AC03_TAM').AsString := FTamanho;
+      FDataSet.ParamByName('AN03_PR_PZ').AsFloat := FPrecoPrazo;
+      FDataSet.ParamByName('AN03_CTCO2').AsFloat := FCusto2;
+      FDataSet.ParamByName('AC03_CFAB2').AsString := FCodigoFornecedor2;
+      FDataSet.ParamByName('AD03_DTCO2').AsDAte := FDataCompra2;
+      FDataSet.ParamByName('AN03_QT_COMP').AsFloat := FQuantidadeComp;
+      FDataSet.ParamByName('AC03_UN_COMP').AsString := FUnidadeComp;
+      FDataSet.ParamByName('AC03_MOD_PRECO').AsString := TFuncoesGerais.GetSN(FPermiteAlterarPrecoDuranteVenda);
+      FDataSet.ParamByName('AN03_COMI_VAREJO').AsFloat := FComissaoDiferenciada;
+      FDataSet.ParamByName('AN03_COMI_ATACADO').AsFloat := FComissaoDiferenciadaAtacado;
+      FDataSet.ParamByName('AN03_QT_COMPRA').AsFloat := FQuantidadeCompra;
+      FDataSet.ParamByName('AN03_QT_ATACADO').AsFloat := FQuantidadeAtacado;
+      FDataSet.ParamByName('AC03_UN2').AsString := FUnidade2;
+      FDataSet.ParamByName('AN03_QT_COMPRA2').AsFloat := FQuantidadeCompra2;
+      FDataSet.ParamByName('AN03_CUSTO2').AsFloat := FCusto02;
+      FDataSet.ParamByName('AN03_PRECO2').AsFloat := FPrecoAtacado;
+      FDataSet.ParamByName('AC03_DESC2').AsString := FDescricaoAtacado;
+      FDataSet.ParamByName('AC03_REF2').AsString := FReferenciaAtacado;
+      FDataSet.ParamByName('AC03_CBR2').AsString := FCodigoBarrasAtacado;
+      FDataSet.ParamByName('AN03_SALDO2').AsFloat := FSaldo2;
+      FDataSet.ParamByName('AN03_CUSTO_COMPRA').AsFloat := FCustoCompra;
+      FDataSet.ParamByName('AN03_MARGEM2').AsFloat := FMargemAtacado;
+      FDataSet.ParamByName('AC03_SUBST_TRIB').AsString := TFuncoesGerais.GetSN(FSubstituicaoTributaria);
+      FDataSet.ParamByName('AC03_STB').AsString := FCodigoICMSST;
+      FDataSet.ParamByName('AN03_FT_BASE_RS').AsFloat := FMVA;
+      FDataSet.ParamByName('AN03_FT_BASE_UF').AsFloat := FMVAUF;
+      FDataSet.ParamByName('AN03_FT_VALOR_RS').AsFloat := FAliquotaICMSST;
+      FDataSet.ParamByName('AN03_FT_VALOR_UF').AsFloat := FAliquotaICMSSTUF;
+      FDataSet.ParamByName('AC03_CFOP_RS').AsString := FCFOPConsumidorFinal;
+      FDataSet.ParamByName('AC03_CFOP_UF').AsString := FCFOPConsumidorFinalUF;
+      FDataSet.ParamByName('AC03_FOTO').AsString := FFoto;
+      FDataSet.ParamByName('AC03_VALIDADE').AsString := TFuncoesGerais.GetSN(FValidade);
+      FDataSet.ParamByName('AD03_DT_VALIDADE').AsDAte := FDataValidade;
+      FDataSet.ParamByName('AC03_DECIMAL3').AsString := TFuncoesGerais.GetSN(FDecimal3);
+      FDataSet.ParamByName('AC03_UNIR').AsString := FCodigoProdutoSimilar;
+      FDataSet.ParamByName('AN03_RES_SAIDA').AsFloat := FReservaSaida;
+      FDataSet.ParamByName('AN03_RES_ENTRADA').AsFloat := FReservaEntrada;
+      FDataSet.ParamByName('AC03_COD_FAB').AsInteger := FCodigoFabricante;
+      FDataSet.ParamByName('AC03_LIBERARPRECO').AsString := TFuncoesGerais.GetSN(FPrecoVendaLiberado);
+      FDataSet.ParamByName('AN03_BASE_SUBST').AsFloat := FPrecoBaseST;
+      FDataSet.ParamByName('AC03_LISTA_ATACADO').AsString := TFuncoesGerais.GetSN(FImprimirNaListaPrecoAtacado);
+      FDataSet.ParamByName('AN03_PRECO_PMC').AsFloat := FPMCSugestao;
+      FDataSet.ParamByName('AN03_PROMOCAO2').AsFloat := FValorPromocaoAtacado;
+      FDataSet.ParamByName('AD03_DT_PROMOCAO2').AsDAte := FDataFimPromocaoAt;
+      FDataSet.ParamByName('AC03_NOME_SITE').AsString := FNomeSite;
+      FDataSet.ParamByName('AC03_NOME_SITE_RESUMIDO').AsString := FNomeSiteResumido;
+      FDataSet.ParamByName('AC03_DESCRICAO_SITE').AsString := FDescricaoSite;
+      FDataSet.ParamByName('AC03_ESPEFICICAO_SITE').AsString := FEspecificacaoSite;
+      FDataSet.ParamByName('AC03_DISPONIVEL_SITE').AsString := TFuncoesGerais.GetSN(FDisponivelSite);
+      FDataSet.ParamByName('AC03_FOTO_ALTERADA_SITE').AsString := TFuncoesGerais.GetSN(FFotoAlteradaSite);
+      FDataSet.ParamByName('AC03_ENVIAR_SITE').AsString := TFuncoesGerais.GetSN(FEnviarSite);
+      FDataSet.ParamByName('AC03_ESTOQUE_NEGATIVO').AsString := TFuncoesGerais.GetSN(FEstoqueNegativo);
+      FDataSet.ParamByName('AC03_USU_CONTROLADO').AsString := TFuncoesGerais.GetSN(FUsuarioControlado);
+      FDataSet.ParamByName('AC03_TIPO_LISTA').AsString := FTipoLista;
+      FDataSet.ParamByName('AC03_CODIGO_DCB').AsString := FNcm;
+      FDataSet.ParamByName('AN03_RESERVA').AsFloat := FReserva;
+      FDataSet.ParamByName('AN03_PED_COMPRA').AsFloat := FPedidoCompra;
+      FDataSet.ParamByName('AN03_GIRO_DIAS').AsInteger := FQuantidadeMultiplaVenda;
+      FDataSet.ParamByName('AN03_QTVENDA_UC').AsFloat := FQuantidadeVendidaPartirUltimaCompra;
+      FDataSet.ParamByName('AN03_GIRO_PERC').AsFloat := FQuantidadeMinimaVenda;
+      FDataSet.ParamByName('AC03_OBSOLETOS').AsString := TFuncoesGerais.GetSN(FObsoletos);
+      FDataSet.ParamByName('AN03_PRAZO_ENTREGA').AsInteger := FPrazoEntrega;
+      FDataSet.ParamByName('AN03DESCONTO').AsFloat := FDesconto;
+      FDataSet.ParamByName('AN03PED_MIN').AsFloat := FPedidoMinimo;
+      FDataSet.ParamByName('AN03QT_PROMO').AsFloat := FQuantidadePromocao;
+      FDataSet.ParamByName('AN03_PREMIACAO').AsFloat := FFatorBasePremiacao;
+      FDataSet.ParamByName('AN03_FATORE').AsFloat := FFatorEntrada;
+      FDataSet.ParamByName('AN03_FATORS').AsFloat := FFatorSaida;
+      FDataSet.ParamByName('AC03_UNIDE').AsString := FUnidadeEntrada;
+      FDataSet.ParamByName('AC03_UNIDS').AsString := FUnidadeSaida;
+      FDataSet.ParamByName('AC03_GRADE').AsString := FGrade;
+      FDataSet.ParamByName('AC03_TABPRECO').AsString := FTabelaPreco;
+      FDataSet.ParamByName('AN03_GELADO').AsFloat := FFatorGelado;
+      FDataSet.ParamByName('AC03_SPED_SN').AsString := TFuncoesGerais.GetSN(FSPED);
+      FDataSet.ParamByName('AC03_CEST').AsString := FCest;
+      FDataSet.ParamByName('AC03_CFOP_RS_REVENDA').AsString := FCFOPRevenda;
+      FDataSet.ParamByName('AC03_CFOP_UF_REVENDA').AsString := FCFOPRevendaUF;
+      FDataSet.ParamByName('AC03CODIGOANP').AsString := FANP.CodigoANP;
+      FDataSet.ParamByName('AC03VENDAPORDIMENSAO').AsString := TFuncoesGerais.GetSN(FVendaPorDimensao);
+      FDataSet.ParamByName('AC03_MARCA').AsString := FMarca;
+      FDataSet.ParamByName('AN03_PRECO_VENDA_AUX').AsFloat := FPrecoVendaAuxiliar;
+      FDataSet.ParamByName('AN03_CTCO_AUX').AsFloat := FCustoAuxiliar;
+      FDataSet.ParamByName('AC03_VENDA_KG').AsString := FVendaKilo;
+      FDataSet.ParamByName('AN03_SALDO_AUX').AsFloat := FSaldoAuxiliar;
+      FDataSet.ParamByName('AC03_PRO_SEM_COMISSAO').AsString := TFuncoesGerais.GetSN(FSemComissao);
+      FDataSet.ParamByName('AC03_SKU').AsString := FSKU;
+      FDataSet.ParamByName('AC03CODIGO_GIA').AsString := FCodigoGIA;
+      FDataSet.ParamByName('AN03_VBCSTRET').AsFloat := FvBCSTRet;
+      FDataSet.ParamByName('AN03_VICMSSTRET').AsFloat := FvICMSSTRet;
+      FDataSet.ParamByName('AN03_ALIQ_ST_RET').AsFloat := FALIQ_ST_RET;
+      FDataSet.ParamByName('AN03_VICMSSUBSTITUTO').AsFloat := FValorIcmsSubstituto;
+      FDataSet.ParamByName('AC03CODIGO_GIA_REVENDA').AsString := FCodigoGIARevenda;
+      FDataSet.ParamByName('AC03_INSUMO').AsString := FInsumo;
+      FDataSet.ParamByName('AD03DTINIPROM').AsDAte := FDataIniPromocaoVenda;
+      FDataSet.ParamByName('AD03_DT_INI_PROMOCAO2').AsDAte := FDataIniPromocaoAt;
+      FDataSet.ParamByName('AN03_PRECO_SITE').AsFloat := FPrecoSite;
+      FDataSet.ParamByName('AN03_PRECO_SITE_PROMO').AsFloat := FPrecoPromocaoSite;
+      FDataSet.ParamByName('AN03_PRECO_DIFER_SITE').AsString := TFuncoesGerais.GetSN(FprecoDiferenciadoSite);
+      FDataSet.ParamByName('AD03_DT_INI_PROM_SITE').AsDAte := FDataInicialPromocaoSite;
+      FDataSet.ParamByName('AD03_DT_FIM_PROM_SITE').AsDAte := FDataFinalPromocaoSite;
+      FDataSet.ParamByName('AC03_PROD_PROMO_SITE').AsString := TFuncoesGerais.GetSN(FProdutoEmPromocaoSite);
+      FDataSet.ParamByName('AD03_DT_ENVIADO_SITE').AsDateTime := FDataEnviadoSite;
+      FDataSet.ParamByName('AC03_ENVIADO_SITE').AsString := TFuncoesGerais.GetSN(FEnviadoSite);
+      FDataSet.ParamByName('AN03PESO_GRAMAS').AsFloat := FPesoSiteGramas;
+      FDataSet.ParamByName('ID_SITE').AsString := FIdSite;
+      FDataSet.ParamByName('ID_CATEGORIA_SITE').AsInteger := FIdCategoriaSite;
+
+      FDataSet.ExecSql;
+      if (pEfetuarCommit) then
+      begin
+        TSistema.GravarNoBanco(FDataSet, false);
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+class function TProduto.MontaValorPromocao(pCodProduto, pTipoVenda: string; pPermiteUsaPromocao: Boolean): Double;
+var
+  lValorAtacado, lValorVenda, lValorPromocaoAtacado, lValorPromocaoVenda, lValorRetorno, lQuantidadeAtacado: Double;
+  lDataIniAt, lDataFimAt, lDataIniVenda, lDataFimVenda: TDate;
+  lPermiteRotinaAtacado, lBloqueiaUsuarioUsarPromocao, lProdutoEmPromocao: Boolean;
+  lnDec: Integer;
+  lProduto: TProduto;
+
+  procedure AlimentaVariaveisLocais;
+  begin
+    lProduto := TProduto.Create;
+    try
+      lProduto.Codigo := pCodProduto;
+      lProduto.Carrega('C');
+
+      lValorAtacado := lProduto.PrecoAtacado;
+      lValorVenda := lProduto.PrecoVista;
+      lValorPromocaoAtacado := lProduto.ValorPromocaoAtacado;
+      lValorPromocaoVenda := lProduto.ValorPromocaoVenda;
+      lQuantidadeAtacado := lProduto.QuantidadeAtacado;
+
+      lDataIniAt := lProduto.DataIniPromocaoAt;
+      lDataFimAt := lProduto.DataFimPromocaoAt;
+      lDataIniVenda := lProduto.DataIniPromocaoVenda;
+      lDataFimVenda := lProduto.DataFimPromocaoVenda;
+      lProdutoEmPromocao := lProduto.ProdutoEmPromocao;
+      lPermiteRotinaAtacado := TSistema.Configuracao.UtilizarRotinaAtacado;
+      lBloqueiaUsuarioUsarPromocao := TSistema.Usuario.ConfiguracaoUsuario.V_VendaPromocao;
+      lnDec := TSistema.Configuracao.QuantidadeCasasDecimais;
+      lValorRetorno := 0.00;
+    finally
+      lProduto.Free;
+    end;
+
+  end;
+
+  function ValidaDataAtacado: Boolean;
+  begin
+    Result := (lDataIniAt <= Date) and (lDataFimAt >= Date);
+  end;
+
+  function ValidaDataVenda: Boolean;
+  begin
+    Result := (lDataIniVenda <= Date) and (lDataFimVenda >= Date);
+  end;
+
+  procedure ValidacaoVendaVarejo;
+  begin
+    if not(lBloqueiaUsuarioUsarPromocao) and (ValidaDataVenda) and (lProdutoEmPromocao) and (pPermiteUsaPromocao) then
+    begin
+      lValorRetorno := SimpleRoundTo((lValorPromocaoVenda), -lnDec);
+    end
+    else
+    begin
+      lValorRetorno := SimpleRoundTo(lValorVenda, -lnDec);
+    end;
+  end;
+
+  procedure ValidacaoVendaAtacado;
+  begin
+    if (lPermiteRotinaAtacado) and (not(lBloqueiaUsuarioUsarPromocao)) and (lQuantidadeAtacado > 0) and
+      (ValidaDataAtacado) and (lProdutoEmPromocao) and (pPermiteUsaPromocao) then
+    begin
+      lValorRetorno := SimpleRoundTo((lValorPromocaoAtacado * lQuantidadeAtacado), -lnDec);
+    end
+    else
+    begin
+      if TSistema.Configuracao.NaoPermitirVendaPretoATQtdeVJZero then
+      BEGIN
+        ValidacaoVendaVarejo;
+      end
+      ELSE
+      BEGIN
+        lValorRetorno := SimpleRoundTo(lValorAtacado, -lnDec);
+      end;
+    end;
+  end;
+
+// Todas as procedures usadas aqui estão criadas dentro da propria procedure.
+begin
+  AlimentaVariaveisLocais;
+
+  if pTipoVenda = 'A' then
+  begin
+    ValidacaoVendaAtacado;
+  end
+  else if pTipoVenda = 'V' then
+  begin
+    ValidacaoVendaVarejo;
+  end;
+
+  Result := lValorRetorno;
+
+end;
+
+function TProduto.VerificaSeExisteBuscaPelaDescricao(pCampo: string): Boolean;
+begin
+  Result := false;
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT FIRST 1 * FROM MC03PRO ');
+  FDataSet.SQL.Add(' Where (AC03DESC =' + QuotedStr(pCampo) + ')');
+  FDataSet.Open;
+  FDataSet.FetchAll;
+  if FDataSet.RecordCount > 0 then
+  begin
+    FDescricao := FDataSet.FieldByName('AC03DESC').AsString;
+    Carrega('D');
+    Result := True;
+  end;
+end;
+
+function TProduto.VerificaSeExisteBuscaPelaFabricante(pCampo: string): Boolean;
+begin
+  Result := false;
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC03PRO ');
+  FDataSet.SQL.Add(' Where (AC03RFAB =' + QuotedStr(pCampo) + ')');
+  FDataSet.Open;
+  FDataSet.FetchAll;
+  if FDataSet.RecordCount > 0 then
+  begin
+    // := FDataSet.FieldByName('AC03RFAB').AsString;
+    Carrega('F');
+    Result := True;
+  end
+end;
+
+function TProduto.VerificaSeExisteBuscaPelaReferencia(pCampo: string): Boolean;
+begin
+  Result := false;
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC03PRO ');
+  FDataSet.SQL.Add(' Where (AC03REF =' + QuotedStr(pCampo) + ')');
+  FDataSet.Open;
+  FDataSet.FetchAll;
+  if FDataSet.RecordCount > 0 then
+  begin
+    FReferencia := FDataSet.FieldByName('AC03REF').AsString;
+    Carrega('R');
+    Result := True;
+  end
+end;
+
+function TProduto.VerificaSeExisteBuscaPeloCBarras(pCampo: string): Boolean;
+begin
+  Result := false;
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC03PRO ');
+  FDataSet.SQL.Add(' Where (AC03CBR =' + QuotedStr(pCampo) + ')');
+  FDataSet.Open;
+  FDataSet.FetchAll;
+  if FDataSet.RecordCount > 0 then
+  begin
+    FCodigoBarras := FDataSet.FieldByName('AC03CBR').AsString;
+    Carrega('B');
+    Result := True;
+  end;
+end;
+
+function TProduto.VerificaSeExisteBuscaPeloCodigo(pCampo: string): Boolean;
+begin
+  Result := false;
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC03PRO ');
+  FDataSet.SQL.Add(' Where (AC03CODI =' + QuotedStr(pCampo) + ')');
+  FDataSet.Open;
+  FDataSet.FetchAll;
+  if FDataSet.RecordCount > 0 then
+  begin
+    FCodigo := FDataSet.FieldByName('AC03CODI').AsString;
+    Carrega('C');
+    Result := True;
+  end;
+end;
+
+function TProduto.CarregaSemTipoBusca(pCampo: string): Boolean;
+begin
+  Result := false;
+  pCampo := Trim(pCampo);
+
+  if VerificaSeExisteBuscaPeloCodigo(pCampo) then
+  begin
+    Result := True;
+  end
+  else if VerificaSeExisteBuscaPeloCBarras(pCampo) then
+  begin
+    Result := True;
+  end
+  else if VerificaSeExisteBuscaPelaReferencia(pCampo) then
+  begin
+    Result := True;
+  end
+  else if VerificaSeExisteBuscaPelaFabricante(pCampo) then
+  begin
+    Result := True;
+  end
+  else if VerificaSeExisteBuscaPelaDescricao(pCampo) then
+  begin
+    Result := True;
+  end;
+
+end;
+
+end.

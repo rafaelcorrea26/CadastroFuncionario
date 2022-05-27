@@ -1,0 +1,307 @@
+unit uProdutosMC;
+
+interface
+
+uses
+  DB,
+  SysUtils,
+  FireDAC.Comp.Client, uConexao, System.Math, Vcl.Dialogs;
+
+type
+  TProdutoMC = class
+  private
+    FQuery: TFDQuery;
+    FDataSet: TFDQuery;
+
+    Fean: string;
+    Fname: string;
+    Fncm: string;
+    Fdescription: string;
+    Fdescription_small: string;
+    Fprice: Double;
+    Fcost_price: Double;
+    Fpromotional_price: Double;
+    Fstart_promotion: string;
+    Fend_promotion: string;
+    Fbrand: string;
+    Fmodel: string;
+    Fweight: Double;
+    Flength: String;
+    Fwidth: String;
+    Fheight: String;
+    Fstock: Double;
+    Fcategory_id: integer;
+    Favailable: integer;
+    Favailability: string;
+    Favailability_days: integer;
+    Freference: string;
+    Frelated_categories: Double;
+    Frelease_date: string;
+    Fshortcut: string;
+    Fvirtual_product: integer;
+    FCodigoMC: string;
+    FEnviado: Boolean;
+    FCodigoSite: string;
+
+  public
+    destructor Destroy; override;
+    property CodigoSite: string read FCodigoSite write FCodigoSite;
+    property CodigoMC: string read FCodigoMC write FCodigoMC;
+    property CodigoBarras: string read Fean write Fean; // "9999";
+    property Descricao: string read Fname write Fname; // "Produto Teste API";
+    property NCM: string read Fncm write Fncm; // "99999999"
+    property DescricaoLonga: string read Fdescription write Fdescription; // "Descrição do Produto de Teste da API";
+    property DescricaoCurta: string read Fdescription_small write Fdescription_small; // "Produto de Teste da API";
+    property Preco: Double read Fprice write Fprice; // 10.01;
+    property Custo: Double read Fcost_price write Fcost_price; // 10.01;
+    property PrecoPromocao: Double read Fpromotional_price write Fpromotional_price; // 10.01;
+    property InicioPromocao: string read Fstart_promotion write Fstart_promotion; // "2019-04-01";
+    property FimPromocao: string read Fend_promotion write Fend_promotion; // "2019-04-30";
+    property Marca: string read Fbrand write Fbrand; // "Marca";
+    property Modelo: string read Fmodel write Fmodel; // "Modelo";
+    property Peso: Double read Fweight write Fweight; // 1000;
+    property Comprimento: String read Flength write Flength; // 10;
+    property Largura: String read Fwidth write Fwidth; // 10;
+    property Altura: String read Fheight write Fheight; // 10;
+    property Estoque: Double read Fstock write Fstock; // 100;
+    property CategoriaID: integer read Fcategory_id write Fcategory_id; // "2";  // Cod categoria principal do produto
+    property ProdutoDisponivel: integer read Favailable write Favailable; // 1;  0 = indisponivel // 1 = disponivel
+    property Disponibilidade: string read Favailability write Favailability; // "Disponível em 3 dias";
+    property DisponibilidadeDias: integer read Favailability_days write Favailability_days; // 3;
+    property SKU: string read Freference write Freference; // "111";
+    property CategoriasAdicionais: Double read Frelated_categories write Frelated_categories; // [3,5,7];
+    property DataLancamento: string read Frelease_date write Frelease_date; // "";
+    property Atalho: string read Fshortcut write Fshortcut; // "";
+    property ProdutoVirtual: integer read Fvirtual_product write Fvirtual_product; // "0";  0 = Normal // 1 = virtual
+    property Enviado: Boolean read FEnviado write FEnviado;
+    procedure Carrega;
+
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+
+    function GetSN(pBoolean: Boolean): string;
+    constructor Create;
+
+  end;
+
+implementation
+
+{ TProduto }
+
+procedure TProdutoMC.Alterar(pEfetuarCommit: Boolean);
+// Promo, ver com jef se coloco.
+// FDataSet.SQL.Add('  , AC03_PROD_PROMO_SITE     = :AC03_PROD_PROMO_SITE      '); // Promo site S/N
+// FDataSet.SQL.Add('  , AN03_PRECO_SITE_PROMO    = :AN03_PRECO_SITE_PROMO     '); // Preço Promo
+// FDataSet.SQL.Add('  , AD03_DT_INI_PROM_SITE    = :AD03_DT_INI_PROM_SITE     '); // Ini Promo
+// FDataSet.SQL.Add('  , AD03_DT_FIM_PROM_SITE    = :AD03_DT_FIM_PROM_SITE     '); // Fim Promo
+// FDataSet.ParamByName('AC03_PROD_PROMO_SITE').AsString := 'N';
+// FDataSet.ParamByName('AN03_PRECO_SITE_PROMO').AsFloat := Fpromotional_price;
+// FDataSet.ParamByName('AD03_DT_INI_PROM_SITE').AsString := Fstart_promotion;
+// FDataSet.ParamByName('AD03_DT_FIM_PROM_SITE').AsString := Fend_promotion;
+begin
+  try
+    FDataSet.close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE MC03PRO SET                                        ');
+    FDataSet.SQL.Add('    AC03CBR                  = :AC03CBR                   '); // Codigo barra
+    FDataSet.SQL.Add('  , AC03DESC                 = :AC03DESC                  '); // desc
+    FDataSet.SQL.Add('  , AC03_NOME_SITE           = :AC03_NOME_SITE            '); // desc site
+    FDataSet.SQL.Add('  , AC03_NOME_SITE_RESUMIDO  = :AC03_NOME_SITE_RESUMIDO   '); // desc curta
+    //FDataSet.SQL.Add('  , AC03_DESCRICAO_SITE      = :AC03_DESCRICAO_SITE       '); // desc longa
+    FDataSet.SQL.Add('  , AN03_PRECO_SITE          = :AN03_PRECO_SITE           '); // Preço
+    FDataSet.SQL.Add('  , AC03_CODIGO_DCB          = :AC03_CODIGO_DCB           '); // NCM
+    FDataSet.SQL.Add('  , AN03PESO_GRAMAS          = :AN03PESO_GRAMAS           '); // Peso
+    FDataSet.SQL.Add('  , AN03CTCO                 = :AN03CTCO                  '); // Custo
+    FDataSet.SQL.Add('  , AC03_MARCA               = :AC03_MARCA                '); // Marca
+    FDataSet.SQL.Add('  , ID_CATEGORIA_SITE        = :ID_CATEGORIA_SITE         '); // Id Categoria
+    FDataSet.SQL.Add('  , AN03SLAM                 = :AN03SLAM                  '); // Saldo
+    FDataSet.SQL.Add('  , ID_SITE                  = :ID_SITE                   '); // id site
+    FDataSet.SQL.Add('  , AC03_ENVIADO_SITE = ''S''                             ');
+    FDataSet.SQL.Add('  , AC03_ENVIAR_SITE  = ''S''                             ');
+    FDataSet.SQL.Add('  , AN03_PRECO_DIFER_SITE  = ''S''                        ');
+    FDataSet.SQL.Add('    WHERE AC03_SKU = :AC03_SKU                            ');
+    FDataSet.ParamByName('AC03CBR').AsString := Fean;
+    FDataSet.ParamByName('AC03DESC').AsString := Copy(Fname, 1, 35);
+    FDataSet.ParamByName('AC03_NOME_SITE').AsString := Copy(Fname, 1, 150);
+    FDataSet.ParamByName('AC03_NOME_SITE_RESUMIDO').AsString := Copy(Fdescription_small, 1, 80);
+    //FDataSet.ParamByName('AC03_DESCRICAO_SITE').AsString := Copy(Fdescription, 1, 80);
+    FDataSet.ParamByName('AN03_PRECO_SITE').AsFloat := Fprice;
+    FDataSet.ParamByName('AC03_CODIGO_DCB').AsString := Fncm;
+    FDataSet.ParamByName('AN03PESO_GRAMAS').AsFloat := Fweight;
+    FDataSet.ParamByName('AN03CTCO').AsFloat := Fcost_price;
+    FDataSet.ParamByName('AC03_MARCA').AsString := Copy(Fbrand, 1, 25);
+    FDataSet.ParamByName('ID_CATEGORIA_SITE').AsInteger := Fcategory_id;
+    FDataSet.ParamByName('AN03SLAM').AsFloat := Fstock;
+    FDataSet.ParamByName('ID_SITE').AsString := FCodigoSite;
+    FDataSet.ParamByName('AC03_SKU').AsString := Copy(Freference, 1, 25);
+    FDataSet.ExecSql;
+
+    if trim(FCodigoMC) <> '' then
+    begin
+      FDataSet.close;
+      FDataSet.SQL.Clear;
+      FDataSet.SQL.Add(' UPDATE or INSERT into MC03_CUSTO(        ');
+      FDataSet.SQL.Add('    AC03_CODIGO                           ');
+      FDataSet.SQL.Add('  , AN03_PROFUNDIDADE                     '); // Profundidade
+      FDataSet.SQL.Add('  , AN03_LARGURA                          '); // Largura
+      FDataSet.SQL.Add('  , AN03_ALTURA                           '); // Altura
+      FDataSet.SQL.Add('  ) values (                              ');
+      FDataSet.SQL.Add('    :AC03_CODIGO                          ');
+      FDataSet.SQL.Add('  , :AN03_PROFUNDIDADE                    '); // Profundidade
+      FDataSet.SQL.Add('  , :AN03_LARGURA                         '); // Largura
+      FDataSet.SQL.Add('  , :AN03_ALTURA                          '); // Altura
+      FDataSet.SQL.Add(')                                         ');
+      FDataSet.SQL.Add('  matching (AC03_CODIGO)                  '); // CÓDIGO
+      FDataSet.ParamByName('AN03_PROFUNDIDADE').AsString := Flength;
+      FDataSet.ParamByName('AN03_LARGURA').AsString := Fwidth;
+      FDataSet.ParamByName('AN03_ALTURA').AsString := Fheight;
+      FDataSet.ParamByName('AC03_CODIGO').AsString := FCodigoMC;
+      FDataSet.ExecSql;
+    end;
+
+    if (pEfetuarCommit) then
+    begin
+      FDataSet.Connection.Commit;
+    end;
+  except
+    on E: Exception do
+    begin
+    end;
+  end;
+end;
+
+procedure TProdutoMC.Carrega;
+begin
+  FQuery.close;
+  FQuery.SQL.Clear;
+  FQuery.SQL.Add('SELECT * FROM MC03PRO WHERE AC03CODI = :AC03CODI');
+  FQuery.ParamByName('AC03CODI').AsString := FCodigoMC;
+  FQuery.Open;
+  //
+  // por variaveis carregadas aqui
+end;
+
+constructor TProdutoMC.Create;
+begin
+  FQuery := TFDQuery.Create(nil);
+  FQuery.Connection := TConexao.ObjetoConexao.ConnectionMC;
+
+  FDataSet := TFDQuery.Create(nil);
+  FDataSet.Connection := TConexao.ObjetoConexao.ConnectionMC;
+end;
+
+destructor TProdutoMC.Destroy;
+begin
+  FDataSet.Free;
+  FQuery.Free;
+  inherited;
+end;
+
+procedure TProdutoMC.Excluir(pEfetuarCommit: Boolean);
+begin
+  FDataSet.close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('DELETE FROM MC03PRO WHERE SKU = :SKU ');
+  FDataSet.ParamByName('SKU').AsString := Freference;
+  FDataSet.ExecSql;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.Commit;
+  end;
+end;
+
+function TProdutoMC.GetSN(pBoolean: Boolean): string;
+begin
+  if pBoolean then
+    Result := 'S'
+  else
+    Result := 'N';
+end;
+
+procedure TProdutoMC.Incluir(pEfetuarCommit: Boolean);
+begin
+  try
+    FDataSet.close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('INSERT INTO MC03PRO (         ');
+    FDataSet.SQL.Add('  , AC03CBR                   '); // Codigo barra
+    FDataSet.SQL.Add('  , AC03DESC                  '); // desc
+    FDataSet.SQL.Add('  , AC03_NOME_SITE            '); // desc site
+    FDataSet.SQL.Add('  , AC03_NOME_SITE_RESUMIDO   '); // desc curta
+    FDataSet.SQL.Add('  , AC03_DESCRICAO_SITE       '); // desc longa
+    FDataSet.SQL.Add('  , AN03_PRECO_SITE           '); // Preço
+    FDataSet.SQL.Add('  , AC03_CODIGO_DCB           '); // NCM
+    FDataSet.SQL.Add('  , AN03PESO_GRAMAS           '); // Peso
+    FDataSet.SQL.Add('  , AN03_PROFUNDIDADE         '); // Profundidade
+    FDataSet.SQL.Add('  , AN03_LARGURA              '); // Largura
+    FDataSet.SQL.Add('  , AN03_ALTURA               '); // Altura
+    FDataSet.SQL.Add('  , AN03CTCO                  '); // Custo
+    FDataSet.SQL.Add('  , AC03_PROD_PROMO_SITE      '); // Promo site S/N
+    FDataSet.SQL.Add('  , AN03_PRECO_SITE_PROMO     '); // Preço Promo
+    FDataSet.SQL.Add('  , AD03_DT_INI_PROM_SITE     '); // Ini Promo
+    FDataSet.SQL.Add('  , AD03_DT_FIM_PROM_SITE     '); // Fim Promo
+    FDataSet.SQL.Add('  , AC03_MARCA                '); // Marca
+    FDataSet.SQL.Add('  , ID_CATEGORIA_SITE         '); // Id Categoria
+    FDataSet.SQL.Add('  , AN03SLAM                  '); // Saldo
+    FDataSet.SQL.Add('  , AC03_ENVIADO_SITE         ');
+    FDataSet.SQL.Add(' )                            ');
+    FDataSet.SQL.Add(' values(                      ');
+    FDataSet.SQL.Add('  , :AC03CBR                  '); // Codigo barra
+    FDataSet.SQL.Add('  , :AC03DESC                 '); // desc
+    FDataSet.SQL.Add('  , :AC03_NOME_SITE           '); // desc site
+    FDataSet.SQL.Add('  , :AC03_NOME_SITE_RESUMIDO  '); // desc curta
+    FDataSet.SQL.Add('  , :AC03_DESCRICAO_SITE      '); // desc longa
+    FDataSet.SQL.Add('  , :AN03_PRECO_SITE          '); // Preço
+    FDataSet.SQL.Add('  , :AC03_CODIGO_DCB          '); // NCM
+    FDataSet.SQL.Add('  , :AN03PESO_GRAMAS          '); // Peso
+    FDataSet.SQL.Add('  , :AN03_PROFUNDIDADE        '); // Profundidade
+    FDataSet.SQL.Add('  , :AN03_LARGURA             '); // Largura
+    FDataSet.SQL.Add('  , :AN03_ALTURA              '); // Altura
+    FDataSet.SQL.Add('  , :AN03CTCO                 '); // Custo
+    FDataSet.SQL.Add('  , :AC03_PROD_PROMO_SITE     '); // Promo site S/N
+    FDataSet.SQL.Add('  , :AN03_PRECO_SITE_PROMO    '); // Preço Promo
+    FDataSet.SQL.Add('  , :AD03_DT_INI_PROM_SITE    '); // Ini Promo
+    FDataSet.SQL.Add('  , :AD03_DT_FIM_PROM_SITE    '); // Fim Promo
+    FDataSet.SQL.Add('  , :AC03_MARCA               '); // Marca
+    FDataSet.SQL.Add('  , :ID_CATEGORIA_SITE        '); // Id Categoria
+    FDataSet.SQL.Add('  , :AN03SLAM                 '); // Saldo
+    FDataSet.SQL.Add('  , :AC03_ENVIADO_SITE        '); // enviado s/n
+    FDataSet.SQL.Add(' )                            ');
+    FDataSet.ParamByName('AC03CODI').AsString := FCodigoMC;
+    FDataSet.ParamByName('AC03CBR').AsString := Fean;
+    FDataSet.ParamByName('AC03DESC').AsString := Fname;
+    FDataSet.ParamByName('AC03_NOME_SITE').AsString := Fname;
+    FDataSet.ParamByName('AC03_NOME_SITE_RESUMIDO').AsString := Fdescription_small;
+    FDataSet.ParamByName('AC03_DESCRICAO_SITE').AsString := Fdescription;
+    FDataSet.ParamByName('AN03_PRECO_SITE').AsFloat := Fprice;
+    FDataSet.ParamByName('AC03_CODIGO_DCB').AsString := Fncm;
+    FDataSet.ParamByName('AN03PESO_GRAMAS').AsFloat := Fweight;
+    FDataSet.ParamByName('AN03_PROFUNDIDADE').AsString := Flength;
+    FDataSet.ParamByName('AN03_LARGURA').AsString := Fwidth;
+    FDataSet.ParamByName('AN03_ALTURA').AsString := Fheight;
+    FDataSet.ParamByName('AN03CTCO').AsFloat := Fcost_price;
+    FDataSet.ParamByName('AC03_PROD_PROMO_SITE').AsString := 'N';
+    FDataSet.ParamByName('AN03_PRECO_SITE_PROMO').AsFloat := Fpromotional_price;
+    FDataSet.ParamByName('AD03_DT_INI_PROM_SITE').AsString := Fstart_promotion;
+    FDataSet.ParamByName('AD03_DT_FIM_PROM_SITE').AsString := Fend_promotion;
+    FDataSet.ParamByName('AC03_MARCA').AsString := Fbrand;
+    FDataSet.ParamByName('ID_CATEGORIA_SITE').AsInteger := Fcategory_id;
+    FDataSet.ParamByName('AN03SLAM').AsFloat := Fstock;
+    FDataSet.ParamByName('AC03_ENVIADO_SITE').AsString := GetSN(FEnviado);
+    FDataSet.ExecSql;
+    if (pEfetuarCommit) then
+    begin
+      FDataSet.Connection.Commit;
+    end;
+
+  except
+    on E: Exception do
+    begin
+
+    end;
+  end;
+end;
+
+end.

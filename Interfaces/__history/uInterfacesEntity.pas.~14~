@@ -1,0 +1,24 @@
+unit uInterfacesEntity;
+
+interface
+
+uses
+  System.JSON;
+
+type
+
+  // Entidades
+
+  iEntidade = interface
+    ['{F069D59C-9CB6-49ED-B475-D0C7FAC36DF8}']
+  end;
+
+  // DAO
+
+  iEntidadeDAO = interface
+    ['{7904B91D-DEF0-4C96-8474-B02F0773E4BB}']
+  end;
+
+implementation
+
+end.

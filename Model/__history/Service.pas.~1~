@@ -1,0 +1,11 @@
+unit Service;
+
+interface
+
+type
+
+  TServiceAPI = (tGetFiles, tPostFiles, tUpdateFiles, tGetFollowers, tPostFollowers, tUpdateFollowers);
+
+implementation
+
+end.

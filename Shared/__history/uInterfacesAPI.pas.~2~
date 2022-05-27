@@ -1,0 +1,11 @@
+unit uInterfacesAPI;
+
+interface
+
+    type
+iMessages = interface
+   ['{229CD671-2224-4A00-9B0D-DD500371C2B5}']
+  end;
+implementation
+
+end.

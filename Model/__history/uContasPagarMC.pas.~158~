@@ -1,0 +1,887 @@
+unit uContasPagarMC;
+
+interface
+
+uses
+  FireDAC.Comp.Client, System.SysUtils, System.StrUtils, uConnection, uQuery,
+  System.DateUtils, uInterfaces;
+
+type
+  TContasPagarMC = class(TInterfacedObject, iClassReceive)
+  private
+    FConexao: TFDConnection;
+    FQuery: TFDquery;
+    FDataSet: TFDquery;
+    FTitulo: string;
+    FEmpresa: Integer;
+    FEmissao: Tdate;
+    FFornecedor: Integer;
+    FValor: double;
+    FVencimento: Tdate;
+    FFluxoCaixa: Tdate;
+    FVendedor: Integer;
+    FBancoCobranca: string;
+    FBancoPagamento: string;
+    FSituacao: string;
+    FFormaPagamento: Integer;
+    FJuros: double;
+    FDesconto: double;
+    FDataPagamento: Tdate;
+    FValorPago: double;
+    FTotalPago: double;
+    FDataHoraCadastro: Tdatetime;
+    FDataHoraPagamento: Tdatetime;
+    FUsuarioCadastro: Integer;
+    FUsuarioPagamento: Integer;
+    FDataHoraAlteracao: Tdatetime;
+    FUsuarioAlteracao: Integer;
+    FOrigem: string;
+    FAno: string;
+    FMes: string;
+    FOBS1: string;
+    FOBS2: string;
+    FParcial: String;
+    FConta: string;
+    FCodigoBarras: string;
+    FFormaPagamentoBaixar: Integer;
+    FEmpresaTitulo: string;
+    FCodigoEmpresa: string;
+    FDataUltimoSincronismo: Tdatetime;
+    class var FObjetoBusca: TContasPagarMC;
+
+  public
+    destructor Destroy; override;
+    property EmpresaTitulo: string read FEmpresaTitulo write FEmpresaTitulo;
+    property Titulo: string read FTitulo write FTitulo;
+    property Empresa: Integer read FEmpresa write FEmpresa;
+    property Emissao: Tdate read FEmissao write FEmissao;
+    property Fornecedor: Integer read FFornecedor write FFornecedor;
+    property Valor: double read FValor write FValor;
+    property Vencimento: Tdate read FVencimento write FVencimento;
+    property FluxoCaixa: Tdate read FFluxoCaixa write FFluxoCaixa;
+    property BancoCobranca: string read FBancoCobranca write FBancoCobranca;
+    property BancoPagamento: string read FBancoPagamento write FBancoPagamento;
+    property Situacao: string read FSituacao write FSituacao;
+    property FormaPagamento: Integer read FFormaPagamento write FFormaPagamento;
+    property Juros: double read FJuros write FJuros;
+    property Desconto: double read FDesconto write FDesconto;
+    property DataPagamento: Tdate read FDataPagamento write FDataPagamento;
+    property ValorPago: double read FValorPago write FValorPago;
+    property TotalPago: double read FTotalPago write FTotalPago;
+    property DataHoraCadastro: Tdatetime read FDataHoraCadastro write FDataHoraCadastro;
+    property DataHoraPagamento: Tdatetime read FDataHoraPagamento write FDataHoraPagamento;
+    property UsuarioCadastro: Integer read FUsuarioCadastro write FUsuarioCadastro;
+    property UsuarioPagamento: Integer read FUsuarioPagamento write FUsuarioPagamento;
+    property DataHoraAlteracao: Tdatetime read FDataHoraAlteracao write FDataHoraAlteracao;
+    property UsuarioAlteracao: Integer read FUsuarioAlteracao write FUsuarioAlteracao;
+    property Origem: string read FOrigem write FOrigem;
+    property Ano: string read FAno write FAno;
+    property Mes: string read FMes write FMes;
+    property OBS1: string read FOBS1 write FOBS1;
+    property OBS2: string read FOBS2 write FOBS2;
+    property Parcial: String read FParcial write FParcial;
+    property Conta: string read FConta write FConta;
+    property CodigoBarras: string read FCodigoBarras write FCodigoBarras;
+    property FormaPagamentoBaixar: Integer read FFormaPagamentoBaixar write FFormaPagamentoBaixar;
+    property CodigoEmpresa: string read FCodigoEmpresa write FCodigoEmpresa;
+    property DataUltimoSincronismo: Tdatetime read FDataUltimoSincronismo write FDataUltimoSincronismo;
+    procedure Carrega;
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    function IncluirOuAltera(pEmpresaPrincipal: Boolean = false): String;
+    function ExcluirTituloEmpresa(pEfetuarCommit: Boolean): Boolean;
+    function ExisteEmpresaTitulo(pTitulo: string): Boolean;
+    function RetornaTituloPeloTituloEmpresa(pTituloEmp: String): string;
+    function GeraProximoTituloIntegracao: string;
+    function GeraProximoCodigo: Integer;
+    function GetSN(pBoolean: Boolean): string;
+
+    constructor Create;
+    procedure clearClass;
+    class function RemoveCaracteresEspeciais(aTexto: string): string;
+    class function Existe(pTitulo: string): Boolean;
+    class function BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+    class function BuscaCodigoPeloCpf(pCpf: string): Integer;
+    class property ObjetoBusca: TContasPagarMC read FObjetoBusca write FObjetoBusca;
+  end;
+
+implementation
+
+{ TContasPagarMC }
+
+procedure TContasPagarMC.Alterar(pEfetuarCommit: Boolean);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE MC08CPAG SET                          ');
+  FDataSet.SQL.Add('   AC08EMPRESA = :AC08EMPRESA                 ');
+  FDataSet.SQL.Add(' , AD08EMISSAO = :AD08EMISSAO                 ');
+  FDataSet.SQL.Add(' , AN08FORNEC = :AN08FORNEC                   ');
+  FDataSet.SQL.Add(' , AN08VALOR = :AN08VALOR                     ');
+  FDataSet.SQL.Add(' , AD08VCTO = :AD08VCTO                       ');
+  FDataSet.SQL.Add(' , AD08FLUXO = :AD08FLUXO                     ');
+  FDataSet.SQL.Add(' , AC08BCOR = :AC08BCOR                       ');
+  FDataSet.SQL.Add(' , AC08BCPG = :AC08BCPG                       ');
+  FDataSet.SQL.Add(' , AC08SIT = :AC08SIT                         ');
+  FDataSet.SQL.Add(' , AC08FRPGTO = :AC08FRPGTO                   ');
+  FDataSet.SQL.Add(' , AN08JUROS = :AN08JUROS                     ');
+  FDataSet.SQL.Add(' , AN08DESC = :AN08DESC                       ');
+  FDataSet.SQL.Add(' , AD08DTPGTO = :AD08DTPGTO                   ');
+  FDataSet.SQL.Add(' , AN08VLPAGO = :AN08VLPAGO                   ');
+  FDataSet.SQL.Add(' , AN08TOTALPAGO = :AN08TOTALPAGO             ');
+  FDataSet.SQL.Add(' , AC08DHCAD = :AC08DHCAD                     ');
+  FDataSet.SQL.Add(' , AC08DHPGTO = :AC08DHPGTO                   ');
+  FDataSet.SQL.Add(' , AC08USUCAD = :AC08USUCAD                   ');
+  FDataSet.SQL.Add(' , AC08USUPGTO = :AC08USUPGTO                 ');
+  FDataSet.SQL.Add(' , AC08DHALT = :AC08DHALT                     ');
+  FDataSet.SQL.Add(' , AC08USUALT = :AC08USUALT                   ');
+  FDataSet.SQL.Add(' , AC08ORIG = :AC08ORIG                       ');
+  FDataSet.SQL.Add(' , AN089DESC = :AN089DESC                     ');
+  FDataSet.SQL.Add(' , AC08_ANO = :AC08_ANO                       ');
+  FDataSet.SQL.Add(' , AC08_MES = :AC08_MES                       ');
+  FDataSet.SQL.Add(' , AC08_OBS1 = :AC08_OBS1                     ');
+  FDataSet.SQL.Add(' , AC08_OBS2 = :AC08_OBS2                     ');
+  FDataSet.SQL.Add(' , AC08_PARCIAL = :AC08_PARCIAL               ');
+  FDataSet.SQL.Add(' , AN08_EMPRESA = :AN08_EMPRESA               ');
+  FDataSet.SQL.Add(' , AC08_CTA = :AC08_CTA                       ');
+  FDataSet.SQL.Add(' , AC08_COD_BARRAS = :AC08_COD_BARRAS         ');
+  FDataSet.SQL.Add(' , AC08FRPGTO_BAIXARCP = :AC08FRPGTO_BAIXARCP ');
+  FDataSet.SQL.Add(' , AC08EMP_TIT = :AC08EMP_TIT                 ');
+  FDataSet.SQL.Add(' where (AC08TIT = :AC08TIT)                   ');
+  FDataSet.ParamByName('AC08TIT').AsString := copy(FTitulo, 1, 16);
+  FDataSet.ParamByName('AC08EMPRESA').AsInteger := FEmpresa;
+  FDataSet.ParamByName('AD08EMISSAO').AsDate := FEmissao;
+  FDataSet.ParamByName('AN08FORNEC').AsInteger := FFornecedor;
+  FDataSet.ParamByName('AN08VALOR').asfloat := FValor;
+  FDataSet.ParamByName('AD08VCTO').AsDate := FVencimento;
+  FDataSet.ParamByName('AD08FLUXO').AsDate := FFluxoCaixa;
+  FDataSet.ParamByName('AC08BCOR').AsString := copy(FBancoCobranca, 1, 3);
+  FDataSet.ParamByName('AC08BCPG').AsString := copy(FBancoPagamento, 1, 3);
+  FDataSet.ParamByName('AC08SIT').AsString := copy(FSituacao, 1, 1);
+  FDataSet.ParamByName('AC08FRPGTO').AsInteger := FFormaPagamento;
+  FDataSet.ParamByName('AN08JUROS').asfloat := FJuros;
+  FDataSet.ParamByName('AN08DESC').asfloat := FDesconto;
+  FDataSet.ParamByName('AD08DTPGTO').AsDate := FDataPagamento;
+  FDataSet.ParamByName('AN08VLPAGO').asfloat := FValorPago;
+  FDataSet.ParamByName('AN08TOTALPAGO').asfloat := FTotalPago;
+  FDataSet.ParamByName('AC08DHCAD').AsDate := FDataHoraCadastro;
+  FDataSet.ParamByName('AC08DHPGTO').AsDate := FDataHoraPagamento;
+  FDataSet.ParamByName('AC08USUCAD').AsInteger := FUsuarioCadastro;
+  FDataSet.ParamByName('AC08USUPGTO').AsInteger := FUsuarioPagamento;
+  FDataSet.ParamByName('AC08DHALT').AsDate := FDataHoraAlteracao;
+  FDataSet.ParamByName('AC08USUALT').AsInteger := FUsuarioAlteracao;
+  FDataSet.ParamByName('AC08ORIG').AsString := copy(FOrigem, 1, 2);
+  FDataSet.ParamByName('AC08_ANO').AsString := copy(FAno, 1, 4);
+  FDataSet.ParamByName('AC08_MES').AsString := copy(FMes, 1, 2);
+  FDataSet.ParamByName('AC08_OBS1').AsString := copy(FOBS1, 1, 50);
+  FDataSet.ParamByName('AC08_OBS2').AsString := copy(FOBS2, 1, 50);
+  FDataSet.ParamByName('AC08_PARCIAL').AsString := copy(FParcial, 1, 1);
+  FDataSet.ParamByName('AN08_EMPRESA').AsInteger := FEmpresa;
+  FDataSet.ParamByName('AC08_CTA').AsString := copy(FConta, 1, 3);
+  FDataSet.ParamByName('AC08_COD_BARRAS').AsString := copy(FCodigoBarras, 1, 50);
+  FDataSet.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := FFormaPagamentoBaixar;
+  FDataSet.ParamByName('AC08EMP_TIT').AsString := copy(FEmpresaTitulo, 1, 30);
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+class function TContasPagarMC.BuscaCodigoPeloCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+var
+  lQuery: TFDquery;
+  lIE: string;
+begin
+  lIE := RemoveCaracteresEspeciais(pInscricaoEstadual);
+  Result := 0;
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT MC02CODIGO FROM MC02FORNEC    ');
+    lQuery.SQL.Add(' WHERE MC02CGC = :CNPJ               ');
+    lQuery.ParamByName('CNPJ').AsString := pCnpj;
+    if (Length(trim(lIE)) > 0) then
+    begin
+
+      lQuery.SQL.Add
+        (' AND   REPLACE(REPLACE(REPLACE(REPLACE(MC02IE, ''/'',''''),''-'',''''),''.'',''''),'' '','''') = :INSCRICAO_ESTADUAL ');
+      lQuery.ParamByName('INSCRICAO_ESTADUAL').AsString := lIE;
+    end;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TContasPagarMC.BuscaCodigoPeloCpf(pCpf: string): Integer;
+var
+  lQuery: TFDquery;
+begin
+  Result := 0;
+
+  lQuery := TFDquery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT MC02CPF FROM MC02FORNEC ');
+    lQuery.SQL.Add(' WHERE MC02CPF = :CPF          ');
+    lQuery.ParamByName('CPF').AsString := pCpf;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TContasPagarMC.Carrega;
+var
+  lConsulta: TFDquery;
+begin
+
+  lConsulta := TFDquery.Create(nil);
+  try
+    lConsulta.Close;
+    lConsulta.SQL.Clear;
+    lConsulta.SQL.Add(' select * from MC08CPAG where AC08TIT = :AC08TIT ');
+    lConsulta.ParamByName('AC08TIT').AsString := FTitulo;
+    lConsulta.Open;
+
+    if lConsulta.RecordCount > 0 then
+    begin
+      // carrega dados
+      FTitulo := FDataSet.ParamByName('AC08TIT').AsString;
+      FEmpresa := FDataSet.ParamByName('AC08EMPRESA').AsInteger;
+      FEmissao := FDataSet.ParamByName('AD08EMISSAO').AsDate;
+      FFornecedor := FDataSet.ParamByName('AN08FORNEC').AsInteger;
+      FValor := FDataSet.ParamByName('AN08VALOR').asfloat;
+      FVencimento := FDataSet.ParamByName('AD08VCTO').AsDate;
+      FFluxoCaixa := FDataSet.ParamByName('AD08FLUXO').AsDate;
+      FVendedor := FDataSet.ParamByName('AN08VEND').AsInteger;
+      FBancoCobranca := FDataSet.ParamByName('AC08BCOR').AsString;
+      FBancoPagamento := FDataSet.ParamByName('AC08BCPG').AsString;
+      FSituacao := FDataSet.ParamByName('AC08SIT').AsString;
+      FFormaPagamento := FDataSet.ParamByName('AC08FRPGTO').AsInteger;
+      FJuros := FDataSet.ParamByName('AN08JUROS').asfloat;
+      FDesconto := FDataSet.ParamByName('AN08DESC').asfloat;
+      FDataPagamento := FDataSet.ParamByName('AD08DTPGTO').AsDate;
+      FValorPago := FDataSet.ParamByName('AN08VLPAGO').asfloat;
+      FTotalPago := FDataSet.ParamByName('AN08TOTALPAGO').asfloat;
+      FDataHoraCadastro := FDataSet.ParamByName('AC08DHCAD').AsDate;
+      FDataHoraPagamento := FDataSet.ParamByName('AC08DHPGTO').AsDate;
+      FUsuarioCadastro := FDataSet.ParamByName('AC08USUCAD').AsInteger;
+      FUsuarioPagamento := FDataSet.ParamByName('AC08USUPGTO').AsInteger;
+      FDataHoraAlteracao := FDataSet.ParamByName('AC08DHALT').AsDate;
+      FUsuarioAlteracao := FDataSet.ParamByName('AC08USUALT').AsInteger;
+      FOrigem := FDataSet.ParamByName('AC08ORIG').AsString;
+      FAno := FDataSet.ParamByName('AC08_ANO').AsString;
+      FMes := FDataSet.ParamByName('AC08_MES').AsString;
+      FOBS1 := FDataSet.ParamByName('AC08_OBS1').AsString;
+      FOBS2 := FDataSet.ParamByName('AC08_OBS2').AsString;
+      FParcial := FDataSet.ParamByName('AC08_PARCIAL').AsString;
+      FEmpresa := FDataSet.ParamByName('AN08_EMPRESA').AsInteger;
+      FConta := FDataSet.ParamByName('AC08_CTA').AsString;
+      FCodigoBarras := FDataSet.ParamByName('AC08_COD_BARRAS').AsString;
+      FFormaPagamentoBaixar := FDataSet.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger;
+    end;
+  finally
+    lConsulta.Free;
+  end;
+end;
+
+procedure TContasPagarMC.clearClass;
+begin
+    FTitulo:= EmptyStr;
+    FEmpresa:=0;
+    FEmissao:=0;
+    FFornecedor:=0;
+    FValor:=0;
+    FVencimento:=0;
+    FFluxoCaixa:=0;
+    FVendedor:=0;
+    FBancoCobranca:= EmptyStr;
+    FBancoPagamento:= EmptyStr;
+    FSituacao:= EmptyStr;
+    FFormaPagamento:=0;
+    FJuros:=0;
+    FDesconto:=0;
+    FDataPagamento:=0;
+    FValorPago:=0;
+    FTotalPago:=0;
+    FDataHoraCadastro:=0;
+    FDataHoraPagamento:=0;
+    FUsuarioCadastro:=0;
+    FUsuarioPagamento:=0;
+    FDataHoraAlteracao:=0;
+    FUsuarioAlteracao:=0;
+    FOrigem:= EmptyStr;
+    FAno:= EmptyStr;
+    FMes:= EmptyStr;
+    FOBS1:= EmptyStr;
+    FOBS2:= EmptyStr;
+    FParcial:= EmptyStr;
+    FConta:= EmptyStr;
+    FCodigoBarras:= EmptyStr;
+    FFormaPagamentoBaixar:=0;
+    FEmpresaTitulo:= EmptyStr;
+    FCodigoEmpresa:= EmptyStr;
+    FDataUltimoSincronismo:=0;
+end;
+
+constructor TContasPagarMC.Create;
+begin
+  FQuery := TFDquery.Create(nil);
+  FQuery.Connection := Tconnection.ObjectConnection.Connection;
+
+  FDataSet := TFDquery.Create(nil);
+  FDataSet.Connection := Tconnection.ObjectConnection.Connection;
+
+  clearClass;
+end;
+
+destructor TContasPagarMC.Destroy;
+begin
+  FDataSet.Free;
+  FQuery.Free;
+
+  inherited;
+end;
+
+procedure TContasPagarMC.Excluir(pEfetuarCommit: Boolean);
+begin
+  // HS-540 // Vagner
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('DELETE FROM MC08CPAG WHERE AC08TIT = :AC08TIT ');
+  FDataSet.ParamByName('AC08TIT').AsString := FTitulo;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+function TContasPagarMC.ExcluirTituloEmpresa(pEfetuarCommit: Boolean): Boolean;
+begin
+  Result := false;
+
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select * from MC08CPAG  WHERE AC08EMP_TIT = :AC08EMP_TIT ');
+  FDataSet.ParamByName('AC08EMP_TIT').AsString := FEmpresaTitulo;
+  FDataSet.Open;
+  FDataSet.FetchAll;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('DELETE FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT ');
+    FDataSet.ParamByName('AC08EMP_TIT').AsString := FEmpresaTitulo;
+    FDataSet.ExecSQL;
+
+    if (pEfetuarCommit) then
+    begin
+      FDataSet.Connection.commit;
+    end;
+
+    Result := True;
+  end;
+
+end;
+
+class function TContasPagarMC.Existe(pTitulo: string): Boolean;
+var
+  lQuery: TFDquery;
+begin
+  Result := false;
+  lQuery := TFDquery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08TIT = :AC08TIT');
+    lQuery.ParamByName('AC08TIT').AsString := pTitulo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+
+      if not Assigned(FObjetoBusca) then
+      begin
+        FObjetoBusca := TContasPagarMC.Create;
+      end;
+      FObjetoBusca.Titulo := pTitulo;
+      FObjetoBusca.Carrega;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasPagarMC.ExisteEmpresaTitulo(pTitulo: string): Boolean;
+var
+  lQuery: TFDquery;
+begin
+  lQuery := TFDquery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT');
+    lQuery.ParamByName('AC08EMP_TIT').AsString := pTitulo;
+    lQuery.Open;
+
+    Result := lQuery.RecordCount > 0;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TContasPagarMC.GeraProximoCodigo: Integer;
+begin
+  Result := 0;
+
+  FQuery.Close;
+  FQuery.SQL.Clear;
+  FQuery.SQL.Add('SELECT MAX(AC08TIT) + 1 PROXIMO_CODIGO FROM MC08CPAG ');
+  FQuery.Open;
+
+  if FQuery.RecordCount > 0 then
+  begin
+    Result := FQuery.FieldByName('PROXIMO_CODIGO').AsInteger;
+  end;
+end;
+
+function TContasPagarMC.GeraProximoTituloIntegracao: string;
+var
+  lQuery: TQuery;
+  lProximoNumero: Integer;
+begin
+  lQuery := TQuery.Create(nil);
+
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT FIRST 1 CAST(substring(AC08TIT FROM 6 FOR 30)AS int) AS PROX_NUMERO ');
+    lQuery.SQL.Add(' from mc08cpag                                                              ');
+    lQuery.SQL.Add(' where substring(AC08TIT FROM 1 FOR 3) = ''INT''                            ');
+    lQuery.SQL.Add(' order by 1 desc                                                            ');
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      lProximoNumero := lQuery.FieldByName('PROX_NUMERO').AsInteger + 1;
+    end
+    else
+    begin
+      lProximoNumero := 1;
+    end;
+
+    Result := lProximoNumero.ToString;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TContasPagarMC.GetSN(pBoolean: Boolean): string;
+begin
+  Result := IfThen(pBoolean, 'S', 'N');
+end;
+
+procedure TContasPagarMC.Incluir(pEfetuarCommit: Boolean);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('INSERT INTO MC08CPAG (     ');
+  FDataSet.SQL.Add('   AC08TIT                 ');
+  FDataSet.SQL.Add(' , AC08EMPRESA             ');
+  FDataSet.SQL.Add(' , AD08EMISSAO             ');
+  FDataSet.SQL.Add(' , AN08FORNEC              ');
+  FDataSet.SQL.Add(' , AN08VALOR               ');
+  FDataSet.SQL.Add(' , AD08VCTO                ');
+  FDataSet.SQL.Add(' , AD08FLUXO               ');
+  FDataSet.SQL.Add(' , AN08VEND                ');
+  FDataSet.SQL.Add(' , AC08BCOR                ');
+  FDataSet.SQL.Add(' , AC08BCPG                ');
+  FDataSet.SQL.Add(' , AC08SIT                 ');
+  FDataSet.SQL.Add(' , AC08FRPGTO              ');
+  FDataSet.SQL.Add(' , AN08JUROS               ');
+  FDataSet.SQL.Add(' , AN08DESC                ');
+  FDataSet.SQL.Add(' , AD08DTPGTO              ');
+  FDataSet.SQL.Add(' , AN08VLPAGO              ');
+  FDataSet.SQL.Add(' , AN08TOTALPAGO           ');
+  FDataSet.SQL.Add(' , AC08DHCAD               ');
+  FDataSet.SQL.Add(' , AC08DHPGTO              ');
+  FDataSet.SQL.Add(' , AC08USUCAD              ');
+  FDataSet.SQL.Add(' , AC08USUPGTO             ');
+  FDataSet.SQL.Add(' , AC08DHALT               ');
+  FDataSet.SQL.Add(' , AC08USUALT              ');
+  FDataSet.SQL.Add(' , AC08ORIG                ');
+  FDataSet.SQL.Add(' , AN089DESC               ');
+  FDataSet.SQL.Add(' , AC08_ANO                ');
+  FDataSet.SQL.Add(' , AC08_MES                ');
+  FDataSet.SQL.Add(' , AC08_OBS1               ');
+  FDataSet.SQL.Add(' , AC08_OBS2               ');
+  FDataSet.SQL.Add(' , AC08_PARCIAL            ');
+  FDataSet.SQL.Add(' , AN08_EMPRESA            ');
+  FDataSet.SQL.Add(' , AC08_CTA                ');
+  FDataSet.SQL.Add(' , AC08_COD_BARRAS         ');
+  FDataSet.SQL.Add(' , AC08FRPGTO_BAIXARCP     ');
+  FDataSet.SQL.Add(' )VALUES (                 ');
+  FDataSet.SQL.Add('   :AC08TIT                ');
+  FDataSet.SQL.Add(' , :AC08EMPRESA            ');
+  FDataSet.SQL.Add(' , :AD08EMISSAO            ');
+  FDataSet.SQL.Add(' , :AN08FORNEC             ');
+  FDataSet.SQL.Add(' , :AN08VALOR              ');
+  FDataSet.SQL.Add(' , :AD08VCTO               ');
+  FDataSet.SQL.Add(' , :AD08FLUXO              ');
+  FDataSet.SQL.Add(' , :AN08VEND               ');
+  FDataSet.SQL.Add(' , :AC08BCOR               ');
+  FDataSet.SQL.Add(' , :AC08BCPG               ');
+  FDataSet.SQL.Add(' , :AC08SIT                ');
+  FDataSet.SQL.Add(' , :AC08FRPGTO             ');
+  FDataSet.SQL.Add(' , :AN08JUROS              ');
+  FDataSet.SQL.Add(' , :AN08DESC               ');
+  FDataSet.SQL.Add(' , :AD08DTPGTO             ');
+  FDataSet.SQL.Add(' , :AN08VLPAGO             ');
+  FDataSet.SQL.Add(' , :AN08TOTALPAGO          ');
+  FDataSet.SQL.Add(' , :AC08DHCAD              ');
+  FDataSet.SQL.Add(' , :AC08DHPGTO             ');
+  FDataSet.SQL.Add(' , :AC08USUCAD             ');
+  FDataSet.SQL.Add(' , :AC08USUPGTO            ');
+  FDataSet.SQL.Add(' , :AC08DHALT              ');
+  FDataSet.SQL.Add(' , :AC08USUALT             ');
+  FDataSet.SQL.Add(' , :AC08ORIG               ');
+  FDataSet.SQL.Add(' , :AN089DESC              ');
+  FDataSet.SQL.Add(' , :AC08_ANO               ');
+  FDataSet.SQL.Add(' , :AC08_MES               ');
+  FDataSet.SQL.Add(' , :AC08_OBS1              ');
+  FDataSet.SQL.Add(' , :AC08_OBS2              ');
+  FDataSet.SQL.Add(' , :AC08_PARCIAL           ');
+  FDataSet.SQL.Add(' , :AN08_EMPRESA           ');
+  FDataSet.SQL.Add(' , :AC08_CTA               ');
+  FDataSet.SQL.Add(' , :AC08_COD_BARRAS        ');
+  FDataSet.SQL.Add(' , :AC08FRPGTO_BAIXARCP    ');
+  FDataSet.SQL.Add('  )                        ');
+  FDataSet.ParamByName('AC08TIT').AsString := copy(FTitulo, 1, 16);
+  FDataSet.ParamByName('AC08EMPRESA').AsInteger := FEmpresa;
+  FDataSet.ParamByName('AD08EMISSAO').AsDate := FEmissao;
+  FDataSet.ParamByName('AN08FORNEC').AsInteger := FFornecedor;
+  FDataSet.ParamByName('AN08VALOR').asfloat := FValor;
+  FDataSet.ParamByName('AD08VCTO').AsDate := FVencimento;
+  FDataSet.ParamByName('AD08FLUXO').AsDate := FFluxoCaixa;
+  FDataSet.ParamByName('AC08BCOR').AsString := copy(FBancoCobranca, 1, 3);
+  FDataSet.ParamByName('AC08BCPG').AsString := copy(FBancoPagamento, 1, 3);
+  FDataSet.ParamByName('AC08SIT').AsString := copy(FSituacao, 1, 1);
+  FDataSet.ParamByName('AC08FRPGTO').AsInteger := FFormaPagamento;
+  FDataSet.ParamByName('AN08JUROS').asfloat := FJuros;
+  FDataSet.ParamByName('AN08DESC').asfloat := FDesconto;
+  FDataSet.ParamByName('AD08DTPGTO').AsDate := FDataPagamento;
+  FDataSet.ParamByName('AN08VLPAGO').asfloat := FValorPago;
+  FDataSet.ParamByName('AN08TOTALPAGO').asfloat := FTotalPago;
+  FDataSet.ParamByName('AC08DHCAD').AsDate := FDataHoraCadastro;
+  FDataSet.ParamByName('AC08DHPGTO').AsDate := FDataHoraPagamento;
+  FDataSet.ParamByName('AC08USUCAD').AsInteger := FUsuarioCadastro;
+  FDataSet.ParamByName('AC08USUPGTO').AsInteger := FUsuarioPagamento;
+  FDataSet.ParamByName('AC08DHALT').AsDate := FDataHoraAlteracao;
+  FDataSet.ParamByName('AC08USUALT').AsInteger := FUsuarioAlteracao;
+  FDataSet.ParamByName('AC08ORIG').AsString := copy(FOrigem, 1, 2);
+  FDataSet.ParamByName('AC08_ANO').AsString := copy(FAno, 1, 4);
+  FDataSet.ParamByName('AC08_MES').AsString := copy(FMes, 1, 2);
+  FDataSet.ParamByName('AC08_OBS1').AsString := copy(FOBS1, 1, 50);
+  FDataSet.ParamByName('AC08_OBS2').AsString := copy(FOBS2, 1, 50);
+  FDataSet.ParamByName('AC08_PARCIAL').AsString := copy(FParcial, 1, 1);
+  FDataSet.ParamByName('AN08_EMPRESA').AsInteger := FEmpresa;
+  FDataSet.ParamByName('AC08_CTA').AsString := copy(FConta, 1, 3);
+  FDataSet.ParamByName('AC08_COD_BARRAS').AsString := copy(FCodigoBarras, 1, 50);
+  FDataSet.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := FFormaPagamentoBaixar;
+  FDataSet.ExecSQL;
+
+  if (pEfetuarCommit) then
+  begin
+    FDataSet.Connection.commit;
+  end;
+end;
+
+function TContasPagarMC.IncluirOuAltera(pEmpresaPrincipal: Boolean = false): String;
+var
+  lQuery: TQuery;
+  lTitulo: string;
+begin
+  lTitulo := EmptyStr;
+
+  if ExisteEmpresaTitulo(FEmpresaTitulo) then
+  begin
+    lTitulo := RetornaTituloPeloTituloEmpresa(copy(FEmpresaTitulo, 1, 30));
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  UPDATE MC08CPAG SET                         ');
+    FDataSet.SQL.Add('   AC08EMPRESA         =  :AC08EMPRESA        ');
+    FDataSet.SQL.Add(' , AD08EMISSAO         =  :AD08EMISSAO        ');
+    FDataSet.SQL.Add(' , AN08FORNEC          =  :AN08FORNEC         ');
+    FDataSet.SQL.Add(' , AN08VALOR           =  :AN08VALOR          ');
+    FDataSet.SQL.Add(' , AD08VCTO            =  :AD08VCTO           ');
+    FDataSet.SQL.Add(' , AD08FLUXO           =  :AD08FLUXO          ');
+    FDataSet.SQL.Add(' , AN08VEND            =  :AN08VEND           ');
+    FDataSet.SQL.Add(' , AC08BCOR            =  :AC08BCOR           ');
+    FDataSet.SQL.Add(' , AC08BCPG            =  :AC08BCPG           ');
+    FDataSet.SQL.Add(' , AC08SIT             =  :AC08SIT            ');
+    FDataSet.SQL.Add(' , AC08FRPGTO          =  :AC08FRPGTO         ');
+    FDataSet.SQL.Add(' , AN08JUROS           =  :AN08JUROS          ');
+    FDataSet.SQL.Add(' , AN08DESC            =  :AN08DESC           ');
+    FDataSet.SQL.Add(' , AD08DTPGTO          =  :AD08DTPGTO         ');
+    FDataSet.SQL.Add(' , AN08VLPAGO          =  :AN08VLPAGO         ');
+    FDataSet.SQL.Add(' , AN08TOTALPAGO       =  :AN08TOTALPAGO      ');
+    FDataSet.SQL.Add(' , AC08DHCAD           =  :AC08DHCAD          ');
+    FDataSet.SQL.Add(' , AC08DHPGTO          =  :AC08DHPGTO         ');
+    FDataSet.SQL.Add(' , AC08USUCAD          =  :AC08USUCAD         ');
+    FDataSet.SQL.Add(' , AC08USUPGTO         =  :AC08USUPGTO        ');
+    FDataSet.SQL.Add(' , AC08DHALT           =  :AC08DHALT          ');
+    FDataSet.SQL.Add(' , AC08USUALT          =  :AC08USUALT         ');
+    FDataSet.SQL.Add(' , AC08ORIG            =  :AC08ORIG           ');
+    FDataSet.SQL.Add(' , AN089DESC           =  :AN089DESC          ');
+    FDataSet.SQL.Add(' , AC08_ANO            =  :AC08_ANO           ');
+    FDataSet.SQL.Add(' , AC08_MES            =  :AC08_MES           ');
+    FDataSet.SQL.Add(' , AC08_OBS1           =  :AC08_OBS1          ');
+    FDataSet.SQL.Add(' , AC08_OBS2           =  :AC08_OBS2          ');
+    FDataSet.SQL.Add(' , AC08_PARCIAL        =  :AC08_PARCIAL       ');
+    FDataSet.SQL.Add(' , AN08_EMPRESA        =  :AN08_EMPRESA       ');
+    FDataSet.SQL.Add(' , AC08_CTA            =  :AC08_CTA           ');
+    FDataSet.SQL.Add(' , AC08_COD_BARRAS     =  :AC08_COD_BARRAS    ');
+    FDataSet.SQL.Add(' , AC08FRPGTO_BAIXARCP =  :AC08FRPGTO_BAIXARCP');
+    FDataSet.SQL.Add(' , AC08EMP_TIT         =  :AC08EMP_TIT        ');
+    FDataSet.SQL.Add('  WHERE AC08EMP_TIT    =  :AC08EMP_TIT        ');
+    FDataSet.ParamByName('AC08EMPRESA').AsInteger := FEmpresa;
+    FDataSet.ParamByName('AD08EMISSAO').AsDate := FEmissao;
+    FDataSet.ParamByName('AN08FORNEC').AsInteger := FFornecedor;
+    FDataSet.ParamByName('AN08VALOR').asfloat := FValor;
+    FDataSet.ParamByName('AD08VCTO').AsDate := FVencimento;
+    FDataSet.ParamByName('AD08FLUXO').AsDate := FFluxoCaixa;
+    FDataSet.ParamByName('AC08BCOR').AsString := copy(FBancoCobranca, 1, 3);
+    FDataSet.ParamByName('AC08BCPG').AsString := copy(FBancoPagamento, 1, 3);
+    FDataSet.ParamByName('AC08SIT').AsString := copy(FSituacao, 1, 1);
+    FDataSet.ParamByName('AC08FRPGTO').AsInteger := FFormaPagamento;
+    FDataSet.ParamByName('AN08JUROS').asfloat := FJuros;
+    FDataSet.ParamByName('AN08DESC').asfloat := FDesconto;
+    FDataSet.ParamByName('AD08DTPGTO').AsDate := FDataPagamento;
+    FDataSet.ParamByName('AN08VLPAGO').asfloat := FValorPago;
+    FDataSet.ParamByName('AN08TOTALPAGO').asfloat := FTotalPago;
+    FDataSet.ParamByName('AC08DHCAD').AsDate := FDataHoraCadastro;
+    FDataSet.ParamByName('AC08DHPGTO').AsDate := FDataHoraPagamento;
+    FDataSet.ParamByName('AC08USUCAD').AsInteger := FUsuarioCadastro;
+    FDataSet.ParamByName('AC08USUPGTO').AsInteger := FUsuarioPagamento;
+    FDataSet.ParamByName('AC08DHALT').AsDate := FDataHoraAlteracao;
+    FDataSet.ParamByName('AC08USUALT').AsInteger := FUsuarioAlteracao;
+    FDataSet.ParamByName('AC08ORIG').AsString := copy(FOrigem, 1, 2);
+    FDataSet.ParamByName('AC08_ANO').AsString := copy(FAno, 1, 4);
+    FDataSet.ParamByName('AC08_MES').AsString := copy(FMes, 1, 2);
+    FDataSet.ParamByName('AC08_OBS1').AsString := copy(FOBS1, 1, 50);
+    FDataSet.ParamByName('AC08_OBS2').AsString := copy(FOBS2, 1, 50);
+    FDataSet.ParamByName('AC08_PARCIAL').AsString := copy(FParcial, 1, 1);
+    FDataSet.ParamByName('AN08_EMPRESA').AsInteger := FEmpresa;
+    FDataSet.ParamByName('AC08_CTA').AsString := copy(FConta, 1, 3);
+    FDataSet.ParamByName('AC08_COD_BARRAS').AsString := copy(FCodigoBarras, 1, 50);
+    FDataSet.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := FFormaPagamentoBaixar;
+    FDataSet.ParamByName('AC08EMP_TIT').AsString := copy(FEmpresaTitulo, 1, 30);
+    FDataSet.ExecSQL;
+    FDataSet.Connection.commit;
+
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (              ');
+    FDataSet.SQL.Add(' TITULO, DATA_ATUALIZACAO, EXCLUIDO, ENVIADO)      ');
+    FDataSet.SQL.Add(' VALUES (:TITULO, :DATA_ATUALIZACAO, ''N'', ''S'') ');
+    FDataSet.SQL.Add(' MATCHING (TITULO)                                 ');
+    FDataSet.ParamByName('TITULO').AsString := lTitulo;
+    FDataSet.ParamByName('DATA_ATUALIZACAO').AsDateTime := incminute(FDataUltimoSincronismo, -1);
+    FDataSet.ExecSQL;
+    FDataSet.Connection.commit;
+
+    Result := 'GET - Alterado o titulo: ' + lTitulo + ' - Titulo Empresa: ' + FEmpresaTitulo;
+  end
+  else if pEmpresaPrincipal then
+  begin
+    lTitulo := 'INT' + copy(FEmpresaTitulo, 1, 1) + '-' + GeraProximoTituloIntegracao;
+
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  INSERT INTO MC08CPAG (        ');
+    FDataSet.SQL.Add('   AC08TIT                       ');
+    FDataSet.SQL.Add(' , AC08EMPRESA                   ');
+    FDataSet.SQL.Add(' , AD08EMISSAO                   ');
+    FDataSet.SQL.Add(' , AN08FORNEC                    ');
+    FDataSet.SQL.Add(' , AN08VALOR                     ');
+    FDataSet.SQL.Add(' , AD08VCTO                      ');
+    FDataSet.SQL.Add(' , AD08FLUXO                     ');
+    FDataSet.SQL.Add(' , AN08VEND                      ');
+    FDataSet.SQL.Add(' , AC08BCOR                      ');
+    FDataSet.SQL.Add(' , AC08BCPG                      ');
+    FDataSet.SQL.Add(' , AC08SIT                       ');
+    FDataSet.SQL.Add(' , AC08FRPGTO                    ');
+    FDataSet.SQL.Add(' , AN08JUROS                     ');
+    FDataSet.SQL.Add(' , AN08DESC                      ');
+    FDataSet.SQL.Add(' , AD08DTPGTO                    ');
+    FDataSet.SQL.Add(' , AN08VLPAGO                    ');
+    FDataSet.SQL.Add(' , AN08TOTALPAGO                 ');
+    FDataSet.SQL.Add(' , AC08DHCAD                     ');
+    FDataSet.SQL.Add(' , AC08DHPGTO                    ');
+    FDataSet.SQL.Add(' , AC08USUCAD                    ');
+    FDataSet.SQL.Add(' , AC08USUPGTO                   ');
+    FDataSet.SQL.Add(' , AC08DHALT                     ');
+    FDataSet.SQL.Add(' , AC08USUALT                    ');
+    FDataSet.SQL.Add(' , AC08ORIG                      ');
+    FDataSet.SQL.Add(' , AN089DESC                     ');
+    FDataSet.SQL.Add(' , AC08_ANO                      ');
+    FDataSet.SQL.Add(' , AC08_MES                      ');
+    FDataSet.SQL.Add(' , AC08_OBS1                     ');
+    FDataSet.SQL.Add(' , AC08_OBS2                     ');
+    FDataSet.SQL.Add(' , AC08_PARCIAL                  ');
+    FDataSet.SQL.Add(' , AN08_EMPRESA                  ');
+    FDataSet.SQL.Add(' , AC08_CTA                      ');
+    FDataSet.SQL.Add(' , AC08_COD_BARRAS               ');
+    FDataSet.SQL.Add(' , AC08FRPGTO_BAIXARCP           ');
+    FDataSet.SQL.Add(' , AC08EMP_TIT                   ');
+    FDataSet.SQL.Add(' )VALUES (                       ');
+    FDataSet.SQL.Add('   :AC08TIT                      ');
+    FDataSet.SQL.Add(' , :AC08EMPRESA                  ');
+    FDataSet.SQL.Add(' , :AD08EMISSAO                  ');
+    FDataSet.SQL.Add(' , :AN08FORNEC                   ');
+    FDataSet.SQL.Add(' , :AN08VALOR                    ');
+    FDataSet.SQL.Add(' , :AD08VCTO                     ');
+    FDataSet.SQL.Add(' , :AD08FLUXO                    ');
+    FDataSet.SQL.Add(' , :AN08VEND                     ');
+    FDataSet.SQL.Add(' , :AC08BCOR                     ');
+    FDataSet.SQL.Add(' , :AC08BCPG                     ');
+    FDataSet.SQL.Add(' , :AC08SIT                      ');
+    FDataSet.SQL.Add(' , :AC08FRPGTO                   ');
+    FDataSet.SQL.Add(' , :AN08JUROS                    ');
+    FDataSet.SQL.Add(' , :AN08DESC                     ');
+    FDataSet.SQL.Add(' , :AD08DTPGTO                   ');
+    FDataSet.SQL.Add(' , :AN08VLPAGO                   ');
+    FDataSet.SQL.Add(' , :AN08TOTALPAGO                ');
+    FDataSet.SQL.Add(' , :AC08DHCAD                    ');
+    FDataSet.SQL.Add(' , :AC08DHPGTO                   ');
+    FDataSet.SQL.Add(' , :AC08USUCAD                   ');
+    FDataSet.SQL.Add(' , :AC08USUPGTO                  ');
+    FDataSet.SQL.Add(' , :AC08DHALT                    ');
+    FDataSet.SQL.Add(' , :AC08USUALT                   ');
+    FDataSet.SQL.Add(' , :AC08ORIG                     ');
+    FDataSet.SQL.Add(' , :AN089DESC                    ');
+    FDataSet.SQL.Add(' , :AC08_ANO                     ');
+    FDataSet.SQL.Add(' , :AC08_MES                     ');
+    FDataSet.SQL.Add(' , :AC08_OBS1                    ');
+    FDataSet.SQL.Add(' , :AC08_OBS2                    ');
+    FDataSet.SQL.Add(' , :AC08_PARCIAL                 ');
+    FDataSet.SQL.Add(' , :AN08_EMPRESA                 ');
+    FDataSet.SQL.Add(' , :AC08_CTA                     ');
+    FDataSet.SQL.Add(' , :AC08_COD_BARRAS              ');
+    FDataSet.SQL.Add(' , :AC08FRPGTO_BAIXARCP          ');
+    FDataSet.SQL.Add(' , :AC08EMP_TIT                  ');
+    FDataSet.SQL.Add('  )                              ');
+    FDataSet.ParamByName('AC08TIT').AsString := lTitulo;
+    FDataSet.ParamByName('AC08EMPRESA').AsInteger := FEmpresa;
+    FDataSet.ParamByName('AD08EMISSAO').AsDate := FEmissao;
+    FDataSet.ParamByName('AN08FORNEC').AsInteger := FFornecedor;
+    FDataSet.ParamByName('AN08VALOR').asfloat := FValor;
+    FDataSet.ParamByName('AD08VCTO').AsDate := FVencimento;
+    FDataSet.ParamByName('AD08FLUXO').AsDate := FFluxoCaixa;
+    FDataSet.ParamByName('AC08BCOR').AsString := copy(FBancoCobranca, 1, 3);
+    FDataSet.ParamByName('AC08BCPG').AsString := copy(FBancoPagamento, 1, 3);
+    FDataSet.ParamByName('AC08SIT').AsString := copy(FSituacao, 1, 1);
+    FDataSet.ParamByName('AC08FRPGTO').AsInteger := FFormaPagamento;
+    FDataSet.ParamByName('AN08JUROS').asfloat := FJuros;
+    FDataSet.ParamByName('AN08DESC').asfloat := FDesconto;
+    FDataSet.ParamByName('AD08DTPGTO').AsDate := FDataPagamento;
+    FDataSet.ParamByName('AN08VLPAGO').asfloat := FValorPago;
+    FDataSet.ParamByName('AN08TOTALPAGO').asfloat := FTotalPago;
+    FDataSet.ParamByName('AC08DHCAD').AsDate := FDataHoraCadastro;
+    FDataSet.ParamByName('AC08DHPGTO').AsDate := FDataHoraPagamento;
+    FDataSet.ParamByName('AC08USUCAD').AsInteger := FUsuarioCadastro;
+    FDataSet.ParamByName('AC08USUPGTO').AsInteger := FUsuarioPagamento;
+    FDataSet.ParamByName('AC08DHALT').AsDate := FDataHoraAlteracao;
+    FDataSet.ParamByName('AC08USUALT').AsInteger := FUsuarioAlteracao;
+    FDataSet.ParamByName('AC08ORIG').AsString := copy(FOrigem, 1, 2);
+    FDataSet.ParamByName('AC08_ANO').AsString := copy(FAno, 1, 4);
+    FDataSet.ParamByName('AC08_MES').AsString := copy(FMes, 1, 2);
+    FDataSet.ParamByName('AC08_OBS1').AsString := copy(FOBS1, 1, 50);
+    FDataSet.ParamByName('AC08_OBS2').AsString := copy(FOBS2, 1, 50);
+    FDataSet.ParamByName('AC08_PARCIAL').AsString := copy(FParcial, 1, 1);
+    FDataSet.ParamByName('AN08_EMPRESA').AsInteger := FEmpresa;
+    FDataSet.ParamByName('AC08_CTA').AsString := copy(FConta, 1, 3);
+    FDataSet.ParamByName('AC08_COD_BARRAS').AsString := copy(FCodigoBarras, 1, 50);
+    FDataSet.ParamByName('AC08FRPGTO_BAIXARCP').AsInteger := FFormaPagamentoBaixar;
+    FDataSet.ParamByName('AC08EMP_TIT').AsString := copy(FEmpresaTitulo, 1, 30);
+    FDataSet.ExecSQL;
+    FDataSet.Connection.commit;
+
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (              ');
+    FDataSet.SQL.Add(' TITULO, DATA_ATUALIZACAO, EXCLUIDO, ENVIADO)      ');
+    FDataSet.SQL.Add(' VALUES (:TITULO, :DATA_ATUALIZACAO, ''N'', ''S'') ');
+    FDataSet.SQL.Add(' MATCHING (TITULO)                                 ');
+    FDataSet.ParamByName('TITULO').AsString := lTitulo;
+    FDataSet.ParamByName('DATA_ATUALIZACAO').AsDateTime := incminute(FDataUltimoSincronismo, -1);
+    FDataSet.ExecSQL;
+    FDataSet.Connection.commit;
+
+    Result := 'GET - Incluido o titulo: ' + lTitulo + ' - Titulo Empresa: ' + FEmpresaTitulo;
+  end;
+end;
+
+class function TContasPagarMC.RemoveCaracteresEspeciais(aTexto: string): string;
+const
+  // Lista de Caracteres Extras
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: Integer;
+begin
+  xTexto := aTexto;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := StringReplace(xTexto, xCarExt[i], '', [rfReplaceAll]);
+  end;
+
+  Result := xTexto;
+end;
+
+function TContasPagarMC.RetornaTituloPeloTituloEmpresa(pTituloEmp: String): string;
+var
+  lQuery: TFDquery;
+begin
+  lQuery := TFDquery.Create(nil);
+  try
+    Result := EmptyStr;
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC08CPAG WHERE AC08EMP_TIT = :AC08EMP_TIT');
+    lQuery.ParamByName('AC08EMP_TIT').AsString := pTituloEmp;
+    lQuery.Open;
+    if lQuery.RecordCount > 0 then
+    begin
+      Result := lQuery.FieldByName('AC08TIT').AsString;
+    end;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+end.

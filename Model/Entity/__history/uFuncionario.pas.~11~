@@ -1,0 +1,74 @@
+unit uFuncionario;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity,
+  uCidade,
+  REST.JSON.Types;
+
+type
+  TFuncionario = class;
+
+  TFuncionario = class(TInterfacedObject, iCliente)
+  private
+    fcodigo: integer;
+    fnome: string;
+    fendereco: string;
+    fbairro: string;
+    fnumero: string;
+    fcomplemento: string;
+    fcep: string;
+    fcpf: string;
+    frg: string;
+    ffone: string;
+    fcelular: string;
+    fdata_nasc: tdate;
+    femail: string;
+    fsalario: double;
+    fcidade: tcidade;
+  public
+    property codigo: integer;
+    property nome: string read fnome write fnome;
+    property endereco: string read fendereco write fendereco;
+    property bairro: string read fbairro write fbairro;
+    property numero: string read fnumero write fnumero;
+    property complemento: string read fcomplemento write fcomplemento;
+    property cep: string read fcep write fcep;
+    property cpf: string read fcpf write fcpf;
+    property rg: string read frg write frg;
+    property fone: string read ffone write ffone;
+    property celular: string read fcelular write fcelular;
+    property data_nasc: tdate read fdata_nasc write fdata_nasc;
+    property email: string read femail write femail;
+    property salario: double read fsalario write fsalario;
+    property cidade: tcidade read fcidade write fcidade;
+    destructor destroy; override;
+    constructor create;
+    function toJson: string;
+  end;
+
+implementation
+
+function TFuncionario.toJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TFuncionario.create;
+begin
+  cidade := tcidade.create;
+end;
+
+destructor TFuncionario.destroy;
+begin
+  cidade.Free;
+end;
+
+end.

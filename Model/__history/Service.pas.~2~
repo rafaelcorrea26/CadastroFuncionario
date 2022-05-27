@@ -1,0 +1,14 @@
+unit Service;
+
+interface
+
+type
+
+  TServiceAPI = (tGetCaixas, tPostCaixas, tPutCaixas, tDeleteCaixas, tGetUsuarios, tPostUsuarios, tPutUsuarios,
+    tDeleteUsuarios, tGetLocalizacao, tPostLocalizacao, tPutLocalizacao, tDeleteLocalizacao, tGetOLT, tPostOLT, tPutOLT,
+    tDeleteOLT, tGetManutencoes, tPostManutencoes, tPutManutencoes, tDeleteManutencoes, tGetSpliters, tPostSpliters,
+    tPutSpliters, tDeleteSpliters, tGetTipoSpliters, tPostTipoSpliters, tPutTipoSpliters, tDeleteTipoSpliters);
+
+implementation
+
+end.

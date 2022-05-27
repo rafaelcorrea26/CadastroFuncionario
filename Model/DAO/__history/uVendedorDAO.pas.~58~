@@ -1,0 +1,337 @@
+unit uVendedorDAO;
+
+interface
+
+uses
+  uQuery,
+  uFunctions,
+  uVendedor,
+  REST.JSON.Types,
+  uInterfacesEntity;
+
+type
+  TVendedorDAO = class(TInterfacedObject, iVendedorDAO)
+  private
+
+  public
+    class function Limpar(pVendedor: Tvendedor): Boolean;
+    class function Carrega(pVendedor: Tvendedor): Boolean;
+    class function Incluir(pVendedor: Tvendedor): Boolean;
+    class function Alterar(pVendedor: Tvendedor): Boolean;
+    class function Excluir(pCodigo: Integer): Boolean;
+
+    class function GetLimitePermitidoParaDescontoNaVenda(pVendedor, pCliente: Integer): Double;
+    class function Existe(pCodigo: Integer): Boolean;
+    class function ExisteCPFouCNPJ(pCPFouCNPJ: string): Integer;
+    class function GeraProximoCodigo: Integer;
+  end;
+
+implementation
+
+{ TVendedor }
+
+class function TVendedorDAO.Alterar(pVendedor: Tvendedor): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('UPDATE MC04REP SET                       ');
+    lQuery.SQL.Add('    AC04NOME         = :AC04NOME         ');
+    lQuery.SQL.Add('  , AN04CMAV         = :AN04CMAV         ');
+    lQuery.SQL.Add('  , AN04CMAP         = :AN04CMAP         ');
+    lQuery.SQL.Add('  , AC04PRECO        = :AC04PRECO        ');
+    lQuery.SQL.Add('  , AN04LMDESC       = :AN04LMDESC       ');
+    lQuery.SQL.Add('  , AC04_PART_AGENDA = :AC04_PART_AGENDA ');
+    lQuery.SQL.Add('  , AN04VLMETA       = :AN04VLMETA       ');
+    lQuery.SQL.Add('  , AC04ENDERECO     = :AC04ENDERECO     ');
+    lQuery.SQL.Add('  , AC04CIDADE       = :AC04CIDADE       ');
+    lQuery.SQL.Add('  , AC04CEP          = :AC04CEP          ');
+    lQuery.SQL.Add('  , AC04EMAIL        = :AC04EMAIL        ');
+    lQuery.SQL.Add('  , AC04TELEFONE     = :AC04TELEFONE     ');
+    lQuery.SQL.Add('  , AC04CNPJ         = :AC04CNPJ         ');
+    lQuery.SQL.Add('  , AC04OBS          = :AC04OBS          ');
+    lQuery.SQL.Add('  , AC04SENHA        = :AC04SENHA        ');
+    lQuery.SQL.Add('  , AC04_TIPO_PRECO  = :AC04_TIPO_PRECO  ');
+    lQuery.SQL.Add('WHERE AC04CODIGO     = :AC04CODIGO       ');
+
+    lQuery.ParamByName('AC04NOME').AsString := pVendedor.Nome;
+    lQuery.ParamByName('AN04CMAV').AsFloat := pVendedor.comissao_vista;
+    lQuery.ParamByName('AN04CMAP').AsFloat := pVendedor.comissao_prazo;
+    lQuery.ParamByName('AC04PRECO').AsString := Tfunctions.GetSN(pVendedor.modifica_preco_venda);
+    lQuery.ParamByName('AN04LMDESC').AsFloat := pVendedor.limite_desconto;
+    lQuery.ParamByName('AC04_PART_AGENDA').AsString := Tfunctions.GetSN(pVendedor.participar_agenda);
+    lQuery.ParamByName('AN04VLMETA').AsFloat := pVendedor.meta_venda;
+    lQuery.ParamByName('AC04ENDERECO').AsString := pVendedor.Endereco;
+    lQuery.ParamByName('AC04CIDADE').AsString := pVendedor.Cidade;
+    lQuery.ParamByName('AC04CEP').AsString := pVendedor.Cep;
+    lQuery.ParamByName('AC04EMAIL').AsString := pVendedor.Email;
+    lQuery.ParamByName('AC04TELEFONE').AsString := pVendedor.Fone;
+    lQuery.ParamByName('AC04CNPJ').AsString := pVendedor.Cpf_Cnpj;
+    lQuery.ParamByName('AC04OBS').AsString := pVendedor.Observacoes;
+    lQuery.ParamByName('AC04SENHA').AsString := pVendedor.Senha;
+    lQuery.ParamByName('AC04_TIPO_PRECO').AsString := pVendedor.tipo_preco_venda;
+    lQuery.ParamByName('AC04CODIGO').AsInteger := pVendedor.Codigo;
+
+    lQuery.ExecSQL;
+    lQuery.connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TVendedorDAO.Carrega(pVendedor: Tvendedor): Boolean;
+var
+  lConsulta: TQuery;
+begin
+
+  lConsulta := TQuery.Create(nil);
+  try
+    lConsulta.Close;
+    lConsulta.SQL.Clear;
+    lConsulta.SQL.Add('SELECT * FROM MC04REP WHERE AC04CODIGO = :AC04CODIGO ');
+    lConsulta.ParamByName('AC04CODIGO').AsInteger := pVendedor.Codigo;
+    lConsulta.Open;
+
+    pVendedor.Codigo := lConsulta.FieldByName('AC04CODIGO').AsInteger;
+    pVendedor.Nome := lConsulta.FieldByName('AC04NOME').AsString;
+    pVendedor.comissao_vista := lConsulta.FieldByName('AN04CMAV').AsFloat;
+    pVendedor.comissao_prazo := lConsulta.FieldByName('AN04CMAP').AsFloat;
+    pVendedor.modifica_preco_venda := lConsulta.FieldByName('AC04PRECO').AsString = 'S';
+    pVendedor.limite_desconto := lConsulta.FieldByName('AN04LMDESC').AsInteger;
+    pVendedor.meta_venda := lConsulta.FieldByName('AN04VLMETA').AsFloat;
+    pVendedor.participar_agenda := lConsulta.FieldByName('AC04_PART_AGENDA').AsString = 'S';
+    pVendedor.tipo_preco_venda := lConsulta.FieldByName('AC04_TIPO_PRECO').AsString;
+    pVendedor.Endereco := lConsulta.FieldByName('AC04ENDERECO').AsString;
+    pVendedor.Cpf_Cnpj := lConsulta.FieldByName('AC04CNPJ').AsString;
+    pVendedor.Cidade := lConsulta.FieldByName('AC04CIDADE').AsString;
+    pVendedor.Cep := lConsulta.FieldByName('AC04CEP').AsString;
+    pVendedor.Fone := lConsulta.FieldByName('AC04TELEFONE').AsString;
+    pVendedor.Email := lConsulta.FieldByName('AC04EMAIL').AsString;
+    pVendedor.Observacoes := lConsulta.FieldByName('AC04OBS').AsString;
+    pVendedor.Senha := lConsulta.FieldByName('AC04SENHA').AsString;
+  finally
+    lConsulta.Free;
+  end;
+
+end;
+
+class function TVendedorDAO.Excluir(pCodigo: Integer): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('DELETE FROM MC04REP WHERE AC04CODIGO = :AC04CODIGO ');
+    lQuery.ParamByName('AC04CODIGO').AsInteger := pCodigo;
+    lQuery.ExecSQL;
+    lQuery.connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TVendedorDAO.Existe(pCodigo: Integer): Boolean;
+var
+  lQuery: TQuery;
+begin
+  Result := false;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC04REP WHERE AC04CODIGO = :AC04CODIGO');
+    lQuery.ParamByName('AC04CODIGO').AsInteger := pCodigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TVendedorDAO.ExisteCPFouCNPJ(pCPFouCNPJ: string): Integer;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC04REP WHERE AC04CNPJ = :AC04CNPJ');
+    lQuery.ParamByName('AC04CNPJ').AsString := pCPFouCNPJ;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.fieldbyname('AC04CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TVendedorDAO.GeraProximoCodigo: Integer;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT max(AC04CODIGO) +1 codigo FROM MC04REP');
+    lQuery.Open;
+    Result := lQuery.FieldByName('codigo').AsInteger;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TVendedorDAO.GetLimitePermitidoParaDescontoNaVenda(pVendedor, pCliente: Integer): Double;
+var
+  lPercentualLimiteDescontoVendedor, lPercentualLimiteDescontoCliente: Double;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+  lPercentualLimiteDescontoVendedor := 0;
+  lPercentualLimiteDescontoCliente := 0;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT AN04LMDESC FROM MC04REP    ');
+    lQuery.SQL.Add('  WHERE AC04CODIGO = :AC04CODIGO  ');
+    lQuery.ParamByName('AC04CODIGO').AsInteger := pVendedor;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      lPercentualLimiteDescontoVendedor := lQuery.FieldByName('AN04LMDESC').AsFloat;
+    end;
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT MC01_LIMITEDESCONTO FROM MC01CLIENTE ');
+    lQuery.SQL.Add('  WHERE MC01CODIGO = :MC01CODIGO            ');
+    lQuery.ParamByName('MC01CODIGO').AsInteger := pCliente;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      lPercentualLimiteDescontoCliente := lQuery.FieldByName('MC01_LIMITEDESCONTO').AsFloat;
+    end;
+
+    // if (TSistema.Usuario.LimiteDeDesconto > lPercentualLimiteDescontoVendedor) then
+    // begin
+    // lPercentualLimiteDescontoVendedor := TSistema.Usuario.LimiteDeDesconto;
+    // end;
+
+    Result := lPercentualLimiteDescontoVendedor + lPercentualLimiteDescontoCliente;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TVendedorDAO.Incluir(pVendedor: Tvendedor): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('INSERT INTO MC04REP (    ');
+    lQuery.SQL.Add('    AC04CODIGO           ');
+    lQuery.SQL.Add('  , AC04NOME             ');
+    lQuery.SQL.Add('  , AN04CMAV             ');
+    lQuery.SQL.Add('  , AN04CMAP             ');
+    lQuery.SQL.Add('  , AC04PRECO            ');
+    lQuery.SQL.Add('  , AN04LMDESC           ');
+    lQuery.SQL.Add('  , AC04_PART_AGENDA     ');
+    lQuery.SQL.Add('  , AN04VLMETA           ');
+    lQuery.SQL.Add('  , AC04ENDERECO         ');
+    lQuery.SQL.Add('  , AC04CIDADE           ');
+    lQuery.SQL.Add('  , AC04CEP              ');
+    lQuery.SQL.Add('  , AC04EMAIL            ');
+    lQuery.SQL.Add('  , AC04TELEFONE         ');
+    lQuery.SQL.Add('  , AC04CNPJ             ');
+    lQuery.SQL.Add('  , AC04OBS              ');
+    lQuery.SQL.Add('  , AC04SENHA            ');
+    lQuery.SQL.Add('  , AC04_TIPO_PRECO      ');
+    lQuery.SQL.Add('  ) VALUES (             ');
+    lQuery.SQL.Add('    :AC04CODIGO          ');
+    lQuery.SQL.Add('  , :AC04NOME            ');
+    lQuery.SQL.Add('  , :AN04CMAV            ');
+    lQuery.SQL.Add('  , :AN04CMAP            ');
+    lQuery.SQL.Add('  , :AC04PRECO           ');
+    lQuery.SQL.Add('  , :AN04LMDESC          ');
+    lQuery.SQL.Add('  , :AC04_PART_AGENDA    ');
+    lQuery.SQL.Add('  , :AN04VLMETA          ');
+    lQuery.SQL.Add('  , :AC04ENDERECO        ');
+    lQuery.SQL.Add('  , :AC04CIDADE          ');
+    lQuery.SQL.Add('  , :AC04CEP             ');
+    lQuery.SQL.Add('  , :AC04EMAIL           ');
+    lQuery.SQL.Add('  , :AC04TELEFONE        ');
+    lQuery.SQL.Add('  , :AC04CNPJ            ');
+    lQuery.SQL.Add('  , :AC04OBS             ');
+    lQuery.SQL.Add('  , :AC04SENHA           ');
+    lQuery.SQL.Add('  , :AC04_TIPO_PRECO     ');
+    lQuery.SQL.Add('  ) ;                    ');
+
+    lQuery.ParamByName('AC04NOME').AsString := Copy(pVendedor.Nome,1,25);
+    lQuery.ParamByName('AN04CMAV').AsFloat := pVendedor.comissao_vista;
+    lQuery.ParamByName('AN04CMAP').AsFloat := pVendedor.comissao_prazo;
+    lQuery.ParamByName('AC04PRECO').AsString := Tfunctions.GetSN(pVendedor.modifica_preco_venda);
+    lQuery.ParamByName('AN04LMDESC').AsFloat := pVendedor.limite_desconto;
+    lQuery.ParamByName('AC04_PART_AGENDA').AsString := Tfunctions.GetSN(pVendedor.participar_agenda);
+    lQuery.ParamByName('AN04VLMETA').AsFloat := pVendedor.meta_venda;
+    lQuery.ParamByName('AC04ENDERECO').AsString := Copy(pVendedor.Endereco,1,35);
+    lQuery.ParamByName('AC04CIDADE').AsString := Copy(pVendedor.Cidade,1,30);
+    lQuery.ParamByName('AC04CEP').AsString := Copy(pVendedor.Cep,1,10);
+    lQuery.ParamByName('AC04EMAIL').AsString := Copy(pVendedor.Email,1,50);
+    lQuery.ParamByName('AC04TELEFONE').AsString := Copy(pVendedor.Fone,1,15);
+    lQuery.ParamByName('AC04CNPJ').AsString := Copy(pVendedor.Cpf_Cnpj,1,14);
+    lQuery.ParamByName('AC04OBS').AsString := Copy(pVendedor.Observacoes,1,80);
+    lQuery.ParamByName('AC04SENHA').AsString := Copy(pVendedor.Senha,1,5);
+    lQuery.ParamByName('AC04_TIPO_PRECO').AsString := Copy(pVendedor.tipo_preco_venda,1,1);
+    lQuery.ParamByName('AC04CODIGO').AsInteger := pVendedor.Codigo;
+
+    lQuery.ExecSQL;
+    lQuery.connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TVendedorDAO.Limpar(pVendedor: Tvendedor): Boolean;
+begin
+  pVendedor.Codigo := 0;
+  pVendedor.Nome := '';
+  pVendedor.comissao_vista := 0;
+  pVendedor.comissao_prazo := 0;
+  pVendedor.modifica_preco_venda := false;
+  pVendedor.limite_desconto := 0;
+  pVendedor.meta_venda := 0;
+  pVendedor.participar_agenda := false;
+  pVendedor.tipo_preco_venda := '';
+  pVendedor.Endereco := '';
+  pVendedor.Cpf_Cnpj := '';
+  pVendedor.Cidade := '';
+  pVendedor.Cep := '';
+  pVendedor.Fone := '';
+  pVendedor.Email := '';
+  pVendedor.Observacoes := '';
+  pVendedor.Senha := '';
+end;
+
+end.

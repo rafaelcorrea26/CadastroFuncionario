@@ -1,0 +1,380 @@
+unit uFormaPagamentoDAO;
+
+interface
+
+uses
+  System.Classes,
+  uQuery,
+  pcnconversao,
+  System.SysUtils,
+  uFunctions,
+  uFormaPagamento,
+  REST.JSON.Types, uInterfacesEntity, uContaDAO;
+
+type
+  TFormaPagamentoDAO = class(TInterfacedObject, iFormaPagamentoDAO)
+  private
+
+  public
+    class function Existe(pFormaPagamento: TformaPagamento): Boolean;
+    class function Limpar(pFormaPagamento: TformaPagamento): Boolean;
+    class function Carrega(pFormaPagamento: TformaPagamento): Boolean;
+    class function Incluir(pFormaPagamento: TformaPagamento): Boolean;
+    class function Alterar(pFormaPagamento: TformaPagamento): Boolean;
+    class function Excluir(pCodigo: Integer): Boolean;
+    class function GetFormaPagamentoMultiplasFormasCompra: Integer;
+
+  end;
+
+implementation
+
+{ TFormaDePagamento }
+
+class function TFormaPagamentoDAO.Excluir(pCodigo: Integer): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('DELETE FROM MC44FRPGTO WHERE AC44CODIGO = :AC44CODIGO ');
+    lQuery.ParamByName('AC44CODIGO').AsInteger := pCodigo;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFormaPagamentoDAO.Existe(pFormaPagamento: TformaPagamento): Boolean;
+var
+  lQuery: TQuery;
+begin
+  Result := false;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC44FRPGTO WHERE AC44CODIGO = :AC44CODIGO');
+    lQuery.ParamByName('AC44CODIGO').AsInteger := pFormaPagamento.Codigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFormaPagamentoDAO.GetFormaPagamentoMultiplasFormasCompra: Integer;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+
+  lQuery.Close;
+  lQuery.SQL.Clear;
+  lQuery.SQL.Add('SELECT FIRST 1 AC44CODIGO FROM MC44FRPGTO             ');
+  lQuery.SQL.Add('WHERE AC44_MOV_ES = ''E'' AND AC44_MULTI_FP = ''S''   ');
+  lQuery.Open;
+
+  if (lQuery.RecordCount > 0) then
+  begin
+    Result := lQuery.fieldByName('AC44CODIGO').AsInteger;
+  end;
+
+end;
+
+class function TFormaPagamentoDAO.Alterar(pFormaPagamento: TformaPagamento): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('UPDATE MC44FRPGTO SET                                ');
+    lQuery.SQL.Add('    AC44DESC               = :AC44DESC               ');
+    lQuery.SQL.Add('  , AC44TIPO               = :AC44TIPO               ');
+    lQuery.SQL.Add('  , AC44CODECF             = :AC44CODECF             ');
+    lQuery.SQL.Add('  , AC44ORIG               = :AC44ORIG               ');
+    lQuery.SQL.Add('  , AC44NOMEFISCAL         = :AC44NOMEFISCAL         ');
+    lQuery.SQL.Add('  , AC44DESCONTO           = :AC44DESCONTO           ');
+    lQuery.SQL.Add('  , AC44_CARNE_ECF         = :AC44_CARNE_ECF         ');
+    lQuery.SQL.Add('  , AC44_TIPO_COMI         = :AC44_TIPO_COMI         ');
+    lQuery.SQL.Add('  , AC44_MOV_ES            = :AC44_MOV_ES            ');
+    lQuery.SQL.Add('  , AN44_DIAS              = :AN44_DIAS              ');
+    lQuery.SQL.Add('  , AC44_AGRUPAR           = :AC44_AGRUPAR           ');
+    lQuery.SQL.Add('  , AC44_MULTI_FP          = :AC44_MULTI_FP          ');
+    lQuery.SQL.Add('  , AN44FRFECHA            = :AN44FRFECHA            ');
+    lQuery.SQL.Add('  , AC44_BOLETO            = :AC44_BOLETO            ');
+    lQuery.SQL.Add('  , AC44_LCTO_CAIXA        = :AC44_LCTO_CAIXA        ');
+    lQuery.SQL.Add('  , AC44_BCO_CAIXA         = :AC44_BCO_CAIXA         ');
+    lQuery.SQL.Add('  , AC44_CTA_CAIXA         = :AC44_CTA_CAIXA         ');
+    lQuery.SQL.Add('  , AC44_SPED_SN           = :AC44_SPED_SN           ');
+    lQuery.SQL.Add('  , AC44_IMPRIME_DUAS_VIAS = :AC44_IMPRIME_DUAS_VIAS ');
+    lQuery.SQL.Add('  , AC44_BRANRISUL_SN      = :AC44_BRANRISUL_SN      ');
+    lQuery.SQL.Add('  , AN44_MAXIMO_PARCELAS   = :AN44_MAXIMO_PARCELAS   ');
+    lQuery.SQL.Add('  , AN44_PRAZO_MEDIO       = :AN44_PRAZO_MEDIO       ');
+    lQuery.SQL.Add('  , AC44_CONFISSAO_DIVIDA  = :AC44_CONFISSAO_DIVIDA  ');
+    lQuery.SQL.Add('  , AN44_FINANCEIRA        = :AN44_FINANCEIRA        ');
+    lQuery.SQL.Add('  , AC44_GERAR_CR          = :AC44_GERAR_CR          ');
+    lQuery.SQL.Add('  , AN44_CODIGO_SCANNTECH  = :AN44_CODIGO_SCANNTECH  ');
+    lQuery.SQL.Add('WHERE AC44CODIGO           = :AC44CODIGO             ');
+
+    lQuery.ParamByName('AC44DESC').AsString := copy(pFormaPagamento.Descricao, 1, 25);
+    lQuery.ParamByName('AC44TIPO').AsString := copy(pFormaPagamento.Tipo, 1, 1);
+    lQuery.ParamByName('AC44CODECF').AsString := copy(pFormaPagamento.codigo_ecf, 1, 2);
+    lQuery.ParamByName('AC44ORIG').AsString := copy(pFormaPagamento.Origem, 1, 2);
+    lQuery.ParamByName('AC44NOMEFISCAL').AsString := copy(pFormaPagamento.nome_fiscal, 1, 16);
+    lQuery.ParamByName('AC44DESCONTO').AsString := copy(pFormaPagamento.permite_desconto, 1, 1);
+    lQuery.ParamByName('AC44_CARNE_ECF').AsString := copy(pFormaPagamento.permite_carne_no_final_da_ecf, 1, 1);
+    lQuery.ParamByName('AC44_TIPO_COMI').AsString := copy(pFormaPagamento.tipo_da_comissao, 1, 1);
+    lQuery.ParamByName('AC44_MOV_ES').AsString := copy(pFormaPagamento.tipo_de_movimentacao, 1, 1);
+    lQuery.ParamByName('AN44_DIAS').AsInteger := pFormaPagamento.qtde_dias_para_primeiro_vencimento;
+    lQuery.ParamByName('AC44_AGRUPAR').AsString := copy(pFormaPagamento.Agrupar, 1, 6);
+    lQuery.ParamByName('AC44_MULTI_FP').AsString := copy(pFormaPagamento.multiplas_formas_de_pagamento, 1, 1);
+    lQuery.ParamByName('AN44FRFECHA').AsInteger := pFormaPagamento.forma_de_fechamento;
+    lQuery.ParamByName('AC44_BOLETO').AsString := copy(pFormaPagamento.imprimir_boleto, 1, 1);
+    lQuery.ParamByName('AC44_LCTO_CAIXA').AsString := copy(pFormaPagamento.lancar_no_caixa, 1, 1);
+    lQuery.ParamByName('AC44_BCO_CAIXA').AsInteger := pFormaPagamento.banco_de_lancamento_no_caixa;
+    lQuery.ParamByName('AC44_CTA_CAIXA').AsString := copy(pFormaPagamento.conta_de_lancamento_no_caixa.Codigo, 1, 3);
+    lQuery.ParamByName('AC44_SPED_SN').AsString := copy(pFormaPagamento.permite_sped_fiscal, 1, 1);
+    lQuery.ParamByName('AC44_BRANRISUL_SN').AsString := Tfunctions.GetSN(pFormaPagamento.valida_se_e_banrisul);
+    lQuery.ParamByName('AN44_MAXIMO_PARCELAS').AsInteger := pFormaPagamento.maximo_parcelas;
+    lQuery.ParamByName('AN44_PRAZO_MEDIO').AsInteger := pFormaPagamento.prazo_medio;
+    lQuery.ParamByName('AC44_CONFISSAO_DIVIDA').AsString := Tfunctions.GetSN(pFormaPagamento.confissao_divida);
+    lQuery.ParamByName('AN44_FINANCEIRA').AsInteger := pFormaPagamento.administradora_tef;
+    lQuery.ParamByName('AC44_GERAR_CR').AsString := Tfunctions.GetSN(pFormaPagamento.gerar_contas_receber);
+    lQuery.ParamByName('AN44_CODIGO_SCANNTECH').AsInteger := pFormaPagamento.codigo_scanntech;
+    lQuery.ParamByName('AC44CODIGO').AsInteger := pFormaPagamento.Codigo;
+    lQuery.ExecSQL;
+
+    lQuery.Connection.Commit;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFormaPagamentoDAO.Incluir(pFormaPagamento: TformaPagamento): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('INSERT INTO MC44FRPGTO (    ');
+    lQuery.SQL.Add('    AC44CODIGO              ');
+    lQuery.SQL.Add('  , AC44DESC                ');
+    lQuery.SQL.Add('  , AC44TIPO                ');
+    lQuery.SQL.Add('  , AC44CODECF              ');
+    lQuery.SQL.Add('  , AC44ORIG                ');
+    lQuery.SQL.Add('  , AC44NOMEFISCAL          ');
+    lQuery.SQL.Add('  , AC44DESCONTO            ');
+    lQuery.SQL.Add('  , AC44_CARNE_ECF          ');
+    lQuery.SQL.Add('  , AC44_TIPO_COMI          ');
+    lQuery.SQL.Add('  , AC44_MOV_ES             ');
+    lQuery.SQL.Add('  , AN44_DIAS               ');
+    lQuery.SQL.Add('  , AC44_AGRUPAR            ');
+    lQuery.SQL.Add('  , AC44_MULTI_FP           ');
+    lQuery.SQL.Add('  , AN44FRFECHA             ');
+    lQuery.SQL.Add('  , AC44_BOLETO             ');
+    lQuery.SQL.Add('  , AC44_LCTO_CAIXA         ');
+    lQuery.SQL.Add('  , AC44_BCO_CAIXA          ');
+    lQuery.SQL.Add('  , AC44_CTA_CAIXA          ');
+    lQuery.SQL.Add('  , AC44_SPED_SN            ');
+    lQuery.SQL.Add('  , AC44_IMPRIME_DUAS_VIAS  ');
+    lQuery.SQL.Add('  , AC44_BRANRISUL_SN       ');
+    lQuery.SQL.Add('  , AN44_MAXIMO_PARCELAS    ');
+    lQuery.SQL.Add('  , AN44_PRAZO_MEDIO        ');
+    lQuery.SQL.Add('  , AC44_CONFISSAO_DIVIDA   ');
+    lQuery.SQL.Add('  , AN44_FINANCEIRA         ');
+    lQuery.SQL.Add('  , AC44_GERAR_CR           ');
+    lQuery.SQL.Add('  , AN44_CODIGO_SCANNTECH   ');
+    lQuery.SQL.Add('  ) VALUES (                ');
+    lQuery.SQL.Add('    :AC44CODIGO             ');
+    lQuery.SQL.Add('  , :AC44DESC               ');
+    lQuery.SQL.Add('  , :AC44TIPO               ');
+    lQuery.SQL.Add('  , :AC44CODECF             ');
+    lQuery.SQL.Add('  , :AC44ORIG               ');
+    lQuery.SQL.Add('  , :AC44NOMEFISCAL         ');
+    lQuery.SQL.Add('  , :AC44DESCONTO           ');
+    lQuery.SQL.Add('  , :AC44_CARNE_ECF         ');
+    lQuery.SQL.Add('  , :AC44_TIPO_COMI         ');
+    lQuery.SQL.Add('  , :AC44_MOV_ES            ');
+    lQuery.SQL.Add('  , :AN44_DIAS              ');
+    lQuery.SQL.Add('  , :AC44_AGRUPAR           ');
+    lQuery.SQL.Add('  , :AC44_MULTI_FP          ');
+    lQuery.SQL.Add('  , :AN44FRFECHA            ');
+    lQuery.SQL.Add('  , :AC44_BOLETO            ');
+    lQuery.SQL.Add('  , :AC44_LCTO_CAIXA        ');
+    lQuery.SQL.Add('  , :AC44_BCO_CAIXA         ');
+    lQuery.SQL.Add('  , :AC44_CTA_CAIXA         ');
+    lQuery.SQL.Add('  , :AC44_SPED_SN           ');
+    lQuery.SQL.Add('  , :AC44_IMPRIME_DUAS_VIAS ');
+    lQuery.SQL.Add('  , :AC44_BRANRISUL_SN      ');
+    lQuery.SQL.Add('  , :AN44_MAXIMO_PARCELAS   ');
+    lQuery.SQL.Add('  , :AN44_PRAZO_MEDIO       ');
+    lQuery.SQL.Add('  , :AC44_CONFISSAO_DIVIDA  ');
+    lQuery.SQL.Add('  , :AN44_FINANCEIRA        ');
+    lQuery.SQL.Add('  , :AC44_GERAR_CR          ');
+    lQuery.SQL.Add('  , :AN44_CODIGO_SCANNTECH  ');
+    lQuery.SQL.Add('  )                         ');
+    lQuery.ParamByName('AC44DESC').AsString := copy(pFormaPagamento.Descricao, 1, 25);
+    lQuery.ParamByName('AC44TIPO').AsString := copy(pFormaPagamento.Tipo, 1, 1);
+    lQuery.ParamByName('AC44CODECF').AsString := copy(pFormaPagamento.codigo_ecf, 1, 2);
+    lQuery.ParamByName('AC44ORIG').AsString := copy(pFormaPagamento.Origem, 1, 2);
+    lQuery.ParamByName('AC44NOMEFISCAL').AsString := copy(pFormaPagamento.nome_fiscal, 1, 16);
+    lQuery.ParamByName('AC44DESCONTO').AsString := copy(pFormaPagamento.permite_desconto, 1, 1);
+    lQuery.ParamByName('AC44_CARNE_ECF').AsString := copy(pFormaPagamento.permite_carne_no_final_da_ecf, 1, 1);
+    lQuery.ParamByName('AC44_TIPO_COMI').AsString := copy(pFormaPagamento.tipo_da_comissao, 1, 1);
+    lQuery.ParamByName('AC44_MOV_ES').AsString := copy(pFormaPagamento.tipo_de_movimentacao, 1, 1);
+    lQuery.ParamByName('AN44_DIAS').AsInteger := pFormaPagamento.qtde_dias_para_primeiro_vencimento;
+    lQuery.ParamByName('AC44_AGRUPAR').AsString := copy(pFormaPagamento.Agrupar, 1, 6);
+    lQuery.ParamByName('AC44_MULTI_FP').AsString := copy(pFormaPagamento.multiplas_formas_de_pagamento, 1, 1);
+    lQuery.ParamByName('AN44FRFECHA').AsInteger := pFormaPagamento.forma_de_fechamento;
+    lQuery.ParamByName('AC44_BOLETO').AsString := copy(pFormaPagamento.imprimir_boleto, 1, 1);
+    lQuery.ParamByName('AC44_LCTO_CAIXA').AsString := copy(pFormaPagamento.lancar_no_caixa, 1, 1);
+    lQuery.ParamByName('AC44_BCO_CAIXA').AsInteger := pFormaPagamento.banco_de_lancamento_no_caixa;
+    lQuery.ParamByName('AC44_CTA_CAIXA').AsString := copy(pFormaPagamento.conta_de_lancamento_no_caixa.Codigo, 1, 3);
+    lQuery.ParamByName('AC44_SPED_SN').AsString := copy(pFormaPagamento.permite_sped_fiscal, 1, 1);
+    lQuery.ParamByName('AC44_BRANRISUL_SN').AsString := Tfunctions.GetSN(pFormaPagamento.valida_se_e_banrisul);
+    lQuery.ParamByName('AN44_MAXIMO_PARCELAS').AsInteger := pFormaPagamento.maximo_parcelas;
+    lQuery.ParamByName('AN44_PRAZO_MEDIO').AsInteger := pFormaPagamento.prazo_medio;
+    lQuery.ParamByName('AC44_CONFISSAO_DIVIDA').AsString := Tfunctions.GetSN(pFormaPagamento.confissao_divida);
+    lQuery.ParamByName('AN44_FINANCEIRA').AsInteger := pFormaPagamento.administradora_tef;
+    lQuery.ParamByName('AC44_GERAR_CR').AsString := Tfunctions.GetSN(pFormaPagamento.gerar_contas_receber);
+    lQuery.ParamByName('AN44_CODIGO_SCANNTECH').AsInteger := pFormaPagamento.codigo_scanntech;
+    lQuery.ParamByName('AC44CODIGO').AsInteger := pFormaPagamento.Codigo;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFormaPagamentoDAO.Limpar(pFormaPagamento: TformaPagamento): Boolean;
+begin
+  pFormaPagamento.Codigo := 0;
+  pFormaPagamento.Descricao := '';
+  pFormaPagamento.Tipo := '';
+  pFormaPagamento.codigo_ecf := '';
+  pFormaPagamento.Origem := '';
+  pFormaPagamento.nome_fiscal := '';
+  pFormaPagamento.permite_desconto := '';
+  pFormaPagamento.permite_carne_no_final_da_ecf := '';
+  pFormaPagamento.tipo_da_comissao := '';
+  pFormaPagamento.tipo_de_movimentacao := '';
+  pFormaPagamento.qtde_dias_para_primeiro_vencimento := 0;
+  pFormaPagamento.Agrupar := '';
+  pFormaPagamento.multiplas_formas_de_pagamento := '';
+  pFormaPagamento.forma_de_fechamento := 0;
+  pFormaPagamento.imprimir_boleto := '';
+  pFormaPagamento.lancar_no_caixa := '';
+  pFormaPagamento.banco_de_lancamento_no_caixa := 0;
+  pFormaPagamento.permite_sped_fiscal := '';
+  pFormaPagamento.valida_se_e_banrisul := false;
+end;
+
+class function TFormaPagamentoDAO.Carrega(pFormaPagamento: TformaPagamento): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' select * from MC44FRPGTO        ');
+    lQuery.SQL.Add(' where AC44CODIGO = :AC44CODIGO  ');
+    lQuery.ParamByName('AC44CODIGO').AsInteger := pFormaPagamento.Codigo;
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      pFormaPagamento.Codigo := lQuery.fieldByName('AC44CODIGO').AsInteger;
+      pFormaPagamento.Descricao := lQuery.fieldByName('AC44DESC').AsString;
+      pFormaPagamento.Tipo := lQuery.fieldByName('AC44TIPO').AsString;
+      pFormaPagamento.codigo_ecf := lQuery.fieldByName('AC44CODECF').AsString;
+      pFormaPagamento.Origem := lQuery.fieldByName('AC44ORIG').AsString;
+
+      if (pFormaPagamento.Origem = 'CH') then
+      begin
+        pFormaPagamento.IndPag := ipVista;
+        pFormaPagamento.TPag := fpCheque;
+      end;
+
+      if (pFormaPagamento.Origem = 'CD') then
+      begin
+        pFormaPagamento.IndPag := ipVista;
+        pFormaPagamento.TPag := fpCartaoDebito;
+      end;
+
+      if (pFormaPagamento.Origem = 'CC') then
+      begin
+        pFormaPagamento.IndPag := ipPrazo;
+        pFormaPagamento.TPag := fpCartaoCredito;
+      end;
+
+      if (pFormaPagamento.Origem = 'NF') and (pFormaPagamento.Tipo = 'A') then
+      begin
+        pFormaPagamento.IndPag := ipVista;
+        pFormaPagamento.TPag := fpDinheiro;
+      end;
+
+      if (pFormaPagamento.Origem = 'NF') and (pFormaPagamento.Tipo = 'P') then
+      begin
+        pFormaPagamento.IndPag := ipPrazo;
+        pFormaPagamento.TPag := fpCreditoLoja;
+      end;
+
+      if (pFormaPagamento.Origem = 'DV') and (pFormaPagamento.Tipo = 'A') then
+      begin
+        pFormaPagamento.IndPag := ipVista;
+        pFormaPagamento.TPag := fpDinheiro;
+      end;
+
+      if (pFormaPagamento.Origem = 'FT') and (pFormaPagamento.Tipo = 'P') then
+      begin
+        pFormaPagamento.IndPag := ipPrazo;
+        pFormaPagamento.TPag := fpCreditoLoja;
+      end;
+
+      pFormaPagamento.nome_fiscal := lQuery.fieldByName('AC44NOMEFISCAL').AsString;
+      pFormaPagamento.permite_desconto := lQuery.fieldByName('AC44DESCONTO').AsString;
+      pFormaPagamento.permite_carne_no_final_da_ecf := lQuery.fieldByName('AC44_CARNE_ECF').AsString;
+      pFormaPagamento.tipo_da_comissao := lQuery.fieldByName('AC44_TIPO_COMI').AsString;
+      pFormaPagamento.tipo_de_movimentacao := lQuery.fieldByName('AC44_MOV_ES').AsString;
+      pFormaPagamento.qtde_dias_para_primeiro_vencimento := lQuery.fieldByName('AN44_DIAS').AsInteger;
+      pFormaPagamento.Agrupar := lQuery.fieldByName('AC44_AGRUPAR').AsString;
+      pFormaPagamento.multiplas_formas_de_pagamento := lQuery.fieldByName('AC44_MULTI_FP').AsString;
+      pFormaPagamento.forma_de_fechamento := lQuery.fieldByName('AN44FRFECHA').AsInteger;
+      pFormaPagamento.imprimir_boleto := lQuery.fieldByName('AC44_BOLETO').AsString;
+      pFormaPagamento.lancar_no_caixa := lQuery.fieldByName('AC44_LCTO_CAIXA').AsString;
+      pFormaPagamento.banco_de_lancamento_no_caixa := lQuery.fieldByName('AC44_BCO_CAIXA').AsInteger;
+      pFormaPagamento.permite_sped_fiscal := lQuery.fieldByName('AC44_SPED_SN').AsString;
+      pFormaPagamento.valida_se_e_banrisul := (lQuery.fieldByName('AC44_BRANRISUL_SN').AsString = 'S');
+
+      pFormaPagamento.conta_de_lancamento_no_caixa.Codigo := lQuery.fieldByName('AC44_CTA_CAIXA').AsString;
+      TContaDAO.Carrega(pFormaPagamento.conta_de_lancamento_no_caixa);
+    end;
+
+
+    Result := (lQuery.RecordCount > 0) and (lQuery.FieldByName('AC44DESC').AsString <> EmptyStr);
+
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+end.

@@ -1,0 +1,29 @@
+unit uInterfaces;
+
+interface
+
+uses
+  System.JSON;
+
+type
+  iClassSend = interface
+    ['{795459FD-B5A8-42FF-A75D-D405B77A608D}']
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: TJSONObject;
+  end;
+
+  iClassReceive = interface
+    ['{795459FD-B5A8-42FF-A75D-D405B77A608D}']
+    destructor Destroy; override;
+    constructor Create;
+    procedure Carrega;
+    procedure Salvar(pEfetuarCommit: Boolean);
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+  end;
+
+implementation
+
+end.

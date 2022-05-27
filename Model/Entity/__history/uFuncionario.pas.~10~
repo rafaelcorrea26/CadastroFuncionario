@@ -1,0 +1,74 @@
+unit uFuncionario;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity,
+  uCidade,
+  REST.JSON.Types;
+
+type
+  TFuncionario = class;
+
+  TFuncionario = class(TInterfacedObject, iCliente)
+  private
+    FCODIGO: INTEGER;
+    FNOME: STRING;
+    FENDERECO: STRING;
+    FBAIRRO: STRING;
+    FNUMERO: STRING;
+    FCOMPLEMENTO: STRING;
+    FCEP: STRING;
+    FCPF: STRING;
+    FRG: STRING;
+    FFONE: STRING;
+    FCELULAR: STRING;
+    FDATA_NASC: TDATE;
+    FEMAIL: STRING;
+    FSALARIO: DOUBLE;
+    FCIDADE: TCIDADE;
+  public
+    property CODIGO: INTEGER;
+    property NOME: STRING read FNOME write FNOME;
+    property ENDERECO: STRING read FENDERECO write FENDERECO;
+    property BAIRRO: STRING read FBAIRRO write FBAIRRO;
+    property NUMERO: STRING read FNUMERO write FNUMERO;
+    property COMPLEMENTO: STRING read FCOMPLEMENTO write FCOMPLEMENTO;
+    property CEP: STRING read FCEP write FCEP;
+    property CPF: STRING read FCPF write FCPF;
+    property RG: STRING read FRG write FRG;
+    property FONE: STRING read FFONE write FFONE;
+    property CELULAR: STRING read FCELULAR write FCELULAR;
+    property DATA_NASC: TDATE read FDATA_NASC write FDATA_NASC;
+    property EMAIL: STRING read FEMAIL write FEMAIL;
+    property SALARIO: DOUBLE read FSALARIO write FSALARIO;
+    property CIDADE: TCIDADE read FCIDADE write FCIDADE;
+    destructor destroy; override;
+    constructor create;
+    function toJson: string;
+  end;
+
+implementation
+
+function TFuncionario.toJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TFuncionario.create;
+begin
+  CIDADE := TCIDADE.create;
+end;
+
+destructor TFuncionario.destroy;
+begin
+  CIDADE.Free;
+end;
+
+end.

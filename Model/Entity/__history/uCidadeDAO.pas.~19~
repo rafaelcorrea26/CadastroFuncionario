@@ -1,0 +1,185 @@
+unit uCidadeDAO;
+
+interface
+
+uses
+  Data.DB,
+  uQuery, uCidade;
+
+type
+  TCidadeDAO = class
+  private
+    class var FObjetoBusca: TCidade;
+  public
+
+    procedure Carrega(pCidade : TCidade);
+    procedure Limpar;
+    procedure Incluir(pCidade : TCidade);
+    procedure Alterar(pCidade : TCidade);
+    procedure Excluir(pCodigo : integer);
+    destructor Destroy; override;
+
+    constructor Create;
+
+    
+
+    class property ObjetoBusca: TCidade read FObjetoBusca write FObjetoBusca;
+    class function Existe(pCodigo: string): Boolean;
+  end;
+
+  {
+
+    CREATE TABLE MC300_CID_SEFRAZ (
+    AC300_CODIGO        VARCHAR(14) NOT NULL,
+    AC300_NOME          NOME /* NOME = VARCHAR(35) */,
+    AC300_UF            UF /* UF = CHAR(2) */,
+    AC300_CEP           CEP /* CEP = VARCHAR(10) */,
+    AN300_ALIQUOTA_ISS  DINHEIRO /* DINHEIRO = NUMERIC(15,4) DEFAULT 0 */
+    );
+
+  }
+implementation
+
+{ TCidadeDAO }
+
+class function TCidadeDAO.Existe(pCodigo: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  Result := false;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC300_CID_SEFRAZ WHERE AC300_CODIGO = :AC300_CODIGO');
+    lQuery.ParamByName('AC300_CODIGO').AsString := pCodigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+
+      if not Assigned(FObjetoBusca) then
+      begin
+        FObjetoBusca := TCidadeDAO.Create;
+      end;
+      FObjetoBusca.Codigo := pCodigo;
+      FObjetoBusca.Carrega;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+procedure TCidadeDAO.Alterar(pCidade : TCidade);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('UPDATE MC300_CID_SEFRAZ SET                  ');
+    lQuery.SQL.Add('   , AC300_NOME         =:AC300_NOME         ');
+    lQuery.SQL.Add('   , AC300_UF           =:AC300_UF           ');
+    lQuery.SQL.Add('   , AC300_CEP          =:AC300_CEP          ');
+    lQuery.SQL.Add('   , AN300_ALIQUOTA_ISS =:AN300_ALIQUOTA_ISS ');
+    lQuery.SQL.Add('WHERE AC300_CODIGO      =:AC300_CODIGO       ');
+    lQuery.ParamByName('AC300_NOME').AsString := pCidade.Nome;
+    lQuery.ParamByName('AC300_UF').AsString := pCidade.Uf;
+    lQuery.ParamByName('AC300_CEP').AsString := pCidade.Cep;
+    lQuery.ParamByName('AN300_ALIQUOTA_ISS').AsFloat := pCidade.Aliquota;
+    lQuery.ParamByName('AC300_CODIGO').AsString := pCidade.Codigo;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TCidadeDAO.Carrega(pCidade : TCidade);
+var
+  lQuery: TQuery;                    
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('select * from MC300_CID_SEFRAZ where AC300_CODIGO = :AC300_CODIGO ');
+    lQuery.ParamByName('AC300_CODIGO').AsString := pCidade.Codigo;
+    lQuery.Open;
+
+    pCidade.Nome := lQuery.FieldByName('AC300_NOME').AsString;
+    pCidade.Uf := lQuery.FieldByName('AC300_UF').AsString;
+    pCidade.Cep := lQuery.FieldByName('AC300_CEP').AsString;
+    pCidade.Aliquota := lQuery.FieldByName('AN300_ALIQUOTA_ISS').AsFloat;  
+  finally
+    lQuery.Free;
+  end;
+end;
+
+constructor TCidadeDAO.Create;
+begin
+
+end;
+
+destructor TCidadeDAO.Destroy;
+begin
+  inherited;
+end;
+
+procedure TCidadeDAO.Excluir(pCodigo : integer);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('DELETE FROM MC300_CID_SEFRAZ       ');
+    lQuery.SQL.Add('WHERE AC300_CODIGO =:AC300_CODIGO  ');
+    lQuery.ParamByName('AC300_CODIGO').AsString := pCodigo;
+    lQuery.ExecSQL;
+
+    lQuery.Connection.Commit;  
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TCidadeDAO.Incluir(pCidade : TCidade);
+var
+  lQuery: TQuery;
+begin                                  
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('INSERT INTO MC300_CID_SEFRAZ( ');
+    lQuery.SQL.Add('     AC300_CODIGO             ');
+    lQuery.SQL.Add('   , AC300_NOME               ');
+    lQuery.SQL.Add('   , AC300_UF                 ');
+    lQuery.SQL.Add('   , AC300_CEP                ');
+    lQuery.SQL.Add('   , AN300_ALIQUOTA_ISS       ');
+    lQuery.SQL.Add('   ) VALUES (                 ');
+    lQuery.SQL.Add('     :AC300_CODIGO            ');
+    lQuery.SQL.Add('   , :AC300_NOME              ');
+    lQuery.SQL.Add('   , :AC300_UF                ');
+    lQuery.SQL.Add('   , :AC300_CEP               ');
+    lQuery.SQL.Add('   , :AN300_ALIQUOTA_ISS      ');
+    lQuery.SQL.Add('   )                              ');
+    lQuery.ParamByName('AC300_CODIGO').AsString := pCidade.Codigo;
+    lQuery.ParamByName('AC300_NOME').AsString := pCidade.Nome;
+    lQuery.ParamByName('AC300_UF').AsString := pCidade.Uf;
+    lQuery.ParamByName('AC300_CEP').AsString := pCidade.Cep;
+    lQuery.ParamByName('AN300_ALIQUOTA_ISS').AsFloat := pCidade.Aliquota;
+
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit; 
+  finally
+    lQuery.Free;
+  end;
+end;
+
+end.

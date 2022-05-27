@@ -1,0 +1,62 @@
+unit uBanco;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity;
+
+type
+  TBanco = class;
+
+  TBanco = class(TInterfacedObject, iCliente)
+  private
+    FCodigo: string;
+    FBanco: string;
+    FArquivo: string;
+    FLocal: string;
+    FNumeroArquivo: string;
+    FDigitoBanco: string;
+    FDataHoraArquivoSN: string;
+    FListaBancos: TObjectList<TBanco>;
+
+  public
+    property Codigo: string read FCodigo write FCodigo;
+    property Banco: string read FBanco write FBanco;
+    property Arquivo: string read FArquivo write FArquivo;
+    property Local: string read FLocal write FLocal;
+    property NumeroArquivo: string read FNumeroArquivo write FNumeroArquivo;
+    property DigitoBanco: string read FDigitoBanco write FDigitoBanco;
+    property DataHoraArquivoSN: string read FDataHoraArquivoSN write FDataHoraArquivoSN;
+    property ListaBancos: TObjectList<TBanco> read FListaBancos write FListaBancos;
+
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: string;
+  end;
+
+implementation
+
+destructor TBanco.Destroy;
+begin
+  FListaBancos.free;
+  inherited;
+end;
+
+function TBanco.ToJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+
+constructor TBanco.Create;
+begin
+  FListaBancos := TObjectList<TBanco>.Create;
+end;
+
+end.

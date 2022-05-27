@@ -1,0 +1,43 @@
+unit uInterfacesEntity;
+
+interface
+
+uses
+  System.JSON;
+
+type
+  iCliente = interface
+    ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iClienteDAO = interface
+    ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+
+  iContasReceber = interface
+    ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iContasReceberDAO = interface
+    ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+
+  iContasPagar = interface
+    ['{372A7EA7-5A4E-4EE4-8399-D8D511C22ECE}']
+  end;
+
+  iContasPagarDAO = interface
+    ['{E711B2E4-3FE5-4313-81B6-381B6958D420}']
+  end;
+
+  iFornecedor = interface
+    ['{1BF046C8-37E3-4DAA-9BC1-A66329768B7D}']
+  end;
+
+  iFornecedorDAO = interface
+    ['{72C3C234-EF67-4AB8-8983-03C1A0E54C93}']
+  end;
+
+implementation
+
+end.

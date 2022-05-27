@@ -1,0 +1,30 @@
+unit fAvisos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls;
+
+type
+  TfrmAvisos = class(TForm)
+    pnlTitulo: TPanel;
+    Panel1: TPanel;
+    procedure tmrConexaoTimer(Sender: TObject);
+  private
+    { Private declarations }
+    procedure AtualizaPainelAviso;
+
+  public
+    { Public declarations }
+  end;
+
+var
+  frmAvisos: TfrmAvisos;
+
+implementation
+
+{$R *.dfm}
+{ TfrmAvisos }
+
+end.

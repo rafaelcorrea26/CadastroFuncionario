@@ -1,0 +1,265 @@
+unit uCliente;
+
+interface
+
+uses System.Generics.Collections, FireDAC.Comp.Client, uConexao,
+  System.SysUtils;
+
+type
+
+  TCliente = class;
+
+  TCliente = class
+  private
+    Fcodigo: Integer;
+    FNome: string;
+    FEmpresa: string;
+    FEndereco: string;
+    FNumero: string;
+    FBairro: string;
+    FCidade: string;
+    FCep: string;
+    FComplemento: string;
+    FUf: string;
+    FFone: string;
+    FCelular: string;
+    FCPF: string;
+    FCNPJ: string;
+    FEmail: string;
+    FSexo: string;
+    FConsultaCliente, FConsultaCidade: TFDQuery;
+    FFisJur: string;
+    FGerarSped: string;
+    FObs: string;
+    FConsumidorFinal: string;
+    FTipoCredito: string;
+    FDataNascimento: TDate;
+    FPresencaComprador: string;
+    FDestinatario: string;
+    FCodIBGE: string;
+    FAtivo: string;
+
+  public
+    property codigo: Integer read Fcodigo write Fcodigo; // mc01codigo integer,
+    property Nome: string read FNome write FNome; // mc01nome varchar(35),
+    property Empresa: string read FEmpresa write FEmpresa; // mc01empresa varchar(35),
+    property Endereco: string read FEndereco write FEndereco; // mc01endereco varchar(35),
+    property Numero: string read FNumero write FNumero; // mc01_nr varchar(15),
+    property Bairro: string read FBairro write FBairro; // mc01bairro varchar(20),
+    property Cidade: string read FCidade write FCidade; // mc01cidade varchar(30),
+    property Cep: string read FCep write FCep; // mc01cep varchar(10),
+    property Complemento: string read FComplemento write FComplemento; // mc01_complemento varchar(50),
+    property Uf: string read FUf write FUf; // mc01uf char(2),
+    property Fone: string read FFone write FFone; // mc01fone varchar(15),
+    property Celular: string read FCelular write FCelular; // mc01celular varchar(15),
+    property CPF: string read FCPF write FCPF;
+    property CNPJ: string read FCNPJ write FCNPJ;
+    property Email: string read FEmail write FEmail;
+    property Sexo: string read FSexo write FSexo;
+    property FisJur: string read FFisJur write FFisJur;
+    property GerarSped: string read FGerarSped write FGerarSped;
+    property ConsumidorFinal: string read FConsumidorFinal write FConsumidorFinal;
+    property DataNascimento: TDate read FDataNascimento write FDataNascimento;
+    property Obs: string read FObs write FObs;
+    property TipoCredito: string read FTipoCredito write FTipoCredito;
+    property PresencaComprador: string read FPresencaComprador write FPresencaComprador;
+    property Destinatario: string read FDestinatario write FDestinatario;
+    property CodIBGE: string read FCodIBGE write FCodIBGE; // MC01CODVIP
+    property Ativo: string read FAtivo write FAtivo;
+
+    procedure Limpar;
+    procedure Incluir(pEfetuarCommit: Boolean);
+    function BuscaCodigoIBGE: string;
+    function RemoveAcentos(Texto: string): string;
+
+    constructor Create;
+    destructor Destroy;
+  end;
+
+  { TCliente }
+implementation
+
+function TCliente.BuscaCodigoIBGE: string;
+var
+  lCidade: string;
+
+  function BuscaCodigoSefaz(cCidade: string; cUF: string): String; // 15.01
+  begin
+    Result := ' ';
+
+    FConsultaCliente.Close;
+    FConsultaCliente.Sql.Clear;
+    FConsultaCliente.Sql.Add(' SELECT AC300_CODIGO FROM MC300_CID_SEFRAZ ');
+    FConsultaCliente.Sql.Add(' WHERE AC300_NOME  =' + QuotedStr(cCidade));
+    FConsultaCliente.Sql.Add(' AND  AC300_UF  =' + QuotedStr(cUF));
+    FConsultaCliente.Open;
+    Result := COPY((FConsultaCliente.FieldByName('AC300_CODIGO').AsString), 1, 7);
+  end;
+
+begin
+  lCidade := UpperCase(COPY(FCidade, 1, 35)); // 15.01
+  lCidade := RemoveAcentos(lCidade);
+
+  Result := BuscaCodigoSefaz(lCidade, UpperCase(FUf));;
+
+end;
+
+constructor TCliente.Create;
+begin
+  FConsultaCliente := TFDQuery.Create(nil);
+  FConsultaCliente.Connection := TConexao.ObjetoConexao.Connection;
+
+  FConsultaCidade := TFDQuery.Create(nil);
+  FConsultaCidade.Connection := TConexao.ObjetoConexao.Connection;
+end;
+
+destructor TCliente.Destroy;
+begin
+  FConsultaCidade.Free;
+  FConsultaCliente.Free;
+end;
+
+procedure TCliente.Incluir(pEfetuarCommit: Boolean);
+begin
+  try
+    begin
+      FConsultaCliente.Close;
+      FConsultaCliente.Sql.Clear;
+      FConsultaCliente.Sql.Add(' insert into MC01CLIENTE       (  ');
+      FConsultaCliente.Sql.Add(' MC01CODIGO,                      ');
+      FConsultaCliente.Sql.Add(' MC01NOME,                        ');
+      FConsultaCliente.Sql.Add(' mc01_nr,                         ');
+      FConsultaCliente.Sql.Add(' MC01EMPRESA,                     ');
+      FConsultaCliente.Sql.Add(' MC01ENDERECO,                    ');
+      FConsultaCliente.Sql.Add(' MC01BAIRRO,                      ');
+      FConsultaCliente.Sql.Add(' MC01CIDADE,                      ');
+      FConsultaCliente.Sql.Add(' MC01CEP,                         ');
+      FConsultaCliente.Sql.Add(' MC01_COMPLEMENTO,                ');
+      FConsultaCliente.Sql.Add(' MC01UF,                          ');
+      FConsultaCliente.Sql.Add(' MC01FONE,                        ');
+      FConsultaCliente.Sql.Add(' MC01CELULAR,                     ');
+      FConsultaCliente.Sql.Add(' MC01CPF,                         ');
+      FConsultaCliente.Sql.Add(' MC01CGC,                         ');
+      FConsultaCliente.Sql.Add(' MC01SEXO,                        ');
+      FConsultaCliente.Sql.Add(' MC01FISJUR,                      ');
+      FConsultaCliente.Sql.Add(' MC01OBSGERAL,                    ');
+      FConsultaCliente.Sql.Add(' MC01_CONSUMIDOR_FINAL,           ');
+      FConsultaCliente.Sql.Add(' MC01TIPOCRED,                    ');
+      FConsultaCliente.Sql.Add(' MC01DTNASCTO,                    ');
+      FConsultaCliente.Sql.Add(' MC01_INDPRES,                    ');
+      FConsultaCliente.Sql.Add(' MC01_INDIEDEST,                  ');
+      FConsultaCliente.Sql.Add(' MC01CODVIP,                      ');
+      FConsultaCliente.Sql.Add(' MC01_SPED_SN,                    ');
+      FConsultaCliente.Sql.Add(' MC01EMAIL,                       ');
+      FConsultaCliente.Sql.Add(' MC01ATIINATIVO                   ');
+      FConsultaCliente.Sql.Add(' ) values (                       ');
+      FConsultaCliente.Sql.Add(' :MC01CODIGO,                     ');
+      FConsultaCliente.Sql.Add(' :MC01NOME,                       ');
+      FConsultaCliente.Sql.Add(' :mc01_nr,                        ');
+      FConsultaCliente.Sql.Add(' :MC01EMPRESA,                    ');
+      FConsultaCliente.Sql.Add(' :MC01ENDERECO,                   ');
+      FConsultaCliente.Sql.Add(' :MC01BAIRRO,                     ');
+      FConsultaCliente.Sql.Add(' :MC01CIDADE,                     ');
+      FConsultaCliente.Sql.Add(' :MC01CEP,                        ');
+      FConsultaCliente.Sql.Add(' :MC01_COMPLEMENTO,               ');
+      FConsultaCliente.Sql.Add(' :MC01UF,                         ');
+      FConsultaCliente.Sql.Add(' :MC01FONE,                       ');
+      FConsultaCliente.Sql.Add(' :MC01CELULAR,                    ');
+      FConsultaCliente.Sql.Add(' :MC01CPF,                        ');
+      FConsultaCliente.Sql.Add(' :MC01CGC,                        ');
+      FConsultaCliente.Sql.Add(' :MC01SEXO,                       ');
+      FConsultaCliente.Sql.Add(' :MC01FISJUR,                     ');
+      FConsultaCliente.Sql.Add(' :MC01OBSGERAL,                   ');
+      FConsultaCliente.Sql.Add(' :MC01_CONSUMIDOR_FINAL,          ');
+      FConsultaCliente.Sql.Add(' :MC01TIPOCRED,                   ');
+      FConsultaCliente.Sql.Add(' :MC01DTNASCTO,                   ');
+      FConsultaCliente.Sql.Add(' :MC01_INDPRES,                   ');
+      FConsultaCliente.Sql.Add(' :MC01_INDIEDEST,                 ');
+      FConsultaCliente.Sql.Add(' :MC01CODVIP,                     ');
+      FConsultaCliente.Sql.Add(' :MC01_SPED_SN,                   ');
+      FConsultaCliente.Sql.Add(' :MC01EMAIL,                      ');
+      FConsultaCliente.Sql.Add(' :MC01ATIINATIVO                  ');
+      FConsultaCliente.Sql.Add(' )                                ');
+
+      FConsultaCliente.ParamByName('MC01CODIGO').AsInteger := Fcodigo;
+      FConsultaCliente.ParamByName('MC01NOME').AsString := FNome;
+      FConsultaCliente.ParamByName('mc01_nr').AsString := FNumero;
+      FConsultaCliente.ParamByName('MC01EMPRESA').AsString := FEmpresa;
+      FConsultaCliente.ParamByName('MC01ENDERECO').AsString := FEndereco;
+      FConsultaCliente.ParamByName('MC01BAIRRO').AsString := FBairro;
+      FConsultaCliente.ParamByName('MC01CIDADE').AsString := FCidade;
+      FConsultaCliente.ParamByName('MC01CEP').AsString := FCep;
+      FConsultaCliente.ParamByName('MC01_COMPLEMENTO').AsString := FComplemento;
+      FConsultaCliente.ParamByName('MC01UF').AsString := FUf;
+      FConsultaCliente.ParamByName('MC01FONE').AsString := FFone;
+      FConsultaCliente.ParamByName('MC01CELULAR').AsString := FCelular;
+      FConsultaCliente.ParamByName('MC01CPF').AsString := FCPF;
+      FConsultaCliente.ParamByName('MC01CGC').AsString := FCNPJ;
+      FConsultaCliente.ParamByName('MC01SEXO').AsString := FSexo;
+      FConsultaCliente.ParamByName('MC01EMAIL').AsString := FEmail;
+      FConsultaCliente.ParamByName('MC01FISJUR').AsString := FFisJur;
+      FConsultaCliente.ParamByName('MC01OBSGERAL').AsString := FObs;
+      FConsultaCliente.ParamByName('MC01_CONSUMIDOR_FINAL').AsString := FConsumidorFinal;
+      FConsultaCliente.ParamByName('MC01DTNASCTO').AsDate := FDataNascimento;
+      FConsultaCliente.ParamByName('MC01TIPOCRED').AsString := FTipoCredito;
+      FConsultaCliente.ParamByName('MC01_INDPRES').AsString := FPresencaComprador;
+      FConsultaCliente.ParamByName('MC01_INDIEDEST').AsString := FDestinatario;
+      FConsultaCliente.ParamByName('MC01CODVIP').AsString := FCodIBGE;
+      FConsultaCliente.ParamByName('MC01_SPED_SN').AsString := FGerarSped;
+      FConsultaCliente.ParamByName('MC01ATIINATIVO').AsString := FAtivo;
+      FConsultaCliente.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaCliente.Connection.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, self, E);
+    end;
+  end;
+end;
+
+procedure TCliente.Limpar;
+begin
+  Fcodigo := 0;
+  FNome := '';
+  FEmpresa := '';
+  FEndereco := '';
+  FNumero := '';
+  FBairro := '';
+  FCidade := '';
+  FCep := '';
+  FComplemento := '';
+  FUf := '';
+  FFone := '';
+  FCelular := '';
+  FCPF := '';
+  FCNPJ := '';
+  FEmail := '';
+  FSexo := '';
+end;
+
+function TCliente.RemoveAcentos(Texto: string): string;
+var
+  sAux, sAcentos, sTrocas, sLetra: string;
+  iLoop: Integer;
+
+begin
+  sAcentos := 'áàäâãåÁÀÄÂÃÅéèëêÉÈËÊíìïîÍÌÏÎóòöôõÓÒÖÔÕúùüûÚÙÜÛçÇñÑ';
+  sTrocas := 'aaaaaaAAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUcCnN';
+  sAux := Texto;
+  for iLoop := 1 to Length(sAcentos) do
+  begin
+    while Pos(COPY(sAcentos, iLoop, 1), sAux) > 0 do
+    begin
+      sLetra := COPY(sTrocas, iLoop, 1);
+      sAux[Pos(COPY(sAcentos, iLoop, 1), sAux)] := sLetra[1];
+    end;
+  end;
+  Result := sAux;
+end;
+
+end.

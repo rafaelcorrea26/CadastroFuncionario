@@ -1,0 +1,4980 @@
+unit uConnectionAPI;
+
+interface
+
+uses
+  REST.Client,
+  IPPeerClient,
+  Data.Bind.Components,
+  Data.Bind.ObjectScope,
+  REST.Response.Adapter,
+  REST.Types,
+  System.JSON,
+  System.Classes,
+  System.SysUtils,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  System.DateUtils, REST.Authenticator.OAuth, Vcl.StdCtrls,
+  FireDAC.VCLUI.Wait, FireDAC.Stan.Intf,
+  FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, Data.DB,
+  FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client, uProdutos, Winapi.Windows,
+  Vcl.ExtCtrls, System.Math, System.StrUtils,
+  Vcl.Grids, System.Win.Registry,
+  Vcl.Samples.Gauges;
+
+type
+
+  TServicoAPI = (tEnviaNFeXml, tEnviaProduto, tRecebeUnicoProduto, tRecebeProduto, tDeletaProduto, tUpdateproduto,
+    tUpdateVariacaoproduto, tRecebeUnicaVariacaoproduto, tRecebeVariacaoproduto, tEnviaVenda, tRecebeVenda,
+    tRecebeStatus, tRecebeCategoria, tRecebeVendaCompleta, tDeletaProdutoVenda, tDeletaVenda, tUpdateVenda,
+    tRecebeInformacaoLoja);
+
+  TConexaoAPI = class
+  private
+    FConexao, FConexaoDFe: TFDConnection;
+    FConsultaDFe, FConsulta, FConsultaUP, FConsultaVar, FDataSet, FDataSetRetornaStatus, FDataSetDFe,
+      FConsultaSku: TFDQuery;
+
+    FNovoToken: Boolean;
+
+    FURL_Busca_Token: string;
+    Fcode: string;
+    Fconsumer_key: string;
+    Fconsumer_secret: string;
+    Frefresh_token: string;
+    Faccess_token: string;
+    Frefresh_token_dt_exp: TDateTime;
+    Facess_token_dt_exp: TDateTime;
+    FDataAtivacao: TDateTime;
+    // Status
+    FStatusBaixar: String;
+    FStatusPosBaixar: String;
+    FStatusEnviarNota: String;
+
+    // Venda
+    FCodProdutoSite: string;
+    FPagina, FPaginaTotal: Integer;
+
+    FCodVendaSite: string;
+    FDataInicio: TDateTime;
+    FConfiguracaoFrete: Boolean;
+
+    FEnviarProdutos, FEnviarNFe: Boolean;
+
+    FUrlAPI: string;
+    FSku: string;
+    FCodVariacaoProduto: string;
+    FListaVendas: string;
+    FLiberarIntegradorUso: Boolean;
+
+    // Envio automatico
+    FEnvioAutomatico: Boolean;
+    FEnvioProdutosAutomatico: Boolean;
+    FEnvioVendasAutomatico: Boolean;
+    FEnvioNotasAutomatico: Boolean;
+
+    FBaixarVendasCodigoEmpresa: Boolean;
+    FCodigoEmpresaBaixarVendas: string;
+    FUtilizarSaldoEmpresaUtilizar: Boolean;
+    FCodigoEmpresaUtilizarSaldo: string;
+
+    // Tratamento erros
+    FTotalPareadoMcComSite: Integer;
+    FTotalPareadoSiteComMC: Integer;
+    FTotalPareadoMcComSiteErro: Integer;
+    FTotalPareadoSiteComMCErro: Integer;
+    FTotalProdutosIncluidos: Integer;
+    FTotalProdutosAlterados: Integer;
+    FTotalProdutosIncluirErro: Integer;
+    FTotalProdutosAlterarErro: Integer;
+    FTotalVendasBaixadas: Integer;
+    FTotalVendasErro: Integer;
+    FTotalNotasEnviadas: Integer;
+    FTotalNotasErro: Integer;
+    FStatusError: Integer;
+    FMensagem: string;
+
+{$REGION 'Status de retorno(HttpStatusCodeb)API'}
+    {
+      200/201 - OK (criado, alterado, buscado)
+
+      401/403 - Unauthorized ( Sem permissão, problemas no token)    O response terá a
+      causa, pegue no json o valor de  "causes":
+
+      400/404 - Bad Resquest ou Not Found (Algo deu errado no processo, ou faltou alguma informação, seja na criação
+      ou na alteração, seja o id para alterar ou algum campo chave)  O response terá a
+      causa, pegue no json o valor de  "causes":
+    }
+{$ENDREGION}
+{$REGION 'Componentes para conexão com API'}
+    FRestClient: TRESTClient;
+    FRestRequest: TRESTRequest;
+    FRestResponse: TRESTResponse;
+
+    class var FConexaoAPI: TConexaoAPI;
+
+{$ENDREGION}
+{$REGION 'Métodos para configuração e conexão com API'}
+    procedure PassaUrlRestClient(pTipoServico: TServicoAPI);
+    procedure ConfiguraConexaoComAPI(pMetodo: TRESTRequestMethod; pServico: TServicoAPI; pJson: string);
+    class function GetConexaoAPI: TConexaoAPI; static;
+{$ENDREGION}
+{$REGION 'Métodos Pesquisas e Validações Banco'}
+    function VerificaSeOClienteExisteNaBase(pCPFOuCNPJ: string): string;
+    function GeraCodigoCliente: Integer;
+{$ENDREGION}
+{$REGION 'Métodos Recebimentos Atualização/Datas'}
+    // Recebe Ultima Data ATT
+    function UltimaDataAttProdutosAPI: TDateTime;
+
+    // Recebe alterações pós ultima Data ATT e carrega com os itens.
+    function CarregaQryProdutosInserirSite(pDataAlteracao: TDateTime): Boolean;
+    // inserir
+    function CarregaQryProdutosUpdateSite(pDataAlteracao: TDateTime): Boolean;
+    function CarregaQryProdutosVariacaoUpdateSite(pDataAlteracao: TDateTime): Boolean;
+    // dar update
+    function CarregaNFeInserirSite: Boolean; // inserir NFe
+
+    // Atualiza ultima data para nova data, now.
+    procedure AttUltimaDataProdutosAPI(pDataHora: TDateTime);
+    procedure ValidaSeExisteTabelaAtulizacaoProdutos;
+    procedure AtualizaStatusEnviadoTabelaIntegracao(pCodigoProduto: string);
+    procedure AtualizaStatusEDataEnvioProduto(pCodigoProduto, pIDProdutoSite, pSku: string);
+    procedure AtualizaStatusEDataEnvioProdutoCompleto(pCodigoProduto, pIDProdutoSite, pSku, pDescSite, pDescCurta,
+      pDescLonga: string);
+    procedure LimparIDSiteDoProduto(pCodigoProduto: string);
+    procedure AtualizaStatusProduto(pCodigoProduto, pIDProdutoSite: string; pData: TDateTime);
+    procedure AtualizaStatusEDataEnvioXml(pIDNfe: string);
+    procedure AtualizaSkuProduto(pCodigoProduto, pSku: string);
+    procedure AtualizaIDVariacaoProduto(pCodigoProduto, pidVariacao: string);
+    procedure AtualizaIDProduto(pSku, pidSite: string);
+
+    procedure AtualizaStatusDeparaProdutoEnviado(pidSite, pSku, pDesc, pDescCurta, pDescLonga: string; pPreco: Double);
+    procedure AtualizaStatusEPrecoProdutoEnviado(pidSite, pSku, pDesc: string; pPreco, pPeso: Double;
+      pCategoria: Integer);
+{$ENDREGION}
+{$REGION 'Métodos TOKEN'}
+    // validar ao iniciar sistema primeira vez.
+    procedure VerificaValidadeTokens;
+
+    procedure GeraNovosTokens;
+    procedure GeraNovoAcessToken;
+
+    procedure GravaTokenBanco(pRefresh, pAcess: String; pDt_Refresh, pDt_Acess, pDataAtivacao: TDateTime);
+    function VerificaValidadeRefreshTokenNoBanco: string;
+    function VerificaValidadeAcessTokenNoBanco: string;
+{$ENDREGION}
+{$REGION 'Mensagens'}
+    function TotalRegistros(pTotalRegistros: string): string;
+{$ENDREGION}
+{$REGION 'Procedimentos e funções só da classe.'}
+    // Gravações de log.
+    procedure GravaArquivoTxtLog(pJason, pNomeTXT: string);
+
+    // Decodifica datas do json.
+    function DecodificarDataHora(pData: TDateTime): string;
+    function DecodificarDataToken(pData: string): TDateTime;
+    function DecodificarData(pData: TDate): string;
+    function DecodificarStringParaData(pData: string): string;
+    // Funções de busca dados para inclusão do produto no site.
+    function BuscaPrecoCorreto(pQuery: TFDQuery): Double;
+    function BuscaDescricao(pQuery: TFDQuery): string;
+    function BuscaDescricaoUpdate(pQuery: TFDQuery): string;
+
+    function BuscaDescricaoLonga(pQuery: TFDQuery): string;
+    function BuscaDescricaoCurta(pQuery: TFDQuery): string;
+
+    // verifica se é um inteiro
+    function IsDigit(pString: string): Boolean;
+
+    // Produto
+    function BuscaCodigoProdutoPeloSku(pSku: string): string;
+    function ValidaCodigoProduto(pProduto: string): Boolean;
+
+    // Venda
+    function NovoCodigoPreVenda: Integer;
+    function ConverteEstadoEmSigla(pEstado: string): string;
+
+    // Status
+    function RetornaStatusDescricao(pIdStatus: String): string;
+{$ENDREGION}
+  public
+{$REGION 'Componente Timer'}
+    tmrVendas, tmrProdutos, tmrNotaFiscal: TTimer;
+{$ENDREGION}
+    constructor Create;
+    destructor Destroy; override;
+
+{$REGION 'Métodos Envio'}
+    // Carregamentos no Json Antes de enviar
+    function CarregaProdutosParaEnvio(pMemoEnviados, pMemoRecusados: TMemo; pgauControle: TGauge): string;
+    function CarregaNFeParaEnvio(pMemoEnviados: TMemo; pgauControle: TGauge): string;
+
+    // Envios
+    function EnviaProdutos(pJson: string): string;
+    function EnviaVendas(pJson: string): string;
+    function EnviaNotaXML(pJson: string): string;
+{$ENDREGION}
+{$REGION 'Métodos Recebimento/Listagem'}
+    // Geral
+    function PegaTotalRegistrosCabecalho: Integer;
+
+    // Produtos
+    procedure GetVariacaoProdutosAPI;
+    procedure GetProdutosAPI;
+    function ListarTodosProdutos(pmemo: TMemo): Boolean;
+    function RecebeProdutos(pCds: TFDMemTable; pFiltro: string): Boolean;
+    function CarregoTabelaNaMemoriaComOsProdutosSite(pCds: TFDMemTable; pFiltro: string): Boolean;
+    function VerificaSeJaExisteProduto(pCodigoProduto: string): Boolean;
+
+    // Vendas
+    procedure GetVendasAPI;
+    procedure GetVendasCompletaAPI;
+    function RecebeVendas(pMemoRecebidos, pMemoRecusados: TMemo; pgauControle: TGauge): string;
+    function RecebeVendasELista(pCdsVenda, pCdsVendaitens: TFDMemTable): Boolean;
+    function ListarTodasVendas(pmemo: TMemo): Boolean;
+
+    // Status
+    procedure GetStatusAPI;
+    function RecebeStatus(pMemoStatus: TMemo): string;
+
+    // Categorias
+    procedure GetCategoriasAPI;
+    function RecebeCategorias(pMemoStatus: TMemo): string;
+
+    // Info Loja
+    procedure GetInfoLojaAPI;
+    function RecebeInfoLojaELista(pGrd: TStringGrid; pFiltro: string): Boolean;
+    function ListarInfoLoja(pmemo: TMemo): Boolean;
+{$ENDREGION}
+{$REGION 'Métodos Delete'}
+    procedure DeletaProdutoTabelaIntegracao(pCod: String);
+    function DeletaProduto(pCodProduto: String): string;
+    function DeletaVenda(pCodVenda: String): string;
+    function DeletaProdutoDaVenda(pCodVenda, pCodigoProduto: String): string;
+{$ENDREGION}
+{$REGION 'Métodos Update'}
+    // Vendas
+    function UpdateStatusVendaPosBaixar(pCodVenda: String): string;
+    function UpdateStatusVendaBaixar(pCodVenda: String): string;
+
+    // Produtos
+    procedure UpdateProduto(pJson, pCodProduto, pSku: String);
+    procedure UpdateVariacaoProduto(pJson, pCodVariacao, pSku: string);
+{$ENDREGION}
+{$REGION 'Métodos e Funções que podem ser chamadas de fora da classe'}
+    // Produto
+    function ValidaIDProduto(pIdProduto: String; pLabel: TLabel): Boolean;
+    function DeparaProdutosMcComSite(pMemoEnviados: TMemo; pgauControle: TGauge): Boolean;
+    function DeparaProdutosDoSiteComMC(pMemoEnviados, pMemoNaoEnviados: TMemo; pgauControle: TGauge): Boolean;
+    function VerificaSeTemProdutosParaEnviar: Boolean;
+
+    // Retornos Erro
+    function RetornaCausaErroEnvioProduto(pCodigo: string): string;
+    function RetornaCausaErroEnvioNFe: string;
+    function RetornaCausaErroExcluirProdutoVenda: string;
+
+    // Status
+    function ValidaIDStatus(pIdStatus: String; pLabel: TLabel): Boolean;
+    procedure SalvaConfiguracaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit);
+    procedure CarregaConfiguracaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit);
+    procedure CarregaDescricaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit;
+      plblStatusBaixar, plblStatusPosBaixar, plblStatusEnviarNota: TLabel);
+
+    // Categoria
+    function ValidaIDCategoria(pIdCategoria: String; pLabel: TLabel): Boolean;
+    procedure SalvaConfiguracaoCategoria(pProdutoID, pCategoriaID: TEdit);
+    procedure CarregaDescricaoCategoria(pProdutoID, pCategoriaID: TEdit; plblProduto, plblCategoria: TLabel);
+
+    // Outros
+    procedure FiltraCDS(pCds: TFDMemTable; pVenda: string);
+    procedure BuscaConfiguracoesTray;
+    procedure RegistrarNaInicializacaoDoWindows(pPrograma: string);
+
+    function TamString(pString: string; pTamanho: Integer): string;
+    function ValidaCamposConfigAPI: Boolean;
+    function VersaoSistema: string;
+    function RemoveCaracteresEspeciais(aTexto: string): string;
+    function CarregaIntervaloTempoEnvio: Integer;
+    procedure AlimentaVariaveisEnvioAutomatico;
+    function RetornaIndexIntervalo(pIntervalo: String): Integer;
+
+{$ENDREGION}
+    property CodProdutoSite: string read FCodProdutoSite write FCodProdutoSite;
+    property CodVendaSite: string read FCodVendaSite write FCodVendaSite;
+    property EnvioAutomatico: Boolean read FEnvioAutomatico write FEnvioAutomatico;
+    property EnvioProdutosAutomatico: Boolean read FEnvioProdutosAutomatico write FEnvioProdutosAutomatico;
+    property EnvioVendasAutomatico: Boolean read FEnvioVendasAutomatico write FEnvioVendasAutomatico;
+    property EnvioNotasAutomatico: Boolean read FEnvioNotasAutomatico write FEnvioNotasAutomatico;
+
+    property TotalPareadoMcComSite: Integer read FTotalPareadoMcComSite write FTotalPareadoMcComSite;
+    property TotalPareadoSiteComMC: Integer read FTotalPareadoSiteComMC write FTotalPareadoSiteComMC;
+    property TotalPareadoMcComSiteErro: Integer read FTotalPareadoMcComSiteErro write FTotalPareadoMcComSiteErro;
+    property TotalPareadoSiteComMCErro: Integer read FTotalPareadoSiteComMCErro write FTotalPareadoSiteComMCErro;
+    property TotalProdutosIncluidos: Integer read FTotalProdutosIncluidos write FTotalProdutosIncluidos;
+    property TotalProdutosAlterados: Integer read FTotalProdutosAlterados write FTotalProdutosAlterados;
+    property TotalProdutosIncluirErro: Integer read FTotalProdutosIncluirErro write FTotalProdutosIncluirErro;
+    property TotalProdutosAlterarErro: Integer read FTotalProdutosAlterarErro write FTotalProdutosAlterarErro;
+    property TotalVendasBaixadas: Integer read FTotalVendasBaixadas write FTotalVendasBaixadas;
+    property TotalVendasErro: Integer read FTotalVendasErro write FTotalVendasErro;
+    property TotalNotasEnviadas: Integer read FTotalNotasEnviadas write FTotalNotasEnviadas;
+    property TotalNotasErro: Integer read FTotalNotasErro write FTotalNotasErro;
+
+    property Mensagem: string read FMensagem write FMensagem;
+
+    class procedure ReleaseMe;
+    class property ConexaoAPI: TConexaoAPI read GetConexaoAPI write FConexaoAPI;
+
+  end;
+
+implementation
+
+{ TConexaoAPI }
+
+procedure TConexaoAPI.AtualizaIDProduto(pSku, pidSite: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET ID_SITE = :ID       ');
+  FDataSet.SQL.Add(' WHERE  AC03_SKU = :CODIGO              ');
+  FDataSet.ParamByName('ID').AsString := pidSite;
+  FDataSet.ParamByName('CODIGO').AsString := pSku;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaIDVariacaoProduto(pCodigoProduto, pidVariacao: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET AC03_IDVARIACAO = :VARIACAO       ');
+  FDataSet.SQL.Add(' WHERE  AC03_SKU = :CODIGO                            ');
+  FDataSet.ParamByName('VARIACAO').AsString := pidVariacao;
+  FDataSet.ParamByName('CODIGO').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaSkuProduto(pCodigoProduto, pSku: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET                                     ');
+  FDataSet.SQL.Add(' AC03_SKU = :SKU,                                       ');
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S''                              ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :CODIGO                              ');
+  FDataSet.ParamByName('SKU').AsString := pSku;
+  FDataSet.ParamByName('CODIGO').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+
+end;
+
+procedure TConexaoAPI.AtualizaStatusEDataEnvioProduto(pCodigoProduto, pIDProdutoSite, pSku: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET                 ');
+  FDataSet.SQL.Add(' AD03_DT_ENVIADO_SITE = :DATA_HORA, ');
+
+  if trim(pSku) <> '' then
+  begin
+    FDataSet.SQL.Add(' AC03_SKU = :SKU,                 ');
+  end;
+  if trim(pIDProdutoSite) <> '' then
+  begin
+    FDataSet.SQL.Add(' ID_SITE = :ID,                   ');
+  end;
+
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S''          ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :CODIGO          ');
+  FDataSet.ParamByName('DATA_HORA').asdatetime := FDataInicio;
+  if trim(pSku) <> '' then
+  begin
+    FDataSet.ParamByName('SKU').AsString := pSku;
+  end;
+  if trim(pIDProdutoSite) <> '' then
+  begin
+    FDataSet.ParamByName('ID').AsString := pIDProdutoSite;
+  end;
+
+  FDataSet.ParamByName('CODIGO').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusEDataEnvioProdutoCompleto(pCodigoProduto, pIDProdutoSite, pSku, pDescSite,
+  pDescCurta, pDescLonga: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET                           ');
+  FDataSet.SQL.Add(' AD03_DT_ENVIADO_SITE = :DATA_HORA,           ');
+  FDataSet.SQL.Add(' AC03_NOME_SITE = :DESCRICAO_SITE,            ');
+  FDataSet.SQL.Add(' AC03_NOME_SITE_RESUMIDO  = :DESCRICAOCURTA,  ');
+  FDataSet.SQL.Add(' AC03_DESCRICAO_SITE = :DESCRICAOLONGA,       ');
+
+  if trim(pSku) <> '' then
+  begin
+    FDataSet.SQL.Add(' AC03_SKU = :SKU,                 ');
+  end;
+  if trim(pIDProdutoSite) <> '' then
+  begin
+    FDataSet.SQL.Add(' ID_SITE = :ID,                   ');
+  end;
+
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S''          ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :CODIGO          ');
+  FDataSet.ParamByName('DATA_HORA').asdatetime := FDataInicio;
+  FDataSet.ParamByName('DESCRICAO_SITE').AsString := pDescSite;
+  FDataSet.ParamByName('DESCRICAOCURTA').AsString := pDescCurta;
+  FDataSet.ParamByName('DESCRICAOLONGA').AsString := pDescLonga;
+
+  if trim(pSku) <> '' then
+  begin
+    FDataSet.ParamByName('SKU').AsString := pSku;
+  end;
+  if trim(pIDProdutoSite) <> '' then
+  begin
+    FDataSet.ParamByName('ID').AsString := pIDProdutoSite;
+  end;
+
+  FDataSet.ParamByName('CODIGO').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusEDataEnvioXml(pIDNfe: string);
+begin
+  FDataSetDFe.Close;
+  FDataSetDFe.SQL.Clear;
+  FDataSetDFe.SQL.Add(' UPDATE TB_DFE SET INTEGRADO= ''S'' WHERE ID = :ID ');
+  FDataSetDFe.ParamByName('ID').AsString := pIDNfe;
+  FDataSetDFe.ExecSQL;
+  FDataSetDFe.Connection.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusEnviadoTabelaIntegracao(pCodigoProduto: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' update TBL_INTEG_MC03PRO_WC set             ');
+  FDataSet.SQL.Add(' ENVIADO = ''S''                             ');
+  FDataSet.SQL.Add(' where (COD = :COD)                          ');
+  FDataSet.ParamByName('COD').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FConexao.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusEPrecoProdutoEnviado(pidSite, pSku, pDesc: string; pPreco, pPeso: Double;
+  pCategoria: Integer);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' update mc03pro set                           ');
+  FDataSet.SQL.Add(' AC03_ENVIAR_SITE  = ''S'',                   ');
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S'',                   ');
+  FDataSet.SQL.Add(' AN03_PRECO_DIFER_SITE  = ''S'',              ');
+  FDataSet.SQL.Add(' AN03_PRECO_SITE = :PRECO,                    ');
+  FDataSet.SQL.Add(' AN03PESO_GRAMAS = :PESO,                     ');
+  FDataSet.SQL.Add(' AC03_NOME_SITE = :DESCSITE,                  ');
+  FDataSet.SQL.Add(' ID_CATEGORIA_SITE = :CATEGORIA,              ');
+  FDataSet.SQL.Add(' ID_SITE = :IDSITE                            ');
+  FDataSet.SQL.Add(' where ac03_sku = :SKU                        ');
+  FDataSet.ParamByName('SKU').AsString := pSku;
+  FDataSet.ParamByName('PRECO').AsFloat := pPreco;
+  FDataSet.ParamByName('PESO').AsFloat := pPeso;
+  FDataSet.ParamByName('DESCSITE').AsString := pDesc;
+  FDataSet.ParamByName('CATEGORIA').AsInteger := pCategoria;
+  FDataSet.ParamByName('IDSITE').AsString := pidSite;
+  FDataSet.ExecSQL;
+  FConexao.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusDeparaProdutoEnviado(pidSite, pSku, pDesc, pDescCurta, pDescLonga: string;
+  pPreco: Double);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' update mc03pro set                           ');
+  FDataSet.SQL.Add(' AC03_ENVIAR_SITE  = ''S'',                   ');
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S'',                   ');
+  FDataSet.SQL.Add(' AN03_PRECO_DIFER_SITE  = ''S'',              ');
+  FDataSet.SQL.Add(' AN03_PRECO_SITE = :PRECO,                    ');
+  FDataSet.SQL.Add(' AC03_NOME_SITE = :DESCRICAO_SITE,            ');
+  FDataSet.SQL.Add(' AC03_NOME_SITE_RESUMIDO  = :DESCRICAOCURTA,  ');
+  FDataSet.SQL.Add(' AC03_DESCRICAO_SITE = :DESCRICAOLONGA,       ');
+  FDataSet.SQL.Add(' ID_SITE = :IDSITE                            ');
+  FDataSet.SQL.Add(' where ac03_sku = :SKU            ');
+  FDataSet.ParamByName('SKU').AsString := pSku;
+  FDataSet.ParamByName('PRECO').AsFloat := pPreco;
+  FDataSet.ParamByName('DESCRICAO_SITE').AsString := pDesc;
+  FDataSet.ParamByName('DESCRICAOCURTA').AsString := pDescCurta;
+  FDataSet.ParamByName('DESCRICAOLONGA').AsString := pDescLonga;
+  FDataSet.ParamByName('IDSITE').AsString := pidSite;
+  FDataSet.ExecSQL;
+  FConexao.Commit;
+end;
+
+procedure TConexaoAPI.AtualizaStatusProduto(pCodigoProduto, pIDProdutoSite: string; pData: TDateTime);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET AD03_DT_ENVIADO_SITE = :DATA_HORA, ');
+  if trim(pIDProdutoSite) <> '' then
+    FDataSet.SQL.Add(' AC03_SKU = :SKU,                                    ');
+
+  FDataSet.SQL.Add(' AC03_ENVIADO_SITE = ''S''                             ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :CODIGO                             ');
+  FDataSet.ParamByName('DATA_HORA').asdatetime := pData;
+
+  if trim(pIDProdutoSite) <> '' then
+    FDataSet.ParamByName('SKU').AsString := pIDProdutoSite;
+
+  FDataSet.ParamByName('CODIGO').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+function TConexaoAPI.BuscaDescricaoLonga(pQuery: TFDQuery): string;
+begin
+  // Passar a query carregada e com produto selecionado
+
+  if trim(pQuery.fieldbyname('AC03_DESCRICAO_SITE').AsString) <> '' then
+  begin
+    result := pQuery.fieldbyname('AC03_DESCRICAO_SITE').AsString;
+  end
+  else
+  begin
+    result := '';
+  end;
+end;
+
+function TConexaoAPI.BuscaDescricaoUpdate(pQuery: TFDQuery): string;
+
+begin
+  if trim(pQuery.fieldbyname('AC03_NOME_SITE').AsString) <> '' then
+  begin
+    result := pQuery.fieldbyname('AC03_NOME_SITE').AsString;
+  end
+  else
+  begin
+    result := '';
+  end;
+end;
+
+function TConexaoAPI.BuscaCodigoProdutoPeloSku(pSku: string): string;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select * from mc03pro      ');
+  FDataSet.SQL.Add(' WHERE  AC03_SKU = :SKU     ');
+  FDataSet.ParamByName('SKU').AsString := pSku;
+  FDataSet.Open;
+
+  result := FDataSet.fieldbyname('AC03CODI').AsString;
+end;
+
+procedure TConexaoAPI.BuscaConfiguracoesTray;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM TBL_CONFIGURACAO_TRAY  ');
+  FDataSet.SQL.Add(' where id = 1                         ');
+  FDataSet.Open;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    FUrlAPI := FDataSet.fieldbyname('api_address_url').AsString;
+    FURL_Busca_Token := FDataSet.fieldbyname('api_address_url').AsString + 'auth/';
+    Fcode := FDataSet.fieldbyname('code').AsString;
+    Fconsumer_key := FDataSet.fieldbyname('consumer_key').AsString;
+    Fconsumer_secret := FDataSet.fieldbyname('consumer_secret').AsString;
+    Frefresh_token := FDataSet.fieldbyname('refresh_token').AsString;
+    Faccess_token := FDataSet.fieldbyname('access_token').AsString;
+    Frefresh_token_dt_exp := FDataSet.fieldbyname('dt_validade_refresh_token').asdatetime;
+    Facess_token_dt_exp := FDataSet.fieldbyname('dt_validade_access_token').asdatetime;
+    FDataAtivacao := FDataSet.fieldbyname('dt_ativacao').asdatetime;
+    FStatusBaixar := FDataSet.fieldbyname('STATUS_BAIXAR').AsString;
+    FStatusPosBaixar := FDataSet.fieldbyname('STATUS_POS_BAIXAR').AsString;
+    FStatusEnviarNota := FDataSet.fieldbyname('STATUS_ENVIAR_NOTA').AsString;
+    FConfiguracaoFrete := FDataSet.fieldbyname('UTILIZAR_FRETE').AsString = 'S';
+    FBaixarVendasCodigoEmpresa := FDataSet.fieldbyname('BAIXAR_VENDAS_CODEMPRESA').AsString = 'S';
+    FCodigoEmpresaBaixarVendas := FDataSet.fieldbyname('COEMPRESA_BAIXAR_VENDAS').AsString;
+    FUtilizarSaldoEmpresaUtilizar := FDataSet.fieldbyname('UTILIZAR_SALDO_EMPRESA_U').AsString = 'S';
+    FCodigoEmpresaUtilizarSaldo := FDataSet.fieldbyname('CODEMPRESA_UTILIZAR_SALDO').AsString;
+    FLiberarIntegradorUso := FDataSet.fieldbyname('LIBERADO_PARA_USO').AsString = 'S';
+  end;
+
+  if Frefresh_token <> '' then
+  begin
+    if now < Frefresh_token_dt_exp then
+    begin
+      GeraNovosTokens;
+    end;
+  end
+  else
+  begin
+    GeraNovosTokens;
+  end;
+
+  if Faccess_token <> '' then
+  begin
+    if now < Facess_token_dt_exp then
+    begin
+      GeraNovoAcessToken
+    end;
+  end
+  else
+  begin
+    GeraNovosTokens;
+  end;
+end;
+
+function TConexaoAPI.BuscaDescricao(pQuery: TFDQuery): string;
+begin
+  if trim(pQuery.fieldbyname('AC03_NOME_SITE').AsString) <> '' then
+  begin
+    result := pQuery.fieldbyname('AC03_NOME_SITE').AsString;
+  end
+  else
+  begin
+    result := pQuery.fieldbyname('AC03DESC').AsString;
+  end;
+end;
+
+function TConexaoAPI.BuscaDescricaoCurta(pQuery: TFDQuery): string;
+begin
+  // Passar a query carregada e com produto selecionado
+  if trim(pQuery.fieldbyname('AC03_NOME_SITE_RESUMIDO').AsString) <> '' then
+  begin
+    result := pQuery.fieldbyname('AC03_NOME_SITE_RESUMIDO').AsString;
+  end
+  else
+  begin
+    result := pQuery.fieldbyname('AC03DESC').AsString;
+  end;
+end;
+
+function TConexaoAPI.BuscaPrecoCorreto(pQuery: TFDQuery): Double;
+begin
+  // Passar a query carregada e com produto selecionado
+  if (pQuery.fieldbyname('AN03_PRECO_DIFER_SITE').AsString = 'S') and (pQuery.fieldbyname('AN03_PRECO_SITE').AsFloat > 0)
+  then
+  begin
+    result := pQuery.fieldbyname('AN03_PRECO_SITE').AsFloat;
+  end
+  else
+  begin
+    result := pQuery.fieldbyname('AN03PRC1').AsFloat;
+  end;
+end;
+
+procedure TConexaoAPI.ConfiguraConexaoComAPI(pMetodo: TRESTRequestMethod; pServico: TServicoAPI; pJson: string);
+begin
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    try
+      FRestClient.ResetToDefaults;
+      PassaUrlRestClient(pServico);
+      FRestResponse.ResetToDefaults;
+      FRestResponse.ContentEncoding := 'utf8';
+      FRestRequest.ResetToDefaults;
+      FRestRequest.Client := FRestClient;
+      FRestRequest.ClearBody;
+      FRestRequest.Response := FRestResponse;
+      FRestRequest.Params.Clear;
+      FRestRequest.AddParameter('access_token', Faccess_token);
+
+      if (pServico = tRecebeVenda) and (trim(FStatusBaixar) <> '') then
+      begin
+        FRestRequest.AddParameter('sort', 'id_desc');
+        FRestRequest.AddParameter('status', RetornaStatusDescricao(FStatusBaixar));
+      end;
+
+      if ((pServico = tRecebeProduto) or (pServico = tRecebeVenda) or (pServico = tRecebeStatus)) and
+        ((FPaginaTotal) <> 0) then
+      begin
+        FRestRequest.AddParameter('limit', '50');
+        FRestRequest.AddParameter('page', IntToStr(FPagina));
+      end;
+
+      if ((pServico = tRecebeUnicoProduto) or (pServico = tRecebeUnicaVariacaoproduto)) and (trim(FSku) <> '') then
+      begin
+        FRestRequest.AddParameter('reference', FSku);
+      end;
+
+      if trim(pJson) <> '' then
+      begin
+        FRestRequest.AddBody(pJson, ctAPPLICATION_JSON);
+      end;
+
+      FRestRequest.Method := pMetodo; // showmessage(pJson);
+      FRestRequest.Execute;
+    Except
+      on E: Exception do
+      begin
+        GravaArquivoTxtLog(pJson, 'jsoncomexception');
+        GravaArquivoTxtLog(FRestResponse.Content, 'responsecomexception');
+
+        if FEnvioAutomatico then
+        begin
+          if FEnvioProdutosAutomatico then
+          begin
+            tmrProdutos.Enabled := false;
+            tmrProdutos.Enabled := True;
+          end;
+
+          if FEnvioVendasAutomatico then
+          begin
+            tmrVendas.Enabled := false;
+            tmrVendas.Enabled := True;
+          end;
+
+          if FEnvioNotasAutomatico then
+          begin
+            tmrNotaFiscal.Enabled := false;
+            tmrNotaFiscal.Enabled := True;
+          end;
+        end;
+      end;
+    End;
+
+  end
+  else
+  begin
+    FMensagem := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.ConverteEstadoEmSigla(pEstado: string): string;
+begin
+  if UpperCase(pEstado) = 'ALAGOAS' then
+  begin
+    result := 'AL';
+  end
+  else if UpperCase(pEstado) = 'AMAPÁ' then
+  begin
+    result := 'AP';
+  end
+  else if UpperCase(pEstado) = 'AMAPA' then
+  begin
+    result := 'AP';
+  end
+  else if UpperCase(pEstado) = 'AMAZONAS' then
+  begin
+    result := 'AM';
+  end
+  else if UpperCase(pEstado) = 'BAHIA' then
+  begin
+    result := 'BA';
+  end
+  else if UpperCase(pEstado) = 'CEARÁ' then
+  begin
+    result := 'CE';
+  end
+  else if UpperCase(pEstado) = 'CEARA' then
+  begin
+    result := 'CE';
+  end
+  else if UpperCase(pEstado) = 'DISTRITO FEDERAL' then
+  begin
+    result := 'DF';
+  end
+  else if UpperCase(pEstado) = 'ESPÍRITO SANTO' then
+  begin
+    result := 'ES';
+  end
+  else if UpperCase(pEstado) = 'ESPIRITO SANTO' then
+  begin
+    result := 'ES';
+  end
+  else if UpperCase(pEstado) = 'GOIÁS' then
+  begin
+    result := 'GO';
+  end
+  else if UpperCase(pEstado) = 'GOIAS' then
+  begin
+    result := 'GO';
+  end
+  else if UpperCase(pEstado) = 'MARANHÃO' then
+  begin
+    result := 'MA';
+  end
+  else if UpperCase(pEstado) = 'MARANHAO' then
+  begin
+    result := 'MA';
+  end
+  else if UpperCase(pEstado) = 'MATO GROSSO' then
+  begin
+    result := 'MT';
+  end
+  else if UpperCase(pEstado) = 'MATO GROSSO DO SUL' then
+  begin
+    result := 'MS';
+  end
+  else if UpperCase(pEstado) = 'MINAS GERAIS' then
+  begin
+    result := 'MG';
+  end
+  else if UpperCase(pEstado) = 'PARÁ' then
+  begin
+    result := 'PA';
+  end
+  else if UpperCase(pEstado) = 'PARA' then
+  begin
+    result := 'PA';
+  end
+  else if UpperCase(pEstado) = 'PARAÍBA' then
+  begin
+    result := 'PB';
+  end
+  else if UpperCase(pEstado) = 'PARAIBA' then
+  begin
+    result := 'PB';
+  end
+  else if UpperCase(pEstado) = 'PARANÁ' then
+  begin
+    result := 'PR';
+  end
+  else if UpperCase(pEstado) = 'PARANA' then
+  begin
+    result := 'PR';
+  end
+  else if UpperCase(pEstado) = 'PERNAMBUCO' then
+  begin
+    result := 'PE';
+  end
+  else if UpperCase(pEstado) = 'PIAUÍ' then
+  begin
+    result := 'PI';
+  end
+  else if UpperCase(pEstado) = 'PIAUI' then
+  begin
+    result := 'PI';
+  end
+  else if UpperCase(pEstado) = 'RIO DE JANEIRO' then
+  begin
+    result := 'RJ';
+  end
+  else if UpperCase(pEstado) = 'RIO GRANDE DO NORTE' then
+  begin
+    result := 'RN';
+  end
+  else if UpperCase(pEstado) = 'RIO GRANDE DO SUL' then
+  begin
+    result := 'RS';
+  end
+  else if UpperCase(pEstado) = 'RONDÔNIA' then
+  begin
+    result := 'RO';
+  end
+  else if UpperCase(pEstado) = 'RONDONIA' then
+  begin
+    result := 'RO';
+  end
+  else if UpperCase(pEstado) = 'RORAIMA' then
+  begin
+    result := 'RR';
+  end
+  else if UpperCase(pEstado) = 'SANTA CATARINA' then
+  begin
+    result := 'SC';
+  end
+  else if UpperCase(pEstado) = 'SÃO PAULO' then
+  begin
+    result := 'SP';
+  end
+  else if UpperCase(pEstado) = 'SAO PAULO' then
+  begin
+    result := 'SP';
+  end
+  else if UpperCase(pEstado) = 'SERGIPE' then
+  begin
+    result := 'SE';
+  end
+  else if UpperCase(pEstado) = 'TOCANTINS' then
+  begin
+    result := 'TO';
+  end
+  else
+  begin
+    result := '';
+  end;
+end;
+
+constructor TConexaoAPI.Create;
+begin
+
+end;
+
+function TConexaoAPI.DecodificarDataHora(pData: TDateTime): string;
+var
+  lAno, lMes, lDia, lHora, lMinuto, lSegundo, lMilisegundo: Word;
+begin
+  decodedatetime(now, lAno, lMes, lDia, lHora, lMinuto, lSegundo, lMilisegundo);
+  result := lAno.ToString + FormatFloat('00', lMes) + FormatFloat('00', lDia) + FormatFloat('00', lHora) +
+    FormatFloat('00', lMinuto) + FormatFloat('00', lSegundo);
+end;
+
+function TConexaoAPI.DecodificarData(pData: TDate): string;
+var
+  lAno, lMes, lDia: Word;
+begin
+  DecodeDate(pData, lAno, lMes, lDia);
+  result := lAno.ToString + '-' + FormatFloat('00', lMes) + '-' + FormatFloat('00', lDia);
+end;
+
+function TConexaoAPI.DecodificarDataToken(pData: string): TDateTime;
+var
+  lDataAjustada, lDia, lMes, lAno, lTime: string;
+begin
+  // "date_expiration_access_token": "2021-03-04 18:26:01",
+  // "date_expiration_refresh_token": "2021-04-03 15:26:01",
+  // "date_activated": "2021-03-04 15:26:01",
+
+  pData := StringReplace(pData, '-', '', [rfReplaceAll]);
+
+  lDia := Copy(pData, 7, 2);
+  // ShowMessage(ldia);
+  lMes := Copy(pData, 5, 2);
+  // ShowMessage(lMes);
+  lAno := Copy(pData, 1, 4);
+  // ShowMessage(lAno);
+  lTime := Copy(pData, 9, 9);
+  // ShowMessage(lTime);
+  lDataAjustada := lDia + '/' + lMes + '/' + lAno + ' ' + lTime;
+  // showmessage(lDataAjustada);
+  result := StrToDateTime(lDataAjustada);
+end;
+
+function TConexaoAPI.DecodificarStringParaData(pData: string): string;
+var
+  lDataAjustada, lDia, lMes, lAno, lTime: string;
+begin
+  // "start_promotion": "0000-00-00",
+
+  pData := StringReplace(pData, '-', '', [rfReplaceAll]);
+
+  lDia := Copy(pData, 7, 2);
+  // ShowMessage(ldia);
+  lMes := Copy(pData, 5, 2);
+  // ShowMessage(lMes);
+  lAno := Copy(pData, 1, 4);
+  // ShowMessage(lAno);
+
+  lDataAjustada := lDia + '/' + lMes + '/' + lAno;
+  // showmessage(lDataAjustada);
+  result := lDataAjustada;
+
+end;
+
+function TConexaoAPI.DeletaProduto(pCodProduto: String): string;
+begin
+  BuscaConfiguracoesTray;
+  result := '';
+
+  if ValidaCamposConfigAPI then
+  begin
+
+    FCodProdutoSite := pCodProduto;
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmDELETE, tDeletaProduto, '');
+
+    if FRestResponse.StatusCode = 401 then // forbbiden
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmDELETE, tDeletaProduto, '');
+    end;
+
+    if (FRestResponse.StatusCode = 400) or (FRestResponse.StatusCode = 500) then // sem conexao / n encontrou
+    begin
+      showmessage('Este produto não existe no site, edite o código do produto que deseja excluir.');
+    end
+    else if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      showmessage('Produto Excluido com sucesso do site.');
+    end
+    else
+    begin
+      showmessage('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+
+    result := IntToStr(FRestResponse.StatusCode);
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+function TConexaoAPI.DeletaProdutoDaVenda(pCodVenda, pCodigoProduto: String): string;
+var
+  lResposta: string;
+begin
+  BuscaConfiguracoesTray;
+  result := '';
+  if ValidaCamposConfigAPI then
+  begin
+
+    FCodVendaSite := pCodVenda;
+    FCodProdutoSite := pCodigoProduto;
+
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmPUT, tDeletaProdutoVenda, '');
+
+    if FRestResponse.StatusCode = 401 then // forbbiden
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmPUT, tDeletaProdutoVenda, '');
+    end;
+
+    lResposta := '';
+    if (FRestResponse.StatusCode = 404) then
+    begin
+
+      showmessage
+        ('Problemas na conexão com API, problema venda ou problema no produto selecionado, tente novamente mais tarde. Erro:'
+        + lResposta);
+    end
+    else if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      showmessage('Produto Excluido da venda com sucesso do site.');
+    end
+    else
+    begin
+      showmessage('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+
+    result := IntToStr(FRestResponse.StatusCode);
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+procedure TConexaoAPI.DeletaProdutoTabelaIntegracao(pCod: String);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' delete from tbl_integ_mc03pro_wc ');
+  FDataSet.SQL.Add(' where cod =  :cod                ');
+  FDataSet.ParamByName('cod').AsString := pCod;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+function TConexaoAPI.DeletaVenda(pCodVenda: String): string;
+begin
+  BuscaConfiguracoesTray;
+  result := '';
+  if ValidaCamposConfigAPI then
+  begin
+
+    FCodVendaSite := pCodVenda;
+
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmDELETE, tDeletaVenda, '');
+
+    if FRestResponse.StatusCode = 401 then // forbbiden
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmDELETE, tDeletaVenda, '');
+    end;
+    if (FRestResponse.StatusCode = 400) or (FRestResponse.StatusCode = 500) then
+    begin
+      showmessage('Esta venda não existe no site, edite o código da venda que deseja excluir.');
+    end
+    else if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      showmessage('Venda Excluida com sucesso do site.');
+    end
+    else
+    begin
+      showmessage('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+
+    result := IntToStr(FRestResponse.StatusCode);
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.DeparaProdutosMcComSite(pMemoEnviados: TMemo; pgauControle: TGauge): Boolean;
+var
+  lMemTable: TFDMemTable;
+  lSku, lIDProduto, lIdSite, lDescricao, lDescricaoCurta, lDescricaoLonga: string;
+
+  { Busco todos os produtos no MC Sistemas que estão marcado como enviado para o site porem não tem SKU/reference,
+    pós isso dou um get pelo id do produto e verifico se encontro no site da tray, caso eu o encontre, pego os dados
+    desse produto e atualizo no mc sistemas o ID site e SKU desse produto, resumindo aqui é para verificar se o
+    cliente enviou algum produto e deu erro em alguma parte do processo. }
+begin
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalPareadoMcComSite := 0;
+  FTotalPareadoMcComSiteErro := 0;
+
+  pgauControle.progress := 0;
+  pgauControle.update;
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    FSku := '';
+    result := false;
+    FConsultaSku.Close;
+    FConsultaSku.SQL.Clear;
+    FConsultaSku.SQL.Add(' SELECT * from mc03pro                         ');
+    FConsultaSku.SQL.Add(' where ac03_enviar_site = ''S''                ');
+    FConsultaSku.SQL.Add(' and ((ac03_sku = '''')  or (ac03_sku is null))');
+    FConsultaSku.Open;
+
+    if FConsultaSku.RecordCount > 0 then
+    begin
+      FConsultaSku.First;
+      pgauControle.MaxValue := FConsultaSku.RecordCount;
+
+      lMemTable := TFDMemTable.Create(nil);
+      try
+
+        while not(FConsultaSku.Eof) do
+        begin
+          FSku := FConsultaSku.fieldbyname('ac03codi').AsString;
+
+          if RecebeProdutos(lMemTable, FSku) then
+          begin
+            if lMemTable.Locate('sku', FSku, []) then
+            begin
+              lSku := lMemTable.fieldbyname('sku').AsString;
+              lIdSite := lMemTable.fieldbyname('id').AsString;
+              lIDProduto := FConsultaSku.fieldbyname('ac03codi').AsString;
+
+              try
+                AtualizaStatusEDataEnvioProduto(lIDProduto, lIdSite, lSku);
+                pMemoEnviados.Lines.Add('ID MC: ' + lIDProduto + ' - ' + 'ID Site: ' + lIdSite);
+                FTotalPareadoMcComSite := FTotalPareadoMcComSite + 1;
+
+                result := True;
+              Except
+                on E: Exception do
+                begin
+                  FTotalPareadoMcComSiteErro := FTotalPareadoMcComSiteErro + 1;
+                end;
+              end;
+
+            end;
+          end;
+
+          FConsultaSku.Next;
+          pgauControle.progress := FConsultaSku.Recno;
+        end;
+        showmessage('Processo de pareamento entre Mc Sistemas e Site concluido');
+      finally
+        lMemTable.Free;
+      end;
+    end;
+
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.DeparaProdutosDoSiteComMC(pMemoEnviados, pMemoNaoEnviados: TMemo; pgauControle: TGauge): Boolean;
+var
+  lMemTable: TFDMemTable;
+  lTotalProdutos, lCategoria: Integer;
+  lProdutos: TProdutoMC;
+
+  { Busco todos os produtos cadastrado no site, págino o total e começo baixar e colocar tudo em uma tabela em memoria,
+    pós isso percorro essa tabela e vou dando select no banco mc sistemas pelo SKU/reference do produto, caso encontre
+    o produto, eu atualizo os dados baseado no site. }
+
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalPareadoSiteComMC := 0;
+  FTotalPareadoSiteComMCErro := 0;
+
+  pgauControle.progress := 0;
+  pgauControle.update;
+
+  if ValidaCamposConfigAPI then
+  begin
+    FPagina := 1;
+    FPaginaTotal := 0;
+
+    lMemTable := TFDMemTable.Create(nil);
+    try
+      // Pego total dos produtos para montar o laço de repetição
+      GetProdutosAPI;
+      lTotalProdutos := PegaTotalRegistrosCabecalho;
+      pgauControle.MaxValue := lTotalProdutos;
+
+      if lTotalProdutos > 50 then
+      begin
+        FPaginaTotal := lTotalProdutos div 50;
+        if lTotalProdutos mod 50 > 0 then
+        begin
+          FPaginaTotal := FPaginaTotal + 1;
+        end;
+      end
+      else
+      begin
+        FPaginaTotal := 1;
+      end;
+
+      while FPaginaTotal >= FPagina do
+      begin
+        GetProdutosAPI;
+
+        if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+        begin
+          if CarregoTabelaNaMemoriaComOsProdutosSite(lMemTable, '') then
+          begin
+            FPagina := FPagina + 1;
+
+            lMemTable.First;
+            while not(lMemTable.Eof) do
+            begin
+              lProdutos := TProdutoMC.Create;
+              try
+                pgauControle.progress := pgauControle.progress + 1;
+                lProdutos.CodigoSite := lMemTable.fieldbyname('id').AsString;
+                lProdutos.CodigoBarras := lMemTable.fieldbyname('codigoBarras').AsString;
+                lProdutos.Descricao := lMemTable.fieldbyname('descricao').AsString;
+                lProdutos.NCM := lMemTable.fieldbyname('ncm').AsString;
+                lProdutos.DescricaoLonga := lMemTable.fieldbyname('descricaolonga').AsString;
+                lProdutos.DescricaoCurta := lMemTable.fieldbyname('descricaocurta').AsString;
+                lProdutos.Preco := lMemTable.fieldbyname('preco').AsFloat;
+                lProdutos.Custo := lMemTable.fieldbyname('custo').AsFloat;
+                lProdutos.PrecoPromocao := lMemTable.fieldbyname('precopromocao').AsFloat;
+                lProdutos.InicioPromocao := DecodificarStringParaData(lMemTable.fieldbyname('iniciopromocao').AsString);
+                lProdutos.FimPromocao := DecodificarStringParaData(lMemTable.fieldbyname('fimpromocao').AsString);
+                lProdutos.Marca := lMemTable.fieldbyname('marca').AsString;
+                lProdutos.Modelo := lMemTable.fieldbyname('modelo').AsString;
+                lProdutos.Peso := lMemTable.fieldbyname('peso').AsFloat;
+                lProdutos.Comprimento := lMemTable.fieldbyname('comprimento').AsString;
+                lProdutos.Largura := lMemTable.fieldbyname('largura').AsString;
+                lProdutos.Altura := lMemTable.fieldbyname('altura').AsString;
+                lProdutos.Estoque := lMemTable.fieldbyname('estoque').AsFloat;
+                lProdutos.CategoriaID := lMemTable.fieldbyname('categoria').AsInteger;
+                lProdutos.ProdutoDisponivel := lMemTable.fieldbyname('produtodisponivel').AsInteger;
+                lProdutos.SKU := lMemTable.fieldbyname('sku').AsString;
+                lProdutos.Enviado := True;
+
+                if (Length(trim(lProdutos.SKU)) <= 25) and (trim(lProdutos.SKU) <> '') then
+                // para nao dar erro de tamanho do campo
+                begin
+                  FConsultaSku.Close;
+                  FConsultaSku.SQL.Clear;
+                  FConsultaSku.SQL.Add(' SELECT * from mc03pro    ');
+                  FConsultaSku.SQL.Add(' where ac03_sku = :SKU    ');
+                  FConsultaSku.ParamByName('SKU').AsString := lProdutos.SKU;
+                  FConsultaSku.Open;
+
+                  lProdutos.CodigoMC := FConsultaSku.fieldbyname('ac03codi').AsString;
+
+                  if FConsultaSku.RecordCount > 0 then
+                  begin
+                    result := True;
+                    lProdutos.Alterar(True);
+                    pMemoEnviados.Lines.Add('ID MC: ' + lProdutos.CodigoMC + ' - ' + 'ID Site/Sku: ' + lProdutos.SKU +
+                      ' Preço site: ' + lProdutos.Preco.ToString);
+
+                    FTotalPareadoSiteComMC := FTotalPareadoSiteComMC + 1;
+                  end
+                  else
+                  begin
+                    pMemoNaoEnviados.Lines.Add('Erro ao Ajustar - SKU Não localizado na base MC - ' + 'ID Site/Sku: ' +
+                      lProdutos.SKU + ' Preço site: ' + lProdutos.Preco.ToString);
+                    FTotalPareadoSiteComMCErro := FTotalPareadoSiteComMCErro + 1;
+                  end;
+                end
+                else
+                begin
+                  pMemoNaoEnviados.Lines.Add('Erro ao Ajustar - SKU com tamanho maior que 25 caracteres - ' +
+                    'ID Site/Sku: ' + lProdutos.SKU + ' Preço site: ' + lProdutos.Preco.ToString);
+
+                  FTotalPareadoSiteComMCErro := FTotalPareadoSiteComMCErro + 1;
+                end;
+              finally
+                lProdutos.Free;
+              end;
+              lMemTable.Next;
+            end;
+          end;
+        end;
+      end;
+      showmessage('Processo de pareamento entre Site e MC Sistemas concluido');
+    finally
+      lMemTable.Free;
+    end;
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+destructor TConexaoAPI.Destroy;
+begin
+  tmrVendas.Free;
+  tmrProdutos.Free;
+  tmrNotaFiscal.Free;
+  FRestClient.Free;
+  FRestRequest.Free;
+  FRestResponse.Free;
+  FDataSet.Free;
+  FDataSetRetornaStatus.Free;
+  FConsulta.Free;
+  FConsultaSku.Free;
+  FConsultaVar.Free;
+  inherited;
+end;
+
+procedure TConexaoAPI.AlimentaVariaveisEnvioAutomatico;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select * from TBL_CONFIGURACAO_TRAY   ');
+  FDataSet.Open;
+
+  FEnvioProdutosAutomatico := FDataSet.fieldbyname('PRODUTOS_AUTOMATICO').AsString = 'S';
+  FEnvioVendasAutomatico := FDataSet.fieldbyname('VENDAS_AUTOMATICO').AsString = 'S';
+  FEnvioNotasAutomatico := FDataSet.fieldbyname('NOTAS_AUTOMATICO').AsString = 'S';
+end;
+
+procedure TConexaoAPI.AttUltimaDataProdutosAPI(pDataHora: TDateTime);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE or insert into TBL_ATUALIZACOES_API  (ID, DT_ALTERACAO, DESCRICAO)  ');
+  FDataSet.SQL.Add(' VALUES (1, :DATA_HORA , :DESCRICAO)                                        ');
+  FDataSet.SQL.Add(' MATCHING (DESCRICAO)                                                       ');
+  FDataSet.ParamByName('DATA_HORA').asdatetime := pDataHora;
+  FDataSet.ParamByName('DESCRICAO').AsString := 'PRODUTOSWC';
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+function TConexaoAPI.GeraCodigoCliente: Integer;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT max(MC01CODIGO) FROM MC01CLIENTE        ');
+  FDataSet.Open;
+
+  result := FDataSet.fieldbyname('max').AsInteger + 1;
+end;
+
+procedure TConexaoAPI.GeraNovoAcessToken;
+var
+  lTamanho: Integer;
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+begin
+  // Função que busca o token na API
+
+  // BuscaUrlEConfigAPI;
+  if (trim(Frefresh_token) <> '') and (trim(FURL_Busca_Token) <> '') then
+  begin
+    FRestClient.ResetToDefaults;
+    FRestClient.BaseURL := FURL_Busca_Token;
+    // 'https://trayparceiros.commercesuite.com.br/web_api/auth/';
+    FRestResponse.ResetToDefaults;
+    FRestRequest.ResetToDefaults;
+    FRestRequest.Client := FRestClient;
+    FRestRequest.Response := FRestResponse;
+    FRestRequest.Params.Clear;
+    FRestRequest.AddParameter('refresh_token', Frefresh_token);
+    FRestRequest.Method := rmGET;
+    FRestRequest.Execute;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+      begin
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('access_token') <> '' then
+        begin
+          Faccess_token := lObjectJson.GetValue<string>('access_token');
+        end;
+
+        if lObjectJson.GetValue<String>('refresh_token') <> '' then
+        begin
+          Frefresh_token := lObjectJson.GetValue<string>('refresh_token');
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_access_token') <> '' then
+        begin
+          Facess_token_dt_exp := DecodificarDataToken(lObjectJson.GetValue<string>('date_expiration_access_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_refresh_token') <> '' then
+        begin
+          Frefresh_token_dt_exp := DecodificarDataToken(lObjectJson.GetValue<string>('date_expiration_refresh_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_activated') <> '' then
+        begin
+          FDataAtivacao := DecodificarDataToken(lObjectJson.GetValue<string>('date_activated'));
+        end;
+
+        if FNovoToken then
+        begin
+          GravaTokenBanco(Frefresh_token, Faccess_token, Frefresh_token_dt_exp, Facess_token_dt_exp, FDataAtivacao);
+        end;
+      end;
+
+    end
+    else
+    begin
+      GeraNovosTokens;
+    end;
+  end;
+end;
+
+procedure TConexaoAPI.GeraNovosTokens;
+var
+  lTamanho: Integer;
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+begin
+  // Função que busca o token na API
+  FNovoToken := false;
+
+  if (trim(Fconsumer_key) <> '') and (trim(Fconsumer_secret) <> '') and (trim(Fcode) <> '') and
+    (trim(FURL_Busca_Token) <> '') then
+  begin
+    FRestClient.ResetToDefaults;
+    FRestClient.BaseURL := FURL_Busca_Token;
+    // 'https://trayparceiros.commercesuite.com.br/web_api/auth/';
+    FRestResponse.ResetToDefaults;
+    FRestRequest.ResetToDefaults;
+    FRestRequest.Client := FRestClient;
+    FRestRequest.Response := FRestResponse;
+    FRestRequest.Params.Clear;
+    FRestRequest.AddParameter('consumer_key', Fconsumer_key);
+    FRestRequest.AddParameter('consumer_secret', Fconsumer_secret);
+    FRestRequest.AddParameter('code', Fcode);
+    FRestRequest.Method := rmPOST;
+    FRestRequest.Execute;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FNovoToken := True;
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+      begin
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('access_token') <> '' then
+        begin
+          Faccess_token := lObjectJson.GetValue<string>('access_token');
+        end;
+
+        if lObjectJson.GetValue<String>('refresh_token') <> '' then
+        begin
+          Frefresh_token := lObjectJson.GetValue<string>('refresh_token');
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_access_token') <> '' then
+        begin
+          Facess_token_dt_exp := DecodificarDataToken(lObjectJson.GetValue<string>('date_expiration_access_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_refresh_token') <> '' then
+        begin
+          Frefresh_token_dt_exp := DecodificarDataToken(lObjectJson.GetValue<string>('date_expiration_refresh_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_activated') <> '' then
+        begin
+          FDataAtivacao := DecodificarDataToken(lObjectJson.GetValue<string>('date_activated'));
+        end;
+
+        if FNovoToken then
+        begin
+          GravaTokenBanco(Frefresh_token, Faccess_token, Frefresh_token_dt_exp, Facess_token_dt_exp, FDataAtivacao);
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TConexaoAPI.GetCategoriasAPI;
+begin
+  VerificaValidadeTokens;
+  ConfiguraConexaoComAPI(rmGET, tRecebeCategoria, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmGET, tRecebeCategoria, '');
+  end;
+end;
+
+class function TConexaoAPI.GetConexaoAPI: TConexaoAPI;
+begin
+  if NOT Assigned(FConexaoAPI) then
+  begin
+    FConexaoAPI := TConexaoAPI.Create;
+  end;
+
+  result := FConexaoAPI;
+
+end;
+
+procedure TConexaoAPI.GetInfoLojaAPI;
+begin
+  VerificaValidadeTokens;
+  ConfiguraConexaoComAPI(rmGET, tRecebeInformacaoLoja, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmGET, tRecebeInformacaoLoja, '');
+  end;
+end;
+
+procedure TConexaoAPI.GetVendasCompletaAPI;
+begin
+  VerificaValidadeTokens;
+  ConfiguraConexaoComAPI(rmGET, tRecebeVendaCompleta, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmGET, tRecebeVendaCompleta, '');
+  end;
+end;
+
+procedure TConexaoAPI.GetProdutosAPI;
+begin
+  VerificaValidadeTokens;
+
+  if trim(FSku) <> '' then
+  begin
+    ConfiguraConexaoComAPI(rmGET, tRecebeUnicoProduto, '');
+  end
+  else
+  begin
+    ConfiguraConexaoComAPI(rmGET, tRecebeProduto, '');
+  end;
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+
+    if trim(FSku) <> '' then
+    begin
+      ConfiguraConexaoComAPI(rmGET, tRecebeUnicoProduto, '');
+    end
+    else
+    begin
+      ConfiguraConexaoComAPI(rmGET, tRecebeProduto, '');
+    end;
+  end;
+
+  if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401) then
+  begin
+    FMensagem := ('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+      IntToStr(FRestResponse.StatusCode));
+  end;
+end;
+
+procedure TConexaoAPI.GetStatusAPI;
+begin
+  VerificaValidadeTokens;
+  ConfiguraConexaoComAPI(rmGET, tRecebeStatus, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmGET, tRecebeStatus, '');
+  end;
+end;
+
+procedure TConexaoAPI.GetVariacaoProdutosAPI;
+begin
+  VerificaValidadeTokens;
+
+  if trim(FSku) <> '' then
+  begin
+    ConfiguraConexaoComAPI(rmGET, tRecebeUnicaVariacaoproduto, '');
+  end
+  else
+  begin
+    ConfiguraConexaoComAPI(rmGET, tRecebeVariacaoproduto, '');
+  end;
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+
+    if trim(FSku) <> '' then
+    begin
+      ConfiguraConexaoComAPI(rmGET, tRecebeUnicaVariacaoproduto, '');
+    end
+    else
+    begin
+      ConfiguraConexaoComAPI(rmGET, tRecebeVariacaoproduto, '');
+    end;
+  end;
+
+  if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401) then
+  begin
+    FMensagem := ('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+      IntToStr(FRestResponse.StatusCode));
+  end;
+end;
+
+procedure TConexaoAPI.GetVendasAPI;
+begin
+
+  VerificaValidadeTokens;
+  ConfiguraConexaoComAPI(rmGET, tRecebeVenda, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmGET, tRecebeVenda, '');
+  end;
+end;
+
+procedure TConexaoAPI.GravaArquivoTxtLog(pJason, pNomeTXT: string);
+var
+  FBackupTxt: TStringList;
+  lDiretorioPublicoApp, lNomeArquivoTxt, lCaminhoCompletoArquivo: string;
+begin
+  FBackupTxt := TStringList.Create;
+  try
+    FBackupTxt.Text := pJason;
+    lDiretorioPublicoApp := ExtractFilePath(application.exeName) + 'Log_Erros\';
+    lNomeArquivoTxt := pNomeTXT + '_' + DecodificarDataHora(now) + '.txt';
+    lCaminhoCompletoArquivo := lDiretorioPublicoApp + lNomeArquivoTxt;
+    // ShowMessage(lCaminhoDocumentos);
+
+    if not DirectoryExists(lDiretorioPublicoApp) then
+    begin
+      ForceDirectories(lDiretorioPublicoApp);
+    end;
+
+    if DirectoryExists(lDiretorioPublicoApp) then
+    begin
+      FBackupTxt.SaveToFile(lCaminhoCompletoArquivo);
+    end;
+  finally
+    FBackupTxt.Free;
+  end;
+end;
+
+procedure TConexaoAPI.GravaTokenBanco(pRefresh, pAcess: String; pDt_Refresh, pDt_Acess, pDataAtivacao: TDateTime);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('  UPDATE OR INSERT INTO TBL_CONFIGURACAO_TRAY( ');
+  FDataSet.SQL.Add('   id                                          ');
+  FDataSet.SQL.Add(' , dt_ativacao                                 ');
+  FDataSet.SQL.Add(' , access_token                                ');
+  FDataSet.SQL.Add(' , dt_validade_access_token                    ');
+  FDataSet.SQL.Add(' , refresh_token                               ');
+  FDataSet.SQL.Add(' , dt_validade_refresh_token                   ');
+  FDataSet.SQL.Add(' ) VALUES(                                     ');
+  FDataSet.SQL.Add('  :id                                          ');
+  FDataSet.SQL.Add(' ,:dt_ativacao                                 ');
+  FDataSet.SQL.Add(' ,:access_token                                ');
+  FDataSet.SQL.Add(' ,:dt_validade_access_token                    ');
+  FDataSet.SQL.Add(' ,:refresh_token                               ');
+  FDataSet.SQL.Add(' ,:dt_validade_refresh_token                   ');
+  FDataSet.SQL.Add(' ) MATCHING (id)                               ');
+  FDataSet.ParamByName('dt_ativacao').asdatetime := pDataAtivacao;
+  FDataSet.ParamByName('access_token').AsString := pAcess;
+  FDataSet.ParamByName('dt_validade_access_token').asdatetime := pDt_Refresh;
+  FDataSet.ParamByName('refresh_token').AsString := pRefresh;
+  FDataSet.ParamByName('dt_validade_refresh_token').asdatetime := pDt_Acess;
+  FDataSet.ParamByName('id').AsInteger := 1;
+  FDataSet.ExecSQL;
+  FConexao.Commit;
+end;
+
+function TConexaoAPI.IsDigit(pString: string): Boolean;
+begin
+  result := True;
+  Try
+    strtoint(pString);
+  Except
+    result := false;
+  end;
+end;
+
+function TConexaoAPI.UltimaDataAttProdutosAPI: TDateTime;
+begin
+
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM TBL_ATUALIZACOES_API  ');
+  FDataSet.SQL.Add(' WHERE DESCRICAO = :DESCRICAO        ');
+  FDataSet.SQL.Add(' order by ID                         ');
+  FDataSet.ParamByName('DESCRICAO').AsString := 'PRODUTOSWC';
+  FDataSet.Open;
+
+  // ShowMessage(FConsulta.FieldByName('DT_ALTERACAO').AsString);
+
+  result := FDataSet.fieldbyname('DT_ALTERACAO').asdatetime;
+end;
+
+procedure TConexaoAPI.UpdateProduto(pJson, pCodProduto, pSku: String);
+var
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  lExisteSku: Boolean;
+
+  procedure UpdateProduto;
+  begin
+    if trim(FCodProdutoSite) = '' then
+    begin
+      FCodProdutoSite := pCodProduto;
+    end;
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmPUT, tUpdateproduto, pJson);
+  end;
+
+  procedure BuscaIdPelaReferencia;
+  begin
+    FSku := pSku;
+    VerificaValidadeTokens;
+    GetProdutosAPI;
+    lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+    lObjectJsonArray := lObjectJson.GetValue<TJSONArray>('Products') as TJSONArray;
+
+    if lObjectJsonArray.Count > 0 then
+    begin
+      lObjectJson := lObjectJsonArray.Items[0] as TJSONObject;
+      lObjectJson := lObjectJson.GetValue<TJSONObject>('Product') as TJSONObject;
+
+      if lObjectJson.GetValue<String>('id') <> '' then
+      begin
+        FCodProdutoSite := lObjectJson.GetValue<string>('id');
+        AtualizaIDProduto(FSku, FCodProdutoSite);
+
+      end;
+
+      UpdateProduto;
+    end;
+  end;
+
+begin
+  lExisteSku := True;
+  FSku := '';
+  FCodProdutoSite := '';
+
+  if trim(pCodProduto) <> '' then
+  begin
+    UpdateProduto; // update padrão pela id
+  end
+  else
+  begin
+    BuscaIdPelaReferencia; // Busca id pela referencia dps da update
+  end;
+end;
+
+procedure TConexaoAPI.UpdateVariacaoProduto(pJson, pCodVariacao, pSku: string);
+var
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  lExisteSku: Boolean;
+
+  procedure UpdateVariacao;
+  begin
+    if trim(FCodVariacaoProduto) = '' then // 5558855
+    begin
+      FCodVariacaoProduto := pCodVariacao;
+    end;
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmPUT, tUpdateVariacaoproduto, pJson);
+    // GravaArquivoTxtLog(pJson,'EnvioVariacao');
+  end;
+
+  procedure BuscaIdPelaReferencia;
+  begin
+    FSku := pSku;
+    VerificaValidadeTokens;
+    GetVariacaoProdutosAPI;
+
+    lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+    lObjectJsonArray := lObjectJson.GetValue<TJSONArray>('Variants') as TJSONArray;
+
+    if lObjectJsonArray.Count > 0 then
+    begin
+      lObjectJson := lObjectJsonArray.Items[0] as TJSONObject;
+      lObjectJson := lObjectJson.GetValue<TJSONObject>('Variant') as TJSONObject;
+
+      if lObjectJson.GetValue<String>('id') <> '' then
+      begin
+        FCodVariacaoProduto := lObjectJson.GetValue<string>('id');
+        AtualizaIDVariacaoProduto(FSku, FCodVariacaoProduto);
+      end;
+
+      UpdateVariacao;
+    end;
+  end;
+
+begin
+  FSku := '';
+  FCodProdutoSite := '';
+
+  if trim(pCodVariacao) <> '' then
+  begin
+    FCodVariacaoProduto := pCodVariacao;
+    UpdateVariacao;
+    // update padrão pela id
+  end
+  else
+  begin
+    BuscaIdPelaReferencia; // Busca id pela referencia dps da update
+  end;
+end;
+
+function TConexaoAPI.UpdateStatusVendaPosBaixar(pCodVenda: String): string;
+var
+  lJson: String;
+begin
+  BuscaConfiguracoesTray;
+  result := '';
+
+  if ValidaCamposConfigAPI then
+  begin
+    FCodVendaSite := pCodVenda;
+    VerificaValidadeTokens;
+    lJson := '';
+    lJson := lJson + '{';
+    lJson := lJson + '  "Order": {';
+    lJson := lJson + '      "status_id": ' + FStatusPosBaixar;
+    lJson := lJson + '  }';
+    lJson := lJson + '}';
+
+    ConfiguraConexaoComAPI(rmPUT, tUpdateVenda, lJson);
+
+    if FRestResponse.StatusCode = 401 then // forbbiden
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmPUT, tUpdateVenda, lJson);
+    end;
+    if (FRestResponse.StatusCode = 400) or (FRestResponse.StatusCode = 500) then // sem conexao / n encontrou
+    begin
+      FMensagem := ('Esta venda não existe no site, edite o código da venda que deseja trocar o status.');
+    end
+    else if (FRestResponse.StatusCode = 429) then // passou limite de request
+    begin
+      FMensagem := ('Aguarde 1 minuto e tente novamente, o limite de atualizações estourou.');
+    end
+    else if (TamString(IntToStr(FRestResponse.StatusCode), 1)) <> '2' then
+    begin
+      FMensagem := ('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+  end
+  else
+  begin
+    FMensagem := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.UpdateStatusVendaBaixar(pCodVenda: String): string;
+var
+  lJson: String;
+begin
+  BuscaConfiguracoesTray;
+  result := '';
+
+  if ValidaCamposConfigAPI then
+  begin
+    FCodVendaSite := pCodVenda;
+    VerificaValidadeTokens;
+    lJson := '';
+    lJson := lJson + '{';
+    lJson := lJson + '  "Order": {';
+    lJson := lJson + '      "status_id": ' + FStatusBaixar;
+    lJson := lJson + '  }';
+    lJson := lJson + '}';
+
+    ConfiguraConexaoComAPI(rmPUT, tUpdateVenda, lJson);
+
+    if FRestResponse.StatusCode = 401 then // forbbiden
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmPUT, tUpdateVenda, lJson);
+
+    end;
+    if (FRestResponse.StatusCode = 400) or (FRestResponse.StatusCode = 500) then
+    // sem conexao / n encontrou
+    begin
+      FMensagem := ('Esta venda não existe no site, edite o código da venda que deseja trocar o status.');
+    end
+    else if (FRestResponse.StatusCode = 429) then // passou limite de request
+    begin
+      FMensagem := ('Aguarde 1 minuto e tente novamente, o limite de atualizações estourou.');
+    end
+    else if (TamString(IntToStr(FRestResponse.StatusCode), 1)) <> '2' then
+    begin
+      FMensagem := ('Problemas na conexão com API, tente novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+  end
+  else
+  begin
+    FMensagem := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+function TConexaoAPI.CarregaQryProdutosInserirSite(pDataAlteracao: TDateTime): Boolean;
+var
+  lCampoSaldo, lCampoInnerJoin: string;
+begin
+
+  lCampoSaldo := ' ,AN03SLAM ';
+  lCampoInnerJoin := '';
+
+  if FUtilizarSaldoEmpresaUtilizar then
+  begin
+    lCampoSaldo := ' ,AN033_SALDO AN03SLAM ';
+    lCampoInnerJoin := '  inner join mc033_saldo_produto                                                   ' +
+      '  on ac033_produto = ac03codi                                                                      ' +
+      '    and an033_empresa =                    ' + FCodigoEmpresaUtilizarSaldo + ' ';
+
+  end;
+
+  FConsulta.Close;
+  FConsulta.SQL.Clear;
+  FConsulta.SQL.Add(' SELECT                                                                                  ');
+  FConsulta.SQL.Add('  AC03_SKU                                                                               ');
+  FConsulta.SQL.Add(' ,AC03CODI                                                                               ');
+  FConsulta.SQL.Add(' ,ID_CATEGORIA_SITE                                                                      ');
+  FConsulta.SQL.Add(' ,AN03PESO_GRAMAS                                                                        ');
+  FConsulta.SQL.Add(' ,AN03_PROFUNDIDADE                                                                      ');
+  FConsulta.SQL.Add(' ,AN03_LARGURA                                                                           ');
+  FConsulta.SQL.Add(' ,AN03_ALTURA                                                                            ');
+  FConsulta.SQL.Add(' ,AC03CBR                                                                                ');
+  FConsulta.SQL.Add(' ,AN03CTCO                                                                               ');
+  FConsulta.SQL.Add(' ,AC03_PROD_PROMO_SITE                                                                   ');
+  FConsulta.SQL.Add(' ,AN03_PRECO_SITE_PROMO                                                                  ');
+  FConsulta.SQL.Add(' ,AD03_DT_INI_PROM_SITE                                                                  ');
+  FConsulta.SQL.Add(' ,AD03_DT_FIM_PROM_SITE                                                                  ');
+  FConsulta.SQL.Add(' ,AC03_MARCA                                                                             ');
+  FConsulta.SQL.Add(' ,AC03_NOME_SITE                                                                         ');
+  FConsulta.SQL.Add(' ,AC03DESC                                                                               ');
+  FConsulta.SQL.Add(' ,AC03_NOME_SITE_RESUMIDO                                                                ');
+  FConsulta.SQL.Add(' ,AC03_DESCRICAO_SITE                                                                    ');
+  FConsulta.SQL.Add(' ,AN03_PRECO_DIFER_SITE                                                                  ');
+  FConsulta.SQL.Add(' ,AN03_PRECO_SITE                                                                        ');
+  FConsulta.SQL.Add(' ,AC03_CODIGO_DCB                                                                        ');
+  FConsulta.SQL.Add(' ,AN03PRC1                                                                               ');
+  FConsulta.SQL.Add(' ,ID_SITE                                                                    ' + lCampoSaldo);
+  FConsulta.SQL.Add(' FROM MC03PRO                                                            ' + lCampoInnerJoin);
+  FConsulta.SQL.Add(' left join MC03_CUSTO                                                                    ');
+  FConsulta.SQL.Add(' on (AC03CODI = AC03_CODIGO)                                                             ');
+  FConsulta.SQL.Add(' inner join TBL_INTEG_MC03PRO_WC  WC                                                     ');
+  FConsulta.SQL.Add(' on (AC03CODI = COD)                                                                     ');
+  FConsulta.SQL.Add(' WHERE WC.DT_ATUALIZACAO >= :DT_ALTERACAO                                                ');
+  FConsulta.SQL.Add(' and AC03_ENVIAR_SITE = ''S''                                                            ');
+  FConsulta.SQL.Add(' and ((AC03_ENVIADO_SITE <> ' + QuotedStr('S') + ')  or (AC03_ENVIADO_SITE is null))     ');
+  FConsultaUP.SQL.Add(' and WC.ENVIADO = ''N''                                                                ');
+  FConsulta.SQL.Add(' order by ac03codi                                                                       ');
+  FConsulta.ParamByName('DT_ALTERACAO').asdatetime := pDataAlteracao;
+  FConsulta.Open;
+
+  result := FConsulta.RecordCount > 0;
+end;
+
+function TConexaoAPI.CarregaQryProdutosUpdateSite(pDataAlteracao: TDateTime): Boolean;
+var
+  lCampoSaldo, lCampoInnerJoin: string;
+begin
+
+  lCampoSaldo := ' ,AN03SLAM ';
+  lCampoInnerJoin := '';
+
+  if FUtilizarSaldoEmpresaUtilizar then
+  begin
+    lCampoSaldo := ' ,AN033_SALDO AN03SLAM ';
+    lCampoInnerJoin := '  inner join mc033_saldo_produto                                                  ' +
+      '  on ac033_produto = ac03codi                                                                      ' +
+      '    and an033_empresa =                    ' + FCodigoEmpresaUtilizarSaldo + ' ';
+
+  end;
+
+  FConsultaUP.Close;
+  FConsultaUP.SQL.Clear;
+  FConsultaUP.SQL.Add(' SELECT                                                                      ');
+  FConsultaUP.SQL.Add('  AC03_SKU                                                                   ');
+  FConsultaUP.SQL.Add(' ,AC03CODI                                                                   ');
+  FConsultaUP.SQL.Add(' ,ID_CATEGORIA_SITE                                                          ');
+  FConsultaUP.SQL.Add(' ,AN03PESO_GRAMAS                                                            ');
+  FConsultaUP.SQL.Add(' ,AN03_PROFUNDIDADE                                                          ');
+  FConsultaUP.SQL.Add(' ,AN03_LARGURA                                                               ');
+  FConsultaUP.SQL.Add(' ,AN03_ALTURA                                                                ');
+  FConsultaUP.SQL.Add(' ,AC03CBR                                                                    ');
+  FConsultaUP.SQL.Add(' ,AN03CTCO                                                                   ');
+  FConsultaUP.SQL.Add(' ,AC03_PROD_PROMO_SITE                                                       ');
+  FConsultaUP.SQL.Add(' ,AN03_PRECO_SITE_PROMO                                                      ');
+  FConsultaUP.SQL.Add(' ,AD03_DT_INI_PROM_SITE                                                      ');
+  FConsultaUP.SQL.Add(' ,AD03_DT_FIM_PROM_SITE                                                      ');
+  FConsultaUP.SQL.Add(' ,AC03_MARCA                                                                 ');
+  FConsultaUP.SQL.Add(' ,AC03_NOME_SITE                                                             ');
+  FConsultaUP.SQL.Add(' ,AC03DESC                                                                   ');
+  FConsultaUP.SQL.Add(' ,AC03_NOME_SITE_RESUMIDO                                                    ');
+  FConsultaUP.SQL.Add(' ,AC03_DESCRICAO_SITE                                                        ');
+  FConsultaUP.SQL.Add(' ,AN03_PRECO_DIFER_SITE                                                      ');
+  FConsultaUP.SQL.Add(' ,AN03_PRECO_SITE                                                            ');
+  FConsultaUP.SQL.Add(' ,AC03_CODIGO_DCB                                                            ');
+  FConsultaUP.SQL.Add(' ,AN03PRC1                                                                   ');
+  FConsultaUP.SQL.Add(' ,ID_SITE                                                      ' + lCampoSaldo);
+  FConsultaUP.SQL.Add(' FROM MC03PRO                                              ' + lCampoInnerJoin);
+  FConsultaUP.SQL.Add(' left join MC03_CUSTO                                                        ');
+  FConsultaUP.SQL.Add(' on (AC03CODI = AC03_CODIGO)                                                 ');
+  FConsultaUP.SQL.Add(' inner join TBL_INTEG_MC03PRO_WC  WC                                         ');
+  FConsultaUP.SQL.Add(' on (AC03CODI = COD)                                                         ');
+  FConsultaUP.SQL.Add(' WHERE WC.DT_ATUALIZACAO >= :DT_ALTERACAO                                    ');
+  FConsultaUP.SQL.Add(' and ((AD03_DT_ENVIADO_SITE < :DT_INICIO) or (AD03_DT_ENVIADO_SITE is null)) ');
+  FConsultaUP.SQL.Add(' and AC03_ENVIAR_SITE = ''S''                                                ');
+  FConsultaUP.SQL.Add(' and AC03_ENVIADO_SITE = ' + QuotedStr('S'));
+  FConsultaUP.SQL.Add(' and WC.ENVIADO = ''N''                                                      ');
+  FConsultaUP.SQL.Add(' order by ac03codi                                                           ');
+  FConsultaUP.ParamByName('DT_ALTERACAO').asdatetime := pDataAlteracao;
+  FConsultaUP.ParamByName('DT_INICIO').asdatetime := FDataInicio;
+
+  FConsultaUP.Open;
+
+  result := FConsultaUP.RecordCount > 0;
+end;
+
+function TConexaoAPI.CarregaQryProdutosVariacaoUpdateSite(pDataAlteracao: TDateTime): Boolean;
+var
+  lCampoSaldo, lCampoInnerJoin: string;
+begin
+
+  lCampoSaldo := ' ,AN03SLAM ';
+  lCampoInnerJoin := '';
+
+  if FUtilizarSaldoEmpresaUtilizar then
+  begin
+    lCampoSaldo := ' ,AN033_SALDO AN03SLAM ';
+    lCampoInnerJoin := '  inner join mc033_saldo_produto                                                  ' +
+      '  on ac033_produto = ac03codi                                                                      ' +
+      '    and an033_empresa =                    ' + FCodigoEmpresaUtilizarSaldo + ' ';
+
+  end;
+
+  FConsultaVar.Close;
+  FConsultaVar.SQL.Clear;
+  FConsultaVar.SQL.Add(' SELECT                                                                      ');
+  FConsultaVar.SQL.Add('  AC03_SKU                                                                   ');
+  FConsultaVar.SQL.Add(' ,AC03CODI                                                                   ');
+  FConsultaVar.SQL.Add(' ,ID_CATEGORIA_SITE                                                          ');
+  FConsultaVar.SQL.Add(' ,AN03PESO_GRAMAS                                                            ');
+  FConsultaVar.SQL.Add(' ,AN03_PROFUNDIDADE                                                          ');
+  FConsultaVar.SQL.Add(' ,AN03_LARGURA                                                               ');
+  FConsultaVar.SQL.Add(' ,AN03_ALTURA                                                                ');
+  FConsultaVar.SQL.Add(' ,AC03CBR                                                                    ');
+  FConsultaVar.SQL.Add(' ,AN03CTCO                                                                   ');
+  FConsultaVar.SQL.Add(' ,AC03_PROD_PROMO_SITE                                                       ');
+  FConsultaVar.SQL.Add(' ,AN03_PRECO_SITE_PROMO                                                      ');
+  FConsultaVar.SQL.Add(' ,AD03_DT_INI_PROM_SITE                                                      ');
+  FConsultaVar.SQL.Add(' ,AD03_DT_FIM_PROM_SITE                                                      ');
+  FConsultaVar.SQL.Add(' ,AC03_MARCA                                                                 ');
+  FConsultaVar.SQL.Add(' ,AC03_NOME_SITE                                                             ');
+  FConsultaVar.SQL.Add(' ,AC03DESC                                                                   ');
+  FConsultaVar.SQL.Add(' ,AC03_NOME_SITE_RESUMIDO                                                    ');
+  FConsultaVar.SQL.Add(' ,AC03_DESCRICAO_SITE                                                        ');
+  FConsultaVar.SQL.Add(' ,AN03_PRECO_DIFER_SITE                                                      ');
+  FConsultaVar.SQL.Add(' ,AN03_PRECO_SITE                                                            ');
+  FConsultaVar.SQL.Add(' ,AC03_CODIGO_DCB                                                            ');
+  FConsultaVar.SQL.Add(' ,AC03_VARIACAO                                                              ');
+  FConsultaVar.SQL.Add(' ,AC03_IDVARIACAO                                                            ');
+  FConsultaVar.SQL.Add(' ,AN03PRC1                                                                   ');
+  FConsultaVar.SQL.Add(' ,ID_SITE                                                      ' + lCampoSaldo);
+  FConsultaVar.SQL.Add(' FROM MC03PRO                                              ' + lCampoInnerJoin);
+  FConsultaVar.SQL.Add(' left join MC03_CUSTO                                                        ');
+  FConsultaVar.SQL.Add(' on (AC03CODI = AC03_CODIGO)                                                 ');
+  FConsultaVar.SQL.Add(' inner join TBL_INTEG_MC03PRO_WC  WC                                         ');
+  FConsultaVar.SQL.Add(' on (AC03CODI = COD)                                                         ');
+  FConsultaVar.SQL.Add(' WHERE WC.DT_ATUALIZACAO >= :DT_ALTERACAO                                    ');
+  FConsultaVar.SQL.Add(' and ((AD03_DT_ENVIADO_SITE < :DT_INICIO) or (AD03_DT_ENVIADO_SITE is null)) ');
+  FConsultaVar.SQL.Add(' and AC03_ENVIAR_SITE = ''S''                                                ');
+  FConsultaVar.SQL.Add(' and WC.ENVIADO = ''N''                                                      ');
+  FConsultaVar.SQL.Add(' and AC03_VARIACAO = ''S''                                                   ');
+  FConsultaVar.SQL.Add(' order by ac03codi                                                           ');
+  FConsultaVar.ParamByName('DT_ALTERACAO').asdatetime := pDataAlteracao;
+  FConsultaVar.ParamByName('DT_INICIO').asdatetime := FDataInicio;
+  FConsultaVar.Open;
+  result := FConsultaVar.RecordCount > 0;
+end;
+
+function TConexaoAPI.VerificaValidadeAcessTokenNoBanco: string;
+begin
+  // Verifica se o token existente no banco ainda é válido
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM TBL_CONFIGURACAO_TRAY  ');
+  FDataSet.Open;
+  result := '';
+
+  if FDataSet.fieldbyname('acess_token').AsString <> '' then
+  begin
+    if now > FDataSet.fieldbyname('dt_validade_acess_token').asdatetime then
+    begin
+      result := FDataSet.fieldbyname('acess_token').AsString;
+    end;
+  end;
+end;
+
+function TConexaoAPI.RecebeCategorias(pMemoStatus: TMemo): string;
+var
+  lJsonResposta, lJsonPedido: TJSONObject;
+  lJsonPedidosArray: TJSONArray;
+  i, lTotalStatus: Integer;
+  lIDStatus, lDescCategoria: string;
+  procedure SalvaNovasCategoria(pNovoID, pNovoCategoria: String);
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE or insert into CATEGORIA_PRODUTO_TRAY  (ID, DESCRICAO)  ');
+    FDataSet.SQL.Add(' VALUES (:ID, :DESCRICAO)                                       ');
+    FDataSet.SQL.Add(' MATCHING (ID)                                                  ');
+    FDataSet.ParamByName('ID').AsString := pNovoID;
+    FDataSet.ParamByName('DESCRICAO').AsString := pNovoCategoria;
+    FDataSet.ExecSQL;
+    FDataSet.Connection.Commit;
+  end;
+
+begin
+  BuscaConfiguracoesTray;
+  GetCategoriasAPI;
+
+  if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+  begin
+
+    if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+      not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+    begin
+      // GravaArquivoTxtLog(FRestResponse.Content, 'teste');
+
+      lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+      lJsonPedidosArray := lJsonResposta.GetValue<TJSONArray>('Category') as TJSONArray;
+      for i := 0 to lJsonPedidosArray.Count - 1 do
+      begin
+        if (lJsonPedidosArray <> nil) then
+        begin
+          lJsonPedido := lJsonPedidosArray.Items[i] as TJSONObject;
+          lJsonPedido := lJsonPedido.GetValue<TJSONObject>('Category') as TJSONObject;
+
+          if lJsonPedido.GetValue<String>('id') <> '' then
+          begin
+            lIDStatus := lJsonPedido.GetValue<String>('id');
+          end;
+
+          if lJsonPedido.GetValue<String>('name') <> '' then
+          begin
+            lDescCategoria := TamString(UpperCase(lJsonPedido.GetValue<String>('name')), 50);
+          end;
+
+          SalvaNovasCategoria(lIDStatus, lDescCategoria);
+          pMemoStatus.Lines.Add('ID: ' + lIDStatus + '  Categoria: ' + lDescCategoria)
+        end;
+      end;
+    end;
+  end;
+end;
+
+function TConexaoAPI.RecebeInfoLojaELista(pGrd: TStringGrid; pFiltro: string): Boolean;
+var
+  lObjectJsonArray: TJSONArray;
+  lObjectJson: TJSONObject;
+  i, lTotalProdutos: Integer;
+
+  procedure ConfiguraECriaCamposCds;
+  begin
+    pGrd.Cells[0, 0] := 'ID da Loja';
+    pGrd.Cells[0, 1] := 'Nome';
+    pGrd.Cells[0, 2] := 'Nome Fantasia';
+    pGrd.Cells[0, 3] := 'Cnpj';
+    pGrd.Cells[0, 4] := 'Endereço';
+    pGrd.Cells[0, 5] := 'CEP';
+    pGrd.Cells[0, 6] := 'Cidade';
+    pGrd.Cells[0, 7] := 'Estado';
+    pGrd.Cells[0, 8] := 'Pais';
+    pGrd.Cells[0, 9] := 'Número 1';
+    pGrd.Cells[0, 10] := 'Número 2';
+    pGrd.Cells[0, 11] := 'Número 3';
+    pGrd.Cells[0, 12] := 'Email 1';
+    pGrd.Cells[0, 13] := 'Email 2';
+    pGrd.Cells[0, 14] := 'Horário de funcionamento';
+    pGrd.Cells[0, 15] := 'Título';
+    pGrd.Cells[0, 16] := 'URI';
+    pGrd.Cells[0, 17] := 'Secure_uri';
+    pGrd.Cells[0, 18] := 'API_Host';
+    pGrd.Cells[0, 19] := 'User';
+    pGrd.Cells[0, 20] := 'Status Interno';
+    pGrd.Cells[0, 21] := 'Moeda da Loja';
+
+    pGrd.ColWidths[0] := 150;
+    pGrd.ColWidths[1] := 350;
+  end;
+
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+
+    BuscaConfiguracoesTray;
+
+    GetInfoLojaAPI;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+
+      try
+        ConfiguraECriaCamposCds;
+
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('id') <> '' then
+        begin
+          pGrd.Cells[1, 0] := lObjectJson.GetValue<String>('id');
+        end;
+
+        if lObjectJson.GetValue<String>('name') <> '' then
+        begin
+          pGrd.Cells[1, 1] := lObjectJson.GetValue<String>('name');
+        end;
+
+        if lObjectJson.GetValue<String>('company_name') <> '' then
+        begin
+          pGrd.Cells[1, 2] := lObjectJson.GetValue<String>('company_name');
+        end;
+
+        if lObjectJson.GetValue<String>('cnpj') <> '' then
+        begin
+          pGrd.Cells[1, 3] := lObjectJson.GetValue<String>('cnpj');
+        end;
+        if lObjectJson.GetValue<String>('address') <> '' then
+        begin
+          pGrd.Cells[1, 4] := lObjectJson.GetValue<String>('address');
+        end;
+        if lObjectJson.GetValue<String>('postal_code') <> '' then
+        begin
+          pGrd.Cells[1, 5] := lObjectJson.GetValue<String>('postal_code');
+        end;
+        if lObjectJson.GetValue<String>('city') <> '' then
+        begin
+          pGrd.Cells[1, 6] := lObjectJson.GetValue<String>('city');
+        end;
+
+        if lObjectJson.GetValue<String>('state') <> '' then
+        begin
+          pGrd.Cells[1, 7] := lObjectJson.GetValue<String>('state');
+        end;
+
+        if lObjectJson.GetValue<String>('country') <> '' then
+        begin
+          pGrd.Cells[1, 8] := lObjectJson.GetValue<String>('country');
+        end;
+        if lObjectJson.GetValue<String>('phone_number_1') <> '' then
+        begin
+          pGrd.Cells[1, 9] := lObjectJson.GetValue<String>('phone_number_1');
+        end;
+        if lObjectJson.GetValue<String>('phone_number_2') <> '' then
+        begin
+          pGrd.Cells[1, 10] := lObjectJson.GetValue<String>('phone_number_2');
+        end;
+        if lObjectJson.GetValue<String>('phone_number_3') <> '' then
+        begin
+          pGrd.Cells[1, 11] := lObjectJson.GetValue<String>('phone_number_3');
+        end;
+        if lObjectJson.GetValue<String>('email_1') <> '' then
+        begin
+          pGrd.Cells[1, 12] := lObjectJson.GetValue<String>('email_1');
+        end;
+        if lObjectJson.GetValue<String>('email_2') <> '' then
+        begin
+          pGrd.Cells[1, 13] := lObjectJson.GetValue<String>('email_2');
+        end;
+        if lObjectJson.GetValue<String>('office_hour') <> '' then
+        begin
+          pGrd.Cells[1, 14] := lObjectJson.GetValue<String>('office_hour');
+        end;
+        if lObjectJson.GetValue<String>('title') <> '' then
+        begin
+          pGrd.Cells[1, 15] := lObjectJson.GetValue<String>('title');
+        end;
+        if lObjectJson.GetValue<String>('uri') <> '' then
+        begin
+          pGrd.Cells[1, 16] := lObjectJson.GetValue<String>('uri');
+        end;
+        if lObjectJson.GetValue<String>('secure_uri') <> '' then
+        begin
+          pGrd.Cells[1, 17] := lObjectJson.GetValue<String>('secure_uri');
+        end;
+        if lObjectJson.GetValue<String>('api_host') <> '' then
+        begin
+          pGrd.Cells[1, 18] := lObjectJson.GetValue<String>('api_host');
+        end;
+        if lObjectJson.GetValue<String>('user') <> '' then
+        begin
+          pGrd.Cells[1, 19] := lObjectJson.GetValue<String>('user');
+        end;
+        if lObjectJson.GetValue<String>('internal_status') <> '' then
+        begin
+          pGrd.Cells[1, 20] := lObjectJson.GetValue<String>('internal_status');
+        end;
+        if lObjectJson.GetValue<String>('coin') <> '' then
+        begin
+          pGrd.Cells[1, 21] := lObjectJson.GetValue<String>('coin');
+        end;
+
+        result := True;
+      except
+        on E: Exception do
+        begin
+          showmessage('Problemas ao receber as iformações da loja, favor tentar novamente mais tarde. ');
+        end;
+      end;
+    end
+    else if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401)
+    then
+    begin
+      showmessage('Problemas ao receber as iformações da loja, favor tentar novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+function TConexaoAPI.RecebeProdutos(pCds: TFDMemTable; pFiltro: string): Boolean;
+var
+  lObjectJsonArray: TJSONArray;
+  lObjectJson: TJSONObject;
+  i, lTotalProdutos: Integer;
+
+  procedure ConfiguraECriaCamposCds;
+  begin
+    if pCds.Fields.Count = 0 then
+    begin
+      pCds.FieldDefs.Add('id', ftString, 35, True);
+      pCds.FieldDefs.Add('descricao', ftString, 70, false);
+      pCds.FieldDefs.Add('sku', ftString, 35, false);
+      pCds.FieldDefs.Add('preco', ftFloat, 0, false);
+      pCds.CreateDataset;
+
+      pCds.fieldbyname('id').DisplayLabel := 'id Site';
+      pCds.fieldbyname('descricao').DisplayLabel := 'Descrição';
+      pCds.fieldbyname('sku').DisplayLabel := 'Sku Produto';
+      pCds.fieldbyname('preco').DisplayLabel := 'Preço';
+
+      TNumericField(pCds.fieldbyname('preco')).DisplayFormat := '#,#0.00';
+      pCds.Open;
+    end;
+
+  end;
+
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    if trim(pFiltro) = '' then
+    begin
+      FSku := '';
+    end;
+
+    lTotalProdutos := 0;
+    FPagina := 1;
+    FPaginaTotal := 0;
+
+    BuscaConfiguracoesTray;
+
+    // Pego total dos produtos para montar o laço de repetição
+    GetProdutosAPI;
+    lTotalProdutos := PegaTotalRegistrosCabecalho;
+
+    if lTotalProdutos > 50 then
+    begin
+      FPaginaTotal := lTotalProdutos div 50;
+      if lTotalProdutos mod 50 > 0 then
+      begin
+        FPaginaTotal := FPaginaTotal + 1;
+      end;
+    end
+    else
+    begin
+      FPaginaTotal := 1;
+    end;
+
+    while FPaginaTotal >= FPagina do
+    begin
+      GetProdutosAPI;
+
+      if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+      begin
+        FPagina := FPagina + 1;
+
+        try
+          ConfiguraECriaCamposCds;
+
+          begin
+            lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+            lObjectJsonArray := lObjectJson.GetValue<TJSONArray>('Products') as TJSONArray;
+
+            for i := 0 to lObjectJsonArray.Count - 1 do
+            begin
+
+              lObjectJson := lObjectJsonArray.Items[i] as TJSONObject;
+              lObjectJson := lObjectJson.GetValue<TJSONObject>('Product') as TJSONObject;
+
+              pCds.Append;
+              if lObjectJson.GetValue<String>('id') <> '' then
+              begin
+                pCds.fieldbyname('id').AsString := lObjectJson.GetValue<String>('id');
+              end;
+
+              if lObjectJson.GetValue<String>('name') <> '' then
+              begin
+                pCds.fieldbyname('descricao').AsString := lObjectJson.GetValue<String>('name');
+              end;
+
+              if lObjectJson.GetValue<String>('reference') <> '' then
+              begin
+                pCds.fieldbyname('sku').AsString := lObjectJson.GetValue<String>('reference');
+              end;
+
+              if lObjectJson.GetValue<String>('price') <> '' then
+              begin
+                pCds.fieldbyname('preco').AsFloat := lObjectJson.GetValue<Double>('price');
+              end;
+
+              pCds.Post;
+            end;
+            pCds.First;
+          end;
+
+          result := True;
+        except
+          on E: Exception do
+          begin
+            FMensagem := ('Problemas ao receber os produtos, favor tentar novamente mais tarde. ');
+          end;
+        end;
+      end
+      else if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401)
+      then
+      begin
+        FMensagem := ('Problemas ao receber os produtos, favor tentar novamente mais tarde. Erro:' +
+          IntToStr(FRestResponse.StatusCode));
+      end;
+
+    end;
+
+  end
+  else
+  begin
+    FMensagem := ('Configure corretamente a configuração do site no MC Sistemas para dar continuidade.');
+  end;
+
+end;
+
+function TConexaoAPI.CarregoTabelaNaMemoriaComOsProdutosSite(pCds: TFDMemTable; pFiltro: string): Boolean;
+var
+  lObjectJsonArray: TJSONArray;
+  lObjectJson: TJSONObject;
+  i, lTotalProdutos: Integer;
+
+  procedure ConfiguraECriaCamposCds;
+  begin
+    if pCds.Fields.Count = 0 then
+    begin
+      pCds.FieldDefs.Add('id', ftString, 35);
+      pCds.FieldDefs.Add('descricao', ftString, 150);
+      pCds.FieldDefs.Add('sku', ftString, 35);
+      pCds.FieldDefs.Add('preco', ftFloat, 0);
+      pCds.FieldDefs.Add('peso', ftFloat, 0);
+      pCds.FieldDefs.Add('categoria', ftInteger, 0);
+      pCds.FieldDefs.Add('codigoBarras', ftString, 35);
+      pCds.FieldDefs.Add('ncm', ftString, 35);
+      pCds.FieldDefs.Add('descricaolonga', ftString, 80);
+      pCds.FieldDefs.Add('descricaocurta', ftString, 50);
+      pCds.FieldDefs.Add('custo', ftFloat, 0);
+      pCds.FieldDefs.Add('precopromocao', ftFloat, 0);
+      pCds.FieldDefs.Add('iniciopromocao', ftString, 35);
+      pCds.FieldDefs.Add('fimPromocao', ftString, 35);
+      pCds.FieldDefs.Add('marca', ftString, 35);
+      pCds.FieldDefs.Add('modelo', ftString, 35);
+      pCds.FieldDefs.Add('comprimento', ftString, 35);
+      pCds.FieldDefs.Add('largura', ftString, 35);
+      pCds.FieldDefs.Add('altura', ftString, 35);
+      pCds.FieldDefs.Add('estoque', ftFloat, 0);
+      pCds.FieldDefs.Add('categoriaid', ftInteger, 0);
+      pCds.FieldDefs.Add('produtodisponivel', ftString, 35);
+      pCds.FieldDefs.Add('disponibilidade', ftString, 35);
+      pCds.FieldDefs.Add('disponibilidadedias', ftString, 35);
+      pCds.FieldDefs.Add('categoriasAdicionais', ftString, 35);
+      pCds.FieldDefs.Add('datalancamento', ftString, 35);
+
+      pCds.CreateDataset;
+
+      pCds.fieldbyname('id').DisplayLabel := 'id Site';
+      pCds.fieldbyname('descricao').DisplayLabel := 'Descrição';
+      pCds.fieldbyname('sku').DisplayLabel := 'Sku Produto';
+      pCds.fieldbyname('preco').DisplayLabel := 'Preço';
+      pCds.fieldbyname('peso').DisplayLabel := 'Peso';
+      pCds.fieldbyname('peso').Visible := false;
+      pCds.fieldbyname('categoria').DisplayLabel := 'Categoria';
+      pCds.fieldbyname('categoria').Visible := false;
+
+      TNumericField(pCds.fieldbyname('preco')).DisplayFormat := '#,#0.00';
+      pCds.Open;
+    end;
+    pCds.EmptyDataSet;
+  end;
+
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    if trim(pFiltro) = '' then
+    begin
+      FSku := '';
+    end;
+
+    lTotalProdutos := 0;
+
+    BuscaConfiguracoesTray;
+
+    GetProdutosAPI; // ShowMessage(FRestResponse.Content);
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+
+      try
+        ConfiguraECriaCamposCds;
+
+        begin
+          lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+          lObjectJsonArray := lObjectJson.GetValue<TJSONArray>('Products') as TJSONArray;
+
+          for i := 0 to lObjectJsonArray.Count - 1 do
+          begin
+
+            lObjectJson := lObjectJsonArray.Items[i] as TJSONObject;
+            lObjectJson := lObjectJson.GetValue<TJSONObject>('Product') as TJSONObject;
+
+            pCds.Append;
+            if lObjectJson.GetValue<String>('id') <> '' then
+            begin
+              pCds.fieldbyname('id').AsString := lObjectJson.GetValue<String>('id');
+
+              if lObjectJson.GetValue<String>('id') = '1266053003' then
+                showmessage(lObjectJson.ToString);
+            end;
+
+            if lObjectJson.GetValue<String>('name') <> '' then
+            begin
+              pCds.fieldbyname('descricao').AsString := lObjectJson.GetValue<String>('name');
+            end;
+
+            if lObjectJson.GetValue<String>('reference') <> '' then
+            begin
+              pCds.fieldbyname('sku').AsString := lObjectJson.GetValue<String>('reference');
+            end;
+
+            if lObjectJson.GetValue<String>('price') <> '' then
+            begin
+              pCds.fieldbyname('preco').AsFloat := lObjectJson.GetValue<Double>('price');
+            end;
+
+            if lObjectJson.GetValue<String>('weight') <> '' then
+            begin
+              pCds.fieldbyname('peso').AsFloat := lObjectJson.GetValue<Double>('weight');
+            end;
+
+            if lObjectJson.GetValue<String>('ean') <> '' then
+            begin
+              pCds.fieldbyname('codigoBarras').AsString := lObjectJson.GetValue<String>('ean');
+            end;
+            if lObjectJson.GetValue<String>('ncm') <> '' then
+            begin
+              pCds.fieldbyname('ncm').AsString := lObjectJson.GetValue<String>('ncm');
+            end;
+            if lObjectJson.GetValue<String>('name') <> '' then
+            begin
+              pCds.fieldbyname('descricaolonga').AsString := lObjectJson.GetValue<String>('name');
+            end;
+            if lObjectJson.GetValue<String>('shortcut') <> '' then
+            begin
+              pCds.fieldbyname('descricaocurta').AsString := lObjectJson.GetValue<String>('shortcut');
+            end;
+            if lObjectJson.GetValue<String>('cost_price') <> '' then
+            begin
+              pCds.fieldbyname('custo').AsFloat := lObjectJson.GetValue<Double>('cost_price');
+            end;
+            if lObjectJson.GetValue<String>('promotional_price') <> '' then
+            begin
+              pCds.fieldbyname('precopromocao').AsFloat := lObjectJson.GetValue<Double>('promotional_price');
+            end;
+            if lObjectJson.GetValue<String>('start_promotion') <> '' then
+            begin
+              pCds.fieldbyname('iniciopromocao').AsString := lObjectJson.GetValue<String>('start_promotion');
+            end;
+            if lObjectJson.GetValue<String>('end_promotion') <> '' then
+            begin
+              pCds.fieldbyname('fimPromocao').AsString := lObjectJson.GetValue<String>('end_promotion');
+            end;
+            if lObjectJson.GetValue<String>('brand') <> '' then
+            begin
+              pCds.fieldbyname('marca').AsString := lObjectJson.GetValue<String>('brand');
+            end;
+            if lObjectJson.GetValue<String>('model') <> '' then
+            begin
+              pCds.fieldbyname('modelo').AsString := lObjectJson.GetValue<String>('model');
+            end;
+            if lObjectJson.GetValue<String>('length') <> '' then
+            begin
+              pCds.fieldbyname('comprimento').AsFloat := lObjectJson.GetValue<Double>('length');
+            end;
+            if lObjectJson.GetValue<String>('width') <> '' then
+            begin
+              pCds.fieldbyname('largura').AsFloat := lObjectJson.GetValue<Double>('width');
+            end;
+            if lObjectJson.GetValue<String>('height') <> '' then
+            begin
+              pCds.fieldbyname('altura').AsFloat := lObjectJson.GetValue<Double>('height');
+            end;
+            if lObjectJson.GetValue<String>('stock') <> '' then
+            begin
+              pCds.fieldbyname('estoque').AsFloat := lObjectJson.GetValue<Double>('stock');
+            end;
+            if lObjectJson.GetValue<String>('category_id') <> '' then
+            begin
+              pCds.fieldbyname('categoriaid').AsInteger := lObjectJson.GetValue<Integer>('category_id');
+            end;
+            if lObjectJson.GetValue<String>('available') <> '' then
+            begin
+              pCds.fieldbyname('produtodisponivel').AsString := lObjectJson.GetValue<String>('available');
+            end;
+
+            pCds.Post;
+          end;
+          pCds.First;
+        end;
+
+        result := True;
+      except
+        on E: Exception do
+        begin
+          FMensagem := ('Problemas ao receber os produtos, favor tentar novamente mais tarde. ');
+        end;
+      end;
+    end
+    else if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401)
+    then
+    begin
+      FMensagem := ('Problemas ao receber os produtos, favor tentar novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+
+  end
+  else
+  begin
+    FMensagem := ('Configure corretamente a configuração do site no MC Sistemas para dar continuidade.');
+  end;
+
+end;
+
+function TConexaoAPI.RecebeStatus(pMemoStatus: TMemo): string;
+var
+  lJsonResposta, lJsonPedido: TJSONObject;
+  lJsonPedidosArray: TJSONArray;
+  i, lTotalStatus: Integer;
+  lIDStatus, lDescStatus: string;
+  procedure SalvaNovosStatus(pNovoID, pNovoStatus: String);
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE or insert into STATUS_VENDA_TRAY  (ID, DESCRICAO)  ');
+    FDataSet.SQL.Add(' VALUES (:ID, :DESCRICAO)                                  ');
+    FDataSet.SQL.Add(' MATCHING (ID)                                             ');
+    FDataSet.ParamByName('ID').AsString := pNovoID;
+    FDataSet.ParamByName('DESCRICAO').AsString := pNovoStatus;
+    FDataSet.ExecSQL;
+    FDataSet.Connection.Commit;
+  end;
+
+begin
+  FPagina := 1;
+  FPaginaTotal := 0;
+  BuscaConfiguracoesTray;
+  GetStatusAPI;
+
+  lTotalStatus := PegaTotalRegistrosCabecalho;
+  FPaginaTotal := lTotalStatus div 50;
+  if lTotalStatus mod 50 > 0 then
+  begin
+    FPaginaTotal := FPaginaTotal + 1;
+  end;
+
+  while FPaginaTotal >= FPagina do
+  begin
+    GetStatusAPI;
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+
+      FPagina := FPagina + 1;
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+        not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+      begin
+        // GravaArquivoTxtLog(FRestResponse.Content, 'teste');
+
+        lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+        lJsonPedidosArray := lJsonResposta.GetValue<TJSONArray>('OrderStatuses') as TJSONArray;
+        for i := 0 to lJsonPedidosArray.Count - 1 do
+        begin
+          if (lJsonPedidosArray <> nil) then
+          begin
+            lJsonPedido := lJsonPedidosArray.Items[i] as TJSONObject;
+            lJsonPedido := lJsonPedido.GetValue<TJSONObject>('OrderStatus') as TJSONObject;
+
+            if lJsonPedido.GetValue<String>('id') <> '' then
+            begin
+              lIDStatus := lJsonPedido.GetValue<String>('id');
+            end;
+
+            if lJsonPedido.GetValue<String>('status') <> '' then
+            begin
+              lDescStatus := UpperCase(lJsonPedido.GetValue<String>('status'));
+            end;
+
+            SalvaNovosStatus(lIDStatus, lDescStatus);
+            pMemoStatus.Lines.Add('ID: ' + lIDStatus + '  Status: ' + lDescStatus)
+          end;
+        end;
+      end;
+    end;
+  end;
+
+end;
+
+function TConexaoAPI.RecebeVendas(pMemoRecebidos, pMemoRecusados: TMemo; pgauControle: TGauge): string;
+var
+  lJsonPedido, lJsonPedidoCompleto, lJsonResposta, lJsonItens, lJsonCliente, lJsonClienteEndereco: TJSONObject;
+  lJsonArray, lJsonPedidosArray, lJsonPedidoCompletoArray, lTotalItens, lJsonArrayCliente: TJSONArray;
+  i: Integer;
+  lContaRegistros, lTotalVendas: Integer;
+  lVenda: TVenda;
+  lVendaItens: TVendaItem;
+  lCliente: TCliente;
+  lCodigoCliente, lCodigoProduto, lCodigoVenda: string;
+  lFormulario: TfrmAdicionaProdutoVenda;
+  lPrimeira: Boolean;
+  procedure ProdutoComSKU; // Função com SKU
+  begin
+    lVendaItens.Produto := BuscaCodigoProdutoPeloSku(lJsonItens.GetValue<String>('reference'));
+
+    if lJsonItens.GetValue<String>('quantity') <> '' then
+    begin
+      lVendaItens.quantidade := lJsonItens.GetValue<Double>('quantity');
+    end;
+
+    if lJsonItens.GetValue<String>('price') <> '' then
+    begin
+      lVendaItens.Valor := lJsonItens.GetValue<Double>('price');
+    end;
+
+    if (FBaixarVendasCodigoEmpresa) and (trim(FCodigoEmpresaBaixarVendas) <> '') then
+    begin
+      lVendaItens.CodigoEmpresa := FCodigoEmpresaBaixarVendas;
+    end;
+
+    if trim(lVendaItens.Produto) <> '' then
+    begin
+      lVenda.AdicionarItem(lVendaItens);
+      Inc(lContaRegistros);
+    end;
+  end;
+
+  procedure ProdutoManualSemSKU; // Função sem SKU
+  begin
+    lCodigoProduto := '';
+
+    lFormulario := TfrmAdicionaProdutoVenda.Create(nil);
+    try
+      lFormulario.descricaotray := lJsonItens.GetValue<String>('name');
+      lFormulario.showmodal;
+      lCodigoProduto := lFormulario.ID;
+    finally
+      lFormulario.Free;
+    end;
+
+    if trim(lCodigoProduto) <> '' then
+    begin
+      if ValidaCodigoProduto(lCodigoProduto) then
+      begin
+        lVendaItens.Produto := lCodigoProduto;
+        if lJsonItens.GetValue<String>('quantity') <> '' then
+        begin
+          lVendaItens.quantidade := lJsonItens.GetValue<Double>('quantity');
+        end;
+
+        if lJsonItens.GetValue<String>('price') <> '' then
+        begin
+          lVendaItens.Valor := lJsonItens.GetValue<Double>('price');
+        end;
+
+        if (FBaixarVendasCodigoEmpresa) and (trim(FCodigoEmpresaBaixarVendas) <> '') then
+        begin
+          lVendaItens.CodigoEmpresa := FCodigoEmpresaBaixarVendas;
+        end;
+
+        lVenda.AdicionarItem(lVendaItens);
+        Inc(lContaRegistros);
+      end;
+    end;
+  end;
+
+  function VerificaSeEhItemCombo(pCodigoSKU: string): Boolean;
+  begin
+    result := false;
+
+    if Pos('-', pCodigoSKU) <> 0 then
+    begin
+      result := True;
+    end
+    else if Pos(UpperCase('X'), pCodigoSKU) <> 0 then
+    begin
+      result := True;
+    end
+    else if Pos('/', pCodigoSKU) <> 0 then
+    begin
+      result := True;
+    end
+    else if Pos('+', pCodigoSKU) <> 0 then
+    begin
+      result := True;
+    end
+    else if Pos('|', pCodigoSKU) <> 0 then
+    begin
+      result := True;
+    end
+    else
+    begin
+      result := false;
+    end;
+
+  end;
+
+  procedure ComboItens;
+  var
+    lCombo, lCodigo: string;
+    lListaCodigos: TListaCodigos;
+    i, lPosicaoX: Integer;
+    X, lQuantidade, lTotal, lDiferencaValorItens, lValorUnitarioCombo, lValorTotalJson: Double;
+    lItens: TStringList;
+
+  begin
+    lCombo := StringReplace(lJsonItens.GetValue<String>('reference'), '|', '-', [rfReplaceAll]);
+    lCombo := StringReplace(lJsonItens.GetValue<String>('reference'), '/', '-', [rfReplaceAll]);
+    lCombo := StringReplace(lJsonItens.GetValue<String>('reference'), '+', '-', [rfReplaceAll]);
+    lCombo := UpperCase(lCombo);
+
+    lItens := TStringList.Create;
+    try
+      lTotal := 0;
+      lValorUnitarioCombo := 0;
+      lDiferencaValorItens := 0;
+      lValorTotalJson := 0;
+      lItens.Delimiter := '-';
+      lItens.DelimitedText := lCombo;
+
+      for i := 0 to lItens.Count - 1 do
+      begin
+        lQuantidade := 1;
+        X := 1;
+        lValorTotalJson := (lJsonItens.GetValue<Double>('price'));
+        lValorUnitarioCombo := (lValorTotalJson / lItens.Count);
+        lPosicaoX := 0;
+        lPosicaoX := Pos('X', lItens[i]);
+
+        if lPosicaoX > 0 then
+        begin
+          X := StrToFloat(Copy(lItens[i], 1, lPosicaoX - 1));
+          lCodigo := (Copy(lItens[i], lPosicaoX + 1, Length(lItens[i])));
+          lQuantidade := X;
+        end
+        else
+        begin
+          lCodigo := lItens[i];
+        end;
+
+        FDataSet.Close;
+        FDataSet.SQL.Clear;
+        FDataSet.SQL.Add('select ac03codi, AN03_PRECO_SITE from mc03pro');
+        FDataSet.SQL.Add(' WHERE  AC03_SKU = :SKU     ');
+        FDataSet.ParamByName('SKU').AsString := lCodigo;
+
+        FDataSet.Open;
+
+        if lJsonItens.GetValue<String>('quantity') <> '' then
+        begin
+          lVendaItens.quantidade := lQuantidade * lJsonItens.GetValue<Double>('quantity');
+        end
+        else
+        begin
+          lVendaItens.quantidade := lQuantidade;
+        end;
+
+        lVendaItens.Produto := FDataSet.fieldbyname('ac03codi').AsString;
+
+        if not FDataSet.fieldbyname('AN03_PRECO_SITE').IsNull then
+        begin
+          if (FDataSet.fieldbyname('AN03_PRECO_SITE').AsFloat > 0) then
+          begin
+            lVendaItens.Valor := RoundTo(FDataSet.fieldbyname('AN03_PRECO_SITE').AsFloat, -2);
+            lTotal := lTotal + RoundTo(lVendaItens.quantidade * FDataSet.fieldbyname('AN03_PRECO_SITE').AsFloat, -2);
+          end
+          else
+          begin
+            lVendaItens.Valor := RoundTo(lValorUnitarioCombo, -2);
+            lTotal := lTotal + RoundTo(lVendaItens.quantidade * lValorUnitarioCombo, -2);
+          end;
+        end
+        else
+        begin
+          lVendaItens.Valor := RoundTo((lValorUnitarioCombo), -2);
+          lTotal := lTotal + RoundTo(lVendaItens.quantidade * lValorUnitarioCombo, -2);
+        end;
+
+        if (FBaixarVendasCodigoEmpresa) and (trim(FCodigoEmpresaBaixarVendas) <> '') then
+        begin
+          lVendaItens.CodigoEmpresa := FCodigoEmpresaBaixarVendas;
+        end;
+
+        if trim(lVendaItens.Produto) <> '' then
+        begin
+          lVenda.AdicionarItem(lVendaItens);
+          Inc(lContaRegistros);
+        end;
+
+      end;
+
+      if lTotal > (lVendaItens.quantidade * lJsonItens.GetValue<Double>('price')) then
+      begin
+        lVenda.ValorDesconto := lTotal - (lVendaItens.quantidade * lJsonItens.GetValue<Double>('price'));
+      end
+      else
+      begin
+        lVenda.ValorDesconto := 0;
+      end;
+    finally
+      lItens.Free;
+    end;
+
+  End;
+
+  procedure AdicionaItensJsonNaVenda;
+  var
+    i: Integer;
+  begin
+
+    for i := 0 to lJsonArray.Count - 1 do
+    begin
+      lVendaItens.Limpar;
+      lJsonItens := lJsonArray.Items[i] as TJSONObject;
+
+      lJsonItens := lJsonItens.GetValue<TJSONObject>('ProductsSold') as TJSONObject;
+      lVendaItens.Pedido := lVenda.Pedido;
+
+      if trim(lJsonItens.GetValue<String>('reference')) <> '' then // código mc
+      begin
+        if VerificaSeEhItemCombo(lJsonItens.GetValue<String>('reference')) then
+        begin
+          ComboItens;
+        end
+        else if BuscaCodigoProdutoPeloSku(lJsonItens.GetValue<String>('reference')) <> '' then // existe mc
+        begin
+          ProdutoComSKU;
+        end
+        else
+        begin
+          ProdutoManualSemSKU;
+        end;
+      end
+      else
+      begin
+        ProdutoManualSemSKU;
+      end;
+    end;
+  end;
+
+  function AdicionaCliente: Integer;
+  var
+    lCodCliente, lData, lDataAniver: string;
+    n: Integer;
+  begin
+    lCodCliente := '';
+
+    // Validação se cliente existe pelo cpf/cnpj
+    if lJsonCliente.GetValue<String>('cnpj') <> '' then
+    begin
+      lCodCliente := VerificaSeOClienteExisteNaBase(RemoveCaracteresEspeciais(lJsonCliente.GetValue<String>('cnpj')));
+    end
+    else
+    begin
+      lCodCliente := VerificaSeOClienteExisteNaBase(RemoveCaracteresEspeciais(lJsonCliente.GetValue<String>('cpf')));
+    end;
+
+    lCliente.Limpar;
+    if trim(lCodCliente) = '' then
+    begin
+      lCliente.Codigo := GeraCodigoCliente;
+    end
+    else
+    begin
+      lCliente.Codigo := strtoint(lCodCliente);
+    end;
+
+    lCliente.ConsumidorFinal := '1';
+    lCliente.Ativo := 'S';
+    lCliente.TipoCredito := 'N';
+    lCliente.PresencaComprador := '2';
+    lCliente.Destinatario := '9';
+    lCliente.Empresa := UpperCase(TamString(lJsonCliente.GetValue<String>('company_name'), 35));
+    lCliente.Fone := TamString(lJsonCliente.GetValue<String>('phone'), 15);
+    lCliente.Celular := TamString(lJsonCliente.GetValue<String>('cellphone'), 15);
+    lCliente.CPF := TamString(RemoveCaracteresEspeciais(lJsonCliente.GetValue<String>('cpf')), 11);
+    lCliente.CNPJ := TamString(RemoveCaracteresEspeciais(lJsonCliente.GetValue<String>('cnpj')), 14);
+    lCliente.email := UpperCase(TamString(lJsonCliente.GetValue<String>('email'), 50));
+
+    for n := 0 to lJsonArrayCliente.Count - 1 do
+    begin
+      lJsonClienteEndereco := lJsonArrayCliente.Items[n] as TJSONObject;
+      lJsonClienteEndereco := lJsonClienteEndereco.GetValue<TJSONObject>('CustomerAddress') as TJSONObject;
+
+      if lJsonClienteEndereco.GetValue<String>('type') = '0' then // 0 Endereço de cobrança
+      begin
+        lCliente.Nome := UpperCase(TamString(lJsonCliente.GetValue<String>('name'), 35));
+        lCliente.Endereco := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('address'), 35));
+        lCliente.Complemento := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('complement'), 50));
+        lCliente.Cidade := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('city'), 30));
+        lCliente.Uf := UpperCase(lJsonClienteEndereco.GetValue<String>('state'));
+        lCliente.Cep := StringReplace(lJsonClienteEndereco.GetValue<String>('zip_code'), '-', '', [rfReplaceAll]);
+        lCliente.Numero := TamString(lJsonClienteEndereco.GetValue<String>('number'), 15);
+        lCliente.Bairro := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('neighborhood'), 20));
+      end
+      else if lJsonClienteEndereco.GetValue<String>('type') = '1' then // 1 Endereço de entrega
+      begin
+        lVenda.UtilizarEnderecoEntrega := True;
+      end;
+    end;
+
+    if lJsonCliente.GetValue<String>('gender') = '0' then
+    begin
+      lCliente.Sexo := 'M';
+    end
+    else if lJsonCliente.GetValue<String>('gender') = '1' then
+    begin
+      lCliente.Sexo := 'F';
+    end;
+
+    // if lJsonCliente.GetValue<String>('birth_date') <> '' then
+    // begin
+    // lCliente.DataNascimento := DecodificarData(lJsonCliente.GetValue<TDate>('birth_date'));
+    // end;
+
+    lCliente.GerarSped := 'S';
+    lCliente.CodIBGE := lCliente.BuscaCodigoIBGE;
+
+    if trim(lCliente.CNPJ) <> '' then
+    begin
+      lCliente.FisJur := 'N'
+    end
+    else
+    begin
+      lCliente.FisJur := 'S'
+    end;
+
+    // se não tiver endereço cobrança eu coloco o da entrega no lugar
+    if (lVenda.UtilizarEnderecoEntrega) and (trim(lCliente.Nome) = '') then
+    begin
+      lCliente.Nome := UpperCase(TamString(lJsonCliente.GetValue<String>('name'), 35));
+      lCliente.Endereco := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('address'), 35));
+      lCliente.Complemento := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('complement'), 50));
+      lCliente.Cidade := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('city'), 30));
+      lCliente.Uf := UpperCase(lJsonClienteEndereco.GetValue<String>('state'));
+      lCliente.Cep := StringReplace(lJsonClienteEndereco.GetValue<String>('zip_code'), '-', '', [rfReplaceAll]);
+      lCliente.Numero := TamString(lJsonClienteEndereco.GetValue<String>('number'), 15);
+      lCliente.Bairro := UpperCase(TamString(lJsonClienteEndereco.GetValue<String>('neighborhood'), 20));
+    end;
+
+    // Endereço entrega
+    lVenda.Nome_ent := UpperCase(TamString(lJsonCliente.GetValue<String>('name'), 35));
+    lVenda.Endereco_ent := UpperCase(TamString(lJsonCliente.GetValue<String>('address'), 35));
+    lVenda.Complemento_ent := UpperCase(TamString(lJsonCliente.GetValue<String>('complement'), 50));
+    lVenda.Cidade_ent := UpperCase(TamString(lJsonCliente.GetValue<String>('city'), 30));
+    lVenda.Estado_ent := UpperCase(lJsonCliente.GetValue<String>('state'));
+    lVenda.Cep_ent := StringReplace(lJsonCliente.GetValue<String>('zip_code'), '-', '', [rfReplaceAll]);
+    lVenda.Numero_ent := TamString(lJsonCliente.GetValue<String>('number'), 15);
+    lVenda.Bairro_ent := UpperCase(TamString(lJsonCliente.GetValue<String>('neighborhood'), 20));
+    lVenda.Pais_ent := lJsonCliente.GetValue<String>('country');
+    lCliente.AlterarOuIncluir(True);
+
+    result := lCliente.Codigo; // Resulta código cliente
+  end;
+
+  procedure PegaPedidoCompleto;
+  begin
+    GetVendasCompletaAPI;
+    lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+    lJsonPedidoCompleto := lJsonResposta.GetValue<TJSONObject>('Order') as TJSONObject;
+
+    lJsonArray := lJsonPedidoCompleto.GetValue<TJSONArray>('ProductsSold') as TJSONArray;
+
+    lJsonCliente := lJsonPedidoCompleto.GetValue<TJSONObject>('Customer') as TJSONObject;
+    lJsonArrayCliente := lJsonCliente.GetValue<TJSONArray>('CustomerAddresses') as TJSONArray;
+  end;
+
+begin
+  lPrimeira := True;
+  result := '';
+  FListaVendas := '';
+
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalVendasBaixadas := 0;
+  FTotalVendasErro := 0;
+
+  lTotalVendas := 0;
+  FPaginaTotal := 0;
+  FPagina := 1;
+
+  BuscaConfiguracoesTray;
+  GetVendasAPI; // Pego total de vendas para montar o laço de repetição
+
+  lTotalVendas := PegaTotalRegistrosCabecalho;
+
+  // Inicio o gauge para mostrar dar feedback pro usuário.
+  pgauControle.progress := 0;
+  pgauControle.update;
+  pgauControle.MaxValue := lTotalVendas;
+
+  if lTotalVendas > 50 then
+  begin
+    FPaginaTotal := lTotalVendas div 50;
+    if lTotalVendas mod 50 > 0 then
+    begin
+      FPaginaTotal := FPaginaTotal + 1;
+    end;
+  end
+  else
+  begin
+    FPaginaTotal := 1;
+  end;
+
+  while FPaginaTotal >= FPagina do
+  begin
+    GetVendasAPI;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FPagina := FPagina + 1;
+
+      lVenda := TVenda.Create;
+      lVendaItens := TVendaItem.Create;
+      lCliente := TCliente.Create;
+
+      try
+        try
+          lVenda.ValidaEAlimentaCamposDaConfigPreVenda;
+
+          if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+            not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+          begin
+            lVenda.ListaItens.Clear; // GravaArquivoTxtLog(FRestResponse.Content, 'teste');
+
+            lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+            lJsonPedidosArray := lJsonResposta.GetValue<TJSONArray>('Orders') as TJSONArray;
+            for i := 0 to lJsonPedidosArray.Count - 1 do
+            begin
+              pgauControle.progress := pgauControle.progress + 1;
+              if (lJsonPedidosArray <> nil) then
+              begin
+                lJsonPedido := lJsonPedidosArray.Items[i] as TJSONObject;
+                lJsonPedido := lJsonPedido.GetValue<TJSONObject>('Order') as TJSONObject;
+                lTotalItens := lJsonPedido.GetValue<TJSONArray>('ProductsSold') as TJSONArray;
+                if lTotalItens.Count > 0 then
+                begin
+                  if lJsonPedido.GetValue<String>('date') <> '' then
+                  begin
+                    lVenda.Emissao := lJsonPedido.GetValue<TDate>('date');
+                  end;
+
+                  if lJsonPedido.GetValue<String>('id') <> '' then
+                  begin
+                    lVenda.Origem := lJsonPedido.GetValue<String>('id');
+                    lVenda.Placa := lJsonPedido.GetValue<String>('id');
+                    FCodVendaSite := lJsonPedido.GetValue<String>('id');
+                    lCodigoVenda := lJsonPedido.GetValue<String>('id');
+                  end;
+
+                  lVenda.Pedido := NovoCodigoPreVenda;
+                  lVenda.PrecoProduto := 'S';
+                  lVenda.TipoPreco := 'D';
+                  lVenda.SituacaoPreVenda := 'A';
+                  lVenda.TipoPedido := 'N';
+                  lVenda.Situacao := 'A';
+                  lVenda.Observacao01 := 'Gerado apartir do site da Tray.';
+
+                  if (FBaixarVendasCodigoEmpresa) and (trim(FCodigoEmpresaBaixarVendas) <> '') then
+                  begin
+                    lVenda.CodigoEmpresa := FCodigoEmpresaBaixarVendas;
+                  end;
+
+                  // lVenda.TipoVenda := lJsonCabecalho.GetValue<Integer>('cod');
+                  if FConfiguracaoFrete then
+                  begin
+                    lVenda.Frete := lJsonPedido.GetValue<Double>('shipment_value');
+                  end;
+
+                  PegaPedidoCompleto;
+
+                  lVenda.Cliente := AdicionaCliente;
+                  lVenda.ListaItens.Clear;
+
+                  AdicionaItensJsonNaVenda;
+                  try
+                    if (lVenda.ListaItens.Count) > 0 then
+                    begin
+                      lVenda.incluir(True);
+                      FTotalVendasBaixadas := FTotalVendasBaixadas + 1;
+                      UpdateStatusVendaPosBaixar(lCodigoVenda);
+                      pMemoRecebidos.Lines.Add('ID Site: ' + lJsonPedido.GetValue<String>('id') + ' - ' + 'ID MC: ' +
+                        IntToStr(lVenda.Pedido));
+                    end
+                    else
+                    begin
+                      FTotalVendasErro := FTotalVendasErro + 1;
+                      pMemoRecusados.Lines.Add('ID Site:' + lJsonPedido.GetValue<String>('id') +
+                        ' - Motivo = Sku/Reference dos produtos não encontrada no MC, preencha o sku no mc e tente novamente.');
+                      GravaArquivoTxtLog('Problemas na venda ' + lJsonPedido.GetValue<String>('id') + '   ',
+                        'VendasNaoEnviadas');
+                    end;
+
+                  except
+                    on E: Exception do
+                    begin
+                      FTotalVendasErro := FTotalVendasErro + 1;
+                      GravaArquivoTxtLog('Problemas na venda ' + lJsonPedido.GetValue<String>('id') + '   ',
+                        'VendasNaoEnviadas');
+
+                      pMemoRecusados.Lines.Add('ID Site:' + lJsonPedido.GetValue<String>('id'));
+                    end;
+                  end;
+                  TotalRegistros(lContaRegistros.ToString);
+                end;
+              end;
+            end;
+          end;
+        except
+          on E: Exception do
+          begin
+            result := 'Problemas na importação de venda, tente novamente mais tarde.';
+          end;
+        end;
+      finally
+        lVenda.Free;
+        lVendaItens.Free;
+        lCliente.Free;
+      end;
+    end
+    else if (FRestResponse.StatusCode <> 400) then
+    begin
+      FMensagem := ('Problemas ao receber as vendas, favor tentar novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+    end;
+  end;
+end;
+
+function TConexaoAPI.RecebeVendasELista(pCdsVenda, pCdsVendaitens: TFDMemTable): Boolean;
+var
+  lJsonPedido, lJsonResposta, lJsonClienteEndereco, lJsonCliente, lJsonPedidoCompleto: TJSONObject;
+  lJsonArray, lJsonPedidosArray, lJsonArrayCliente, lTotalItens: TJSONArray;
+  i, lTotalVendas: Integer;
+  lPrimeira: Boolean;
+
+  function DataEmissao: string;
+  var
+    lDataEmissao, lData: string;
+  begin
+    if lJsonPedido.GetValue<String>('date') <> '' then
+    begin
+      lData := TamString(lJsonPedido.GetValue<String>('date'), 10);
+      lData := StringReplace(lData, '-', '', [rfReplaceAll]);
+      lDataEmissao := Copy(lData, 6, 2) + '/';
+      lDataEmissao := lDataEmissao + Copy(lData, 4, 2) + '/';
+      lDataEmissao := lDataEmissao + Copy(lData, 1, 4);
+      result := lDataEmissao;
+    end;
+  end;
+
+  procedure ConfiguraECriaCamposCdsVenda;
+  begin
+    if pCdsVenda.Fields.Count = 0 then
+    begin
+      pCdsVenda.FieldDefs.Add('pedido', ftInteger, 0, True);
+      pCdsVenda.FieldDefs.Add('emissao', ftString, 10, false);
+      pCdsVenda.FieldDefs.Add('cliente', ftString, 70, false);
+      pCdsVenda.FieldDefs.Add('status', ftString, 50, false);
+      pCdsVenda.FieldDefs.Add('total', ftFloat, 0, false);
+      pCdsVenda.CreateDataset;
+
+      pCdsVenda.fieldbyname('pedido').DisplayLabel := 'Pedido';
+      pCdsVenda.fieldbyname('emissao').DisplayLabel := 'Data Emissão';
+      pCdsVenda.fieldbyname('cliente').DisplayLabel := 'Cliente';
+      pCdsVenda.fieldbyname('status').DisplayLabel := 'Status';
+      pCdsVenda.fieldbyname('total').DisplayLabel := 'Total';
+
+      TNumericField(pCdsVenda.fieldbyname('total')).DisplayFormat := '#,#0.00';
+      pCdsVenda.Open;
+    end;
+
+  end;
+
+  procedure ConfiguraECriaCamposCdsVendaItens;
+  begin
+    if pCdsVendaitens.Fields.Count = 0 then
+    begin
+      pCdsVendaitens.FieldDefs.Add('pedido', ftInteger, 0, false);
+      pCdsVendaitens.FieldDefs.Add('id', ftString, 50, false);
+      pCdsVendaitens.FieldDefs.Add('sku', ftString, 35, false);
+      pCdsVendaitens.FieldDefs.Add('descricao', ftString, 70, false);
+      pCdsVendaitens.FieldDefs.Add('quantidade', ftFloat, 0, false);
+      pCdsVendaitens.FieldDefs.Add('preco', ftFloat, 0, false);
+      pCdsVendaitens.FieldDefs.Add('total', ftFloat, 0, false);
+      pCdsVendaitens.CreateDataset;
+
+      pCdsVendaitens.fieldbyname('pedido').DisplayLabel := 'Código Venda';
+      pCdsVendaitens.fieldbyname('pedido').Visible := false;
+      pCdsVendaitens.fieldbyname('id').DisplayLabel := 'ID';
+      pCdsVendaitens.fieldbyname('sku').DisplayLabel := 'Sku';
+      pCdsVendaitens.fieldbyname('descricao').DisplayLabel := 'Descrição';
+      pCdsVendaitens.fieldbyname('quantidade').DisplayLabel := 'Quantidade';
+      pCdsVendaitens.fieldbyname('preco').DisplayLabel := 'Preço Uni';
+      pCdsVendaitens.fieldbyname('total').DisplayLabel := 'Total';
+
+      TNumericField(pCdsVendaitens.fieldbyname('quantidade')).DisplayFormat := '#,#0.00';
+      TNumericField(pCdsVendaitens.fieldbyname('preco')).DisplayFormat := '#,#0.00';
+      TNumericField(pCdsVendaitens.fieldbyname('total')).DisplayFormat := '#,#0.00';
+      pCdsVendaitens.Open;
+    end;
+  end;
+
+  procedure AdicionaItensJsonNaVenda;
+  var
+    lJsonItensArray: TJSONArray;
+    lJsonItens: TJSONObject;
+    i: Integer;
+
+  begin
+
+    for i := 0 to lJsonArray.Count - 1 do
+    begin
+      lJsonItens := lJsonArray.Items[i] as TJSONObject;
+      lJsonItens := lJsonItens.GetValue<TJSONObject>('ProductsSold') as TJSONObject;
+
+      pCdsVendaitens.Append;
+      // ID venda Site
+      pCdsVendaitens.fieldbyname('pedido').AsString := pCdsVenda.fieldbyname('pedido').AsString;
+
+      // id Produto MC
+      if lJsonItens.GetValue<String>('id') <> '' then
+      begin
+        pCdsVendaitens.fieldbyname('id').AsString := TamString(lJsonItens.GetValue<String>('id'), 50);
+      end;
+
+      // id Produto MC
+      if lJsonItens.GetValue<String>('reference') <> '' then
+      begin
+        pCdsVendaitens.fieldbyname('sku').AsString := TamString(lJsonItens.GetValue<String>('reference'), 35);
+      end;
+
+      // Descrição do produto
+      if lJsonItens.GetValue<String>('name') <> '' then
+      begin
+        pCdsVendaitens.fieldbyname('descricao').AsString := TamString(lJsonItens.GetValue<String>('name'), 70);
+      end;
+
+      // Quantidade
+      if lJsonItens.GetValue<String>('quantity') <> '' then
+      begin
+        pCdsVendaitens.fieldbyname('quantidade').AsFloat := lJsonItens.GetValue<Double>('quantity');
+      end;
+
+      // valor uni
+      if lJsonItens.GetValue<String>('price') <> '' then
+      begin
+        pCdsVendaitens.fieldbyname('preco').AsFloat := lJsonItens.GetValue<Double>('price');
+      end;
+
+      // valor total
+      pCdsVendaitens.fieldbyname('total').AsFloat := lJsonItens.GetValue<Double>('price') *
+        lJsonItens.GetValue<Double>('quantity');
+
+      pCdsVendaitens.Post;
+    end;
+  end;
+
+  procedure PegaPedidoCompleto;
+  begin
+    GetVendasCompletaAPI;
+    lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+    lJsonPedidoCompleto := lJsonResposta.GetValue<TJSONObject>('Order') as TJSONObject;
+
+    lJsonArray := lJsonPedidoCompleto.GetValue<TJSONArray>('ProductsSold') as TJSONArray;
+
+    lJsonCliente := lJsonPedidoCompleto.GetValue<TJSONObject>('Customer') as TJSONObject;
+    lJsonArrayCliente := lJsonCliente.GetValue<TJSONArray>('CustomerAddresses') as TJSONArray;
+    lJsonClienteEndereco := lJsonArrayCliente.Items[0] as TJSONObject;
+    lJsonClienteEndereco := lJsonClienteEndereco.GetValue<TJSONObject>('CustomerAddress') as TJSONObject
+  end;
+
+begin
+  result := false;
+  lTotalVendas := 0;
+  lPrimeira := True;
+  FListaVendas := '';
+  FPagina := 1;
+  FPaginaTotal := 0;
+
+  BuscaConfiguracoesTray;
+
+  // Pego total de vendas para montar o laço de repetição
+  GetVendasAPI;
+  ConfiguraECriaCamposCdsVenda;
+
+  ConfiguraECriaCamposCdsVendaItens;
+
+  pCdsVenda.EmptyDataSet;
+  pCdsVendaitens.EmptyDataSet;
+
+  lTotalVendas := PegaTotalRegistrosCabecalho;
+  FPaginaTotal := lTotalVendas div 50;
+  if lTotalVendas > 50 then
+  begin
+    FPaginaTotal := lTotalVendas div 50;
+    if lTotalVendas mod 50 > 0 then
+    begin
+      FPaginaTotal := FPaginaTotal + 1;
+    end;
+  end
+  else
+  begin
+    FPaginaTotal := 1;
+  end;
+
+  while FPaginaTotal >= FPagina do
+  begin
+    GetVendasAPI;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FPagina := FPagina + 1;
+      try
+        if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+          not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+        begin
+          result := false;
+          GravaArquivoTxtLog(FRestResponse.Content, 'teste');
+
+          lJsonResposta := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+          lJsonPedidosArray := lJsonResposta.GetValue<TJSONArray>('Orders') as TJSONArray;
+          for i := 0 to lJsonPedidosArray.Count - 1 do
+          begin
+            if (lJsonPedidosArray <> nil) then
+            begin
+              lJsonPedido := lJsonPedidosArray.Items[i] as TJSONObject;
+              lJsonPedido := lJsonPedido.GetValue<TJSONObject>('Order') as TJSONObject;
+              lTotalItens := lJsonPedido.GetValue<TJSONArray>('ProductsSold') as TJSONArray;
+              if lTotalItens.Count > 0 then
+              begin
+
+                result := True;
+
+                pCdsVenda.Append; // ShowMessage(lJsonPedido.ToString);
+
+                if lJsonPedido.GetValue<String>('id') <> '' then
+                begin
+                  pCdsVenda.fieldbyname('pedido').AsInteger := lJsonPedido.GetValue<Integer>('id');
+                  FCodVendaSite := lJsonPedido.GetValue<String>('id');
+                end;
+
+                pCdsVenda.fieldbyname('emissao').AsString := DataEmissao;
+
+                if lJsonPedido.GetValue<String>('status') <> '' then
+                begin
+                  pCdsVenda.fieldbyname('status').AsString := lJsonPedido.GetValue<String>('status');
+                end;
+
+                if lJsonPedido.GetValue<String>('total') <> '' then
+                begin
+                  pCdsVenda.fieldbyname('total').AsFloat := lJsonPedido.GetValue<Double>('total');
+                end;
+
+                PegaPedidoCompleto;
+
+                pCdsVenda.fieldbyname('cliente').AsString := UpperCase(lJsonCliente.GetValue<String>('name'));
+
+                pCdsVenda.Post;
+
+                AdicionaItensJsonNaVenda;
+
+                result := True;
+              end;
+            end;
+          end;
+        end;
+
+      except
+        on E: Exception do
+        begin
+          FMensagem := ('Problemas ao receber as vendas, favor tentar novamente mais tarde. ');
+          result := false;
+        end;
+      end;
+    end
+    else
+    begin
+      FMensagem := ('Problemas ao receber as vendas, favor tentar novamente mais tarde. Erro:' +
+        IntToStr(FRestResponse.StatusCode));
+      result := false;
+    end;
+
+  end;
+
+end;
+
+procedure TConexaoAPI.RegistrarNaInicializacaoDoWindows(pPrograma: string);
+var
+  REG: TRegistry;
+begin
+  REG := TRegistry.Create;
+  try
+    REG.RootKey := HKEY_CURRENT_USER;
+    REG.OpenKey('Software\Microsoft\Windows\CurrentVersion\Run\', True);
+    REG.WriteString(pPrograma, ParamStr(0));
+    REG.CloseKey;
+    showmessage('Programa adicionado na inicialização do Windows com sucesso!');
+  finally
+    REG.Free;
+  end;
+end;
+
+class procedure TConexaoAPI.ReleaseMe;
+begin
+  if Assigned(FConexaoAPI) then
+  begin
+    FreeAndNil(FConexaoAPI);
+  end;
+end;
+
+function TConexaoAPI.RemoveCaracteresEspeciais(aTexto: string): string;
+const
+  // Lista de Caracteres Extras
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: Integer;
+begin
+  xTexto := aTexto;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := StringReplace(xTexto, xCarExt[i], '', [rfReplaceAll]);
+  end;
+
+  result := xTexto;
+
+end;
+
+function TConexaoAPI.RetornaCausaErroEnvioNFe: string;
+var
+  lResposta: string;
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+begin
+  lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+  lObjectJsonArray := lObjectJson.GetValue<TJSONArray>('causes') as TJSONArray;
+
+  lResposta := lObjectJsonArray.ToString;
+  lResposta := StringReplace(lResposta, '{', '', [rfReplaceAll]);;
+  lResposta := StringReplace(lResposta, '}', '', [rfReplaceAll]);;
+
+  result := lResposta;
+
+end;
+
+function TConexaoAPI.RetornaCausaErroEnvioProduto(pCodigo: string): string;
+var
+  lResposta: string;
+  lObjectJson: TJSONObject;
+begin
+  lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+  if Pos('["Invalid parameter id."]', lObjectJson.ToString) > 0 then
+  begin
+    lResposta := 'Produto com ID inválido.';
+  end
+  else
+  begin
+    lObjectJson := lObjectJson.GetValue<TJSONObject>('causes') as TJSONObject;
+    lObjectJson := lObjectJson.GetValue<TJSONObject>('Product') as TJSONObject;
+    lResposta := lObjectJson.ToString;
+    lResposta := StringReplace(lResposta, '{', '', [rfReplaceAll]);
+    lResposta := StringReplace(lResposta, '}', '', [rfReplaceAll]);
+  end;
+
+  result := lResposta;
+end;
+
+function TConexaoAPI.RetornaCausaErroExcluirProdutoVenda: string;
+var
+  lResposta: string;
+  lObjectJson: TJSONObject;
+begin
+  lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+  lObjectJson := lObjectJson.GetValue<TJSONObject>('causes') as TJSONObject;
+
+  lResposta := lObjectJson.ToString;
+  lResposta := StringReplace(lResposta, '{', '', [rfReplaceAll]);;
+  lResposta := StringReplace(lResposta, '}', '', [rfReplaceAll]);;
+
+  result := lResposta;
+
+end;
+
+function TConexaoAPI.RetornaIndexIntervalo(pIntervalo: String): Integer;
+begin
+  if pIntervalo = '10 minutos' then
+  begin
+    result := 0;
+  end
+  else if pIntervalo = '30 minutos' then
+  begin
+    result := 1;
+  end
+  else if pIntervalo = '60 minutos' then
+  begin
+    result := 2;
+  end
+  else
+  begin
+    result := -1;
+  end;
+end;
+
+function TConexaoAPI.RetornaStatusDescricao(pIdStatus: string): string;
+begin
+  FDataSetRetornaStatus.Close;
+  FDataSetRetornaStatus.SQL.Clear;
+  FDataSetRetornaStatus.SQL.Add(' SELECT * FROM STATUS_VENDA_TRAY ');
+  FDataSetRetornaStatus.SQL.Add(' where id = :id                  ');
+  FDataSetRetornaStatus.ParamByName('id').AsString := pIdStatus;
+  FDataSetRetornaStatus.Open;
+
+  if FDataSetRetornaStatus.RecordCount > 0 then
+  begin
+    result := FDataSetRetornaStatus.fieldbyname('descricao').AsString;
+  end
+  else
+  begin
+    result := '';
+  end;
+end;
+
+procedure TConexaoAPI.SalvaConfiguracaoCategoria(pProdutoID, pCategoriaID: TEdit);
+begin
+  try
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE MC03PRO SET                     ');
+    FDataSet.SQL.Add('  ID_CATEGORIA_SITE = :ID_CATEGORIA     ');
+    FDataSet.SQL.Add(' WHERE  AC03CODI = :ID                  ');
+
+    FDataSet.ParamByName('ID_CATEGORIA').AsInteger := strtoint(pCategoriaID.Text);
+    FDataSet.ParamByName('ID').AsString := pProdutoID.Text;
+    FDataSet.ExecSQL;
+    FDataSet.Connection.Commit;
+
+    showmessage('Categoria salva com sucesso');
+  except
+    on E: Exception do
+      showmessage('Problemas ao salvar o status.');
+  end;
+
+end;
+
+procedure TConexaoAPI.SalvaConfiguracaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit);
+begin
+  try
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' UPDATE TBL_CONFIGURACAO_TRAY SET              ');
+    FDataSet.SQL.Add('  STATUS_BAIXAR = :STATUS_BAIXAR               ');
+    FDataSet.SQL.Add(' ,STATUS_POS_BAIXAR = :STATUS_POS_BAIXAR       ');
+    FDataSet.SQL.Add(' ,STATUS_ENVIAR_NOTA = :STATUS_ENVIAR_NOTA     ');
+    FDataSet.SQL.Add(' WHERE  ID = :ID                               ');
+
+    FDataSet.ParamByName('STATUS_BAIXAR').AsInteger := strtoint(pStatusBaixar.Text);
+    FDataSet.ParamByName('STATUS_POS_BAIXAR').AsInteger := strtoint(pStatusPosBaixar.Text);
+    FDataSet.ParamByName('STATUS_ENVIAR_NOTA').AsInteger := strtoint(pStatusEnviarNota.Text);
+
+    FDataSet.ParamByName('ID').AsInteger := 1;
+    FDataSet.ExecSQL;
+    FDataSet.Connection.Commit;
+
+    showmessage('Status salvo com sucesso');
+  except
+    on E: Exception do
+      showmessage('Problemas ao salvar o status.');
+  end;
+
+end;
+
+function TConexaoAPI.TotalRegistros(pTotalRegistros: string): string;
+begin
+  if pTotalRegistros.ToInteger > 0 then
+  begin
+    result := 'Foram recebidos ' + pTotalRegistros + ' registros.';
+  end
+  else
+  begin
+    result := 'Não existem registros a ser recebido ...'
+  end;
+end;
+
+procedure TConexaoAPI.LimparIDSiteDoProduto(pCodigoProduto: string);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' UPDATE mc03pro SET ID_SITE = :id  ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :codigo         ');
+  FDataSet.ParamByName('id').AsString := '';
+  FDataSet.ParamByName('codigo').AsString := pCodigoProduto;
+  FDataSet.ExecSQL;
+  FDataSet.Connection.Commit;
+end;
+
+function TConexaoAPI.ListarInfoLoja(pmemo: TMemo): Boolean;
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+  if ValidaCamposConfigAPI then
+  begin
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmGET, tRecebeInformacaoLoja, '');
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmGET, tRecebeInformacaoLoja, '');
+    end;
+
+    pmemo.Clear;
+    if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+      not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+    begin
+      pmemo.Text := FRestResponse.JSONText;
+      result := True;
+    end;
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+    result := false;
+  end;
+end;
+
+function TConexaoAPI.ListarTodasVendas(pmemo: TMemo): Boolean;
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+  if ValidaCamposConfigAPI then
+  begin
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmGET, tRecebeVenda, '');
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmGET, tRecebeVenda, '');
+    end;
+
+    pmemo.Clear;
+    if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+      not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+    begin
+      pmemo.Text := FRestResponse.JSONText;
+      result := True;
+    end;
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+    result := false;
+  end;
+
+end;
+
+function TConexaoAPI.ListarTodosProdutos(pmemo: TMemo): Boolean;
+begin
+  BuscaConfiguracoesTray;
+  FSku := '';
+
+  if ValidaCamposConfigAPI then
+  begin
+    GetProdutosAPI;
+
+    pmemo.Clear;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      pmemo.Text := StringReplace(FRestResponse.JSONText, '\', '', [rfReplaceAll]);
+      result := True;
+    end
+    else
+      result := false;
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+    result := false;
+  end;
+
+end;
+
+function TConexaoAPI.NovoCodigoPreVenda: Integer;
+begin
+  // Gera um novo código de pre-venda.
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('select max(AN130_PEDIDO) from MC130_PREVENDA ');
+  FDataSet.Open;
+
+  result := FDataSet.fieldbyname('max').AsInteger + 1;
+end;
+
+function TConexaoAPI.ValidaCamposConfigAPI: Boolean;
+begin
+  // Valida se algum dos campos da config site está vazio, caso esteja não deixa processguir o processo.
+  ValidaSeExisteTabelaAtulizacaoProdutos;
+
+  if (trim(FUrlAPI) <> '') and (trim(FURL_Busca_Token) <> '') and (trim(Faccess_token) <> '') and (FLiberarIntegradorUso)
+  then
+  begin
+    result := True
+  end
+  else
+    result := false;
+end;
+
+function TConexaoAPI.ValidaCodigoProduto(pProduto: string): Boolean;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select * from mc03pro      ');
+  FDataSet.SQL.Add(' WHERE  AC03CODI = :PRODUTO     ');
+  FDataSet.ParamByName('PRODUTO').AsString := pProduto;
+  FDataSet.Open;
+
+  result := FDataSet.RecordCount > 0;
+end;
+
+function TConexaoAPI.ValidaIDCategoria(pIdCategoria: String; pLabel: TLabel): Boolean;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM CATEGORIA_PRODUTO_TRAY ');
+  FDataSet.SQL.Add(' where id = :id                      ');
+  FDataSet.ParamByName('id').AsString := pIdCategoria;
+  FDataSet.Open;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    result := True;
+    pLabel.Caption := FDataSet.fieldbyname('descricao').AsString;
+  end
+  else
+  begin
+    pLabel.Caption := '';
+    result := false;
+  end;
+end;
+
+function TConexaoAPI.ValidaIDProduto(pIdProduto: String; pLabel: TLabel): Boolean;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC03PRO ');
+  FDataSet.SQL.Add(' where AC03CODI = :id                  ');
+  FDataSet.ParamByName('id').AsString := pIdProduto;
+  FDataSet.Open;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    result := True;
+    pLabel.Caption := FDataSet.fieldbyname('AC03DESC').AsString;
+  end
+  else
+  begin
+    pLabel.Caption := '';
+    result := false;
+  end;
+
+end;
+
+function TConexaoAPI.ValidaIDStatus(pIdStatus: String; pLabel: TLabel): Boolean;
+begin
+
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM STATUS_VENDA_TRAY ');
+  FDataSet.SQL.Add(' where id = :id                  ');
+  FDataSet.ParamByName('id').AsString := pIdStatus;
+  FDataSet.Open;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    result := True;
+    pLabel.Caption := FDataSet.fieldbyname('descricao').AsString;
+  end
+  else
+  begin
+    pLabel.Caption := '';
+    result := false;
+  end;
+
+end;
+
+procedure TConexaoAPI.ValidaSeExisteTabelaAtulizacaoProdutos;
+begin
+
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM TBL_ATUALIZACOES_API  ');
+  FDataSet.SQL.Add(' WHERE DESCRICAO = :DESCRICAO        ');
+  FDataSet.ParamByName('DESCRICAO').AsString := 'PRODUTOSWC';
+  FDataSet.Open;
+
+  if FDataSet.RecordCount = 0 then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add(' INSERT INTO TBL_ATUALIZACOES_API                    ');
+    FDataSet.SQL.Add('         (ID, DESCRICAO, DT_ALTERACAO       )        ');
+    FDataSet.SQL.Add('  VALUES (1, :DESCRICAO, 01/01/1999 00:00:00)        ');
+    FDataSet.ParamByName('DESCRICAO').AsString := 'PRODUTOSWC';
+    FDataSet.ExecSQL;
+    FDataSet.Connection.Commit;
+  end;
+
+end;
+
+function TConexaoAPI.VerificaValidadeRefreshTokenNoBanco: string;
+begin
+  // Verifica se o token existente no banco ainda é válido
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM TBL_CONFIGURACAO_TRAY  ');
+  FDataSet.Open;
+  result := '';
+
+  if FDataSet.fieldbyname('refresh_token').AsString <> '' then
+  begin
+    if now > FDataSet.fieldbyname('dt_validade_refresh_token').asdatetime then
+    begin
+      result := FDataSet.fieldbyname('refresh_token').AsString;
+    end;
+  end;
+
+end;
+
+procedure TConexaoAPI.VerificaValidadeTokens;
+begin
+  if Frefresh_token <> '' then
+  begin
+    if now > Frefresh_token_dt_exp then
+    begin
+      GeraNovosTokens;
+    end;
+  end
+  else
+  begin
+    GeraNovosTokens;
+  end;
+
+  if Faccess_token <> '' then
+  begin
+    if now > Facess_token_dt_exp then
+    begin
+      GeraNovoAcessToken
+    end;
+  end
+  else
+  begin
+    GeraNovosTokens;
+  end;
+end;
+
+function TConexaoAPI.VerificaSeJaExisteProduto(pCodigoProduto: string): Boolean;
+begin
+  result := false;
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    FSku := pCodigoProduto;
+
+    GetProdutosAPI;
+
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      result := True;
+    end
+    else if (FRestResponse.StatusCode = 500) or (FRestResponse.StatusCode = 429) or (FRestResponse.StatusCode = 401)
+    then
+    begin
+      result := false;
+    end;
+  end
+  else
+  begin
+    showmessage('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.VerificaSeOClienteExisteNaBase(pCPFOuCNPJ: string): String;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' SELECT * FROM MC01CLIENTE        ');
+
+  if Length(trim(pCPFOuCNPJ)) = 11 then
+  begin
+    FDataSet.SQL.Add(' WHERE   MC01CPF = :codigo ');
+    FDataSet.ParamByName('codigo').AsString := pCPFOuCNPJ;
+  end
+  else
+  begin
+    FDataSet.SQL.Add(' WHERE   MC01CGC = :codigo ');
+    FDataSet.ParamByName('codigo').AsString := pCPFOuCNPJ;
+  end;
+
+  FDataSet.Open;
+  FDataSet.FetchAll;
+
+  if FDataSet.RecordCount > 0 then
+  begin
+    result := FDataSet.fieldbyname('MC01CODIGO').AsString;
+  end
+  else
+  begin
+    result := '';
+  end;
+
+end;
+
+function TConexaoAPI.VerificaSeTemProdutosParaEnviar: Boolean;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select * from tbl_integ_mc03pro_wc ');
+  FDataSet.Open;
+  result := FDataSet.RecordCount > 0;
+end;
+
+function TConexaoAPI.VersaoSistema: string;
+var
+  VerInfoSize, VerValueSize, Dummy: DWORD;
+  VerInfo: Pointer;
+  VerValue: PVSFixedFileInfo;
+  V1, V2, V3: Word;
+  cV1, cV2, cV3: string;
+  FileName: string;
+begin
+  FileName := application.exeName;
+  VerInfoSize := GetFileVersionInfoSize(PChar(FileName), Dummy);
+  GetMem(VerInfo, VerInfoSize);
+  GetFileVersionInfo(PChar(FileName), 0, VerInfoSize, VerInfo);
+  VerQueryValue(VerInfo, '', Pointer(VerValue), VerValueSize);
+  with VerValue^ do
+  begin
+    V1 := dwFileVersionMS shr 16;
+    V2 := dwFileVersionMS and $FFFF;
+    V3 := dwFileVersionLS shr 16;
+    // V4 := dwFileVersionLS and $FFFF;
+  end;
+  FreeMem(VerInfo, VerInfoSize);
+
+  cV1 := IntToStr(V1);
+  cV2 := IntToStr(V2);
+  cV3 := IntToStr(V3);
+  result := cV1 + '.' + cV2 + '.' + cV3;
+end;
+
+procedure TConexaoAPI.PassaUrlRestClient(pTipoServico: TServicoAPI);
+begin
+
+  case pTipoServico of
+    tEnviaNFeXml:
+      FRestClient.BaseURL := FUrlAPI + '/orders/' + FCodVendaSite + '/invoices';
+
+    tRecebeProduto:
+      FRestClient.BaseURL := FUrlAPI + 'products';
+
+    tRecebeUnicoProduto:
+      FRestClient.BaseURL := FUrlAPI + 'products';
+
+    tEnviaProduto:
+      FRestClient.BaseURL := FUrlAPI + 'products';
+
+    tDeletaProduto:
+      FRestClient.BaseURL := FUrlAPI + 'products/' + FCodProdutoSite;
+
+    tUpdateproduto:
+      FRestClient.BaseURL := FUrlAPI + 'products/' + FCodProdutoSite;
+
+    tUpdateVariacaoproduto:
+      FRestClient.BaseURL := FUrlAPI + 'products/variants/' + FCodVariacaoProduto;
+
+    tRecebeUnicaVariacaoproduto:
+      FRestClient.BaseURL := FUrlAPI + 'products/variants/';
+
+    tRecebeCategoria:
+      FRestClient.BaseURL := FUrlAPI + 'categories/tree';
+
+    tRecebeVenda:
+      FRestClient.BaseURL := FUrlAPI + 'orders';
+
+    tRecebeVendaCompleta:
+      FRestClient.BaseURL := FUrlAPI + 'orders/' + FCodVendaSite + '/complete';
+
+    tRecebeStatus:
+      FRestClient.BaseURL := FUrlAPI + 'orders/statuses';
+
+    tEnviaVenda:
+      FRestClient.BaseURL := FUrlAPI + '';
+
+    tDeletaVenda:
+      FRestClient.BaseURL := FUrlAPI + '/orders/' + FCodVendaSite;
+
+    tDeletaProdutoVenda:
+      FRestClient.BaseURL := FUrlAPI + '/orders/excludeProduct/' + FCodVendaSite + '/' + FCodProdutoSite + '/';
+
+    tUpdateVenda:
+      FRestClient.BaseURL := FUrlAPI + '/orders/' + FCodVendaSite + '/';
+
+    tRecebeInformacaoLoja:
+      FRestClient.BaseURL := FUrlAPI + 'info';
+  end;
+end;
+
+function TConexaoAPI.PegaTotalRegistrosCabecalho: Integer;
+var
+  lJson: TJSONObject;
+begin
+
+  if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+  begin
+    lJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+    lJson := lJson.GetValue<TJSONObject>('paging') as TJSONObject;
+
+    if lJson.GetValue<String>('total') <> '' then
+    begin
+      result := lJson.GetValue<Integer>('total');
+    end;
+  end;
+end;
+
+function TConexaoAPI.EnviaNotaXML(pJson: string): string;
+var
+  lContaRegistros: Integer;
+
+begin
+  result := '';
+
+  begin
+    VerificaValidadeTokens;
+
+    ConfiguraConexaoComAPI(rmPOST, tEnviaNFeXml, pJson);
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      VerificaValidadeTokens;
+
+      ConfiguraConexaoComAPI(rmPOST, tEnviaNFeXml, pJson);
+    end;
+  end;
+end;
+
+function TConexaoAPI.EnviaProdutos(pJson: string): string;
+var
+  lContaRegistros: Integer;
+
+begin
+  result := '';
+
+  begin
+    VerificaValidadeTokens;
+    ConfiguraConexaoComAPI(rmPOST, tEnviaProduto, pJson);
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      VerificaValidadeTokens;
+      ConfiguraConexaoComAPI(rmPOST, tEnviaProduto, pJson);
+    end;
+  end;
+end;
+
+function TConexaoAPI.EnviaVendas(pJson: string): string;
+begin
+  BuscaConfiguracoesTray;
+  VerificaValidadeTokens;
+end;
+
+procedure TConexaoAPI.FiltraCDS(pCds: TFDMemTable; pVenda: string);
+begin
+  pCds.Filtered := false;
+  pCds.Filter := 'pedido = ' + pVenda;
+  pCds.Filtered := True;
+end;
+
+function TConexaoAPI.TamString(pString: string; pTamanho: Integer): string;
+begin
+  result := Copy(pString, 1, pTamanho);
+end;
+
+procedure TConexaoAPI.CarregaConfiguracaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit);
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add('  select                              ');
+  FDataSet.SQL.Add('   STATUS_BAIXAR                      ');
+  FDataSet.SQL.Add(' , STATUS_POS_BAIXAR                  ');
+  FDataSet.SQL.Add(' , STATUS_ENVIAR_NOTA                 ');
+  FDataSet.SQL.Add('  from TBL_CONFIGURACAO_TRAY          ');
+  FDataSet.SQL.Add(' WHERE  ID = :ID                      ');
+  FDataSet.ParamByName('ID').AsInteger := 1;
+  FDataSet.Open;
+
+  pStatusBaixar.Text := FDataSet.fieldbyname('STATUS_BAIXAR').AsString;
+  pStatusPosBaixar.Text := FDataSet.fieldbyname('STATUS_POS_BAIXAR').AsString;
+  pStatusEnviarNota.Text := FDataSet.fieldbyname('STATUS_ENVIAR_NOTA').AsString;
+end;
+
+procedure TConexaoAPI.CarregaDescricaoCategoria(pProdutoID, pCategoriaID: TEdit; plblProduto, plblCategoria: TLabel);
+begin
+  if trim(pProdutoID.Text) <> '' then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  select                              ');
+    FDataSet.SQL.Add('   p.AC03CODI                         ');
+    FDataSet.SQL.Add('  ,p.ID_CATEGORIA_SITE                ');
+    FDataSet.SQL.Add('  ,p.AC03DESC                         ');
+    FDataSet.SQL.Add('  ,c.ID                               ');
+    FDataSet.SQL.Add('  ,c.DESCRICAO                        ');
+    FDataSet.SQL.Add('  from MC03PRO p                       ');
+    FDataSet.SQL.Add('  left join CATEGORIA_PRODUTO_TRAY c  ');
+    FDataSet.SQL.Add('  on  p.ID_CATEGORIA_SITE =  c.ID             ');
+    FDataSet.SQL.Add('  WHERE  p.AC03CODI  = :ID               ');
+    FDataSet.ParamByName('ID').AsString := pProdutoID.Text;
+    FDataSet.Open;
+
+    pCategoriaID.Text := FDataSet.fieldbyname('ID').AsString;
+    plblCategoria.Caption := FDataSet.fieldbyname('DESCRICAO').AsString;
+    plblProduto.Caption := FDataSet.fieldbyname('AC03DESC').AsString;
+  end;
+
+end;
+
+procedure TConexaoAPI.CarregaDescricaoStatus(pStatusBaixar, pStatusPosBaixar, pStatusEnviarNota: TEdit;
+  plblStatusBaixar, plblStatusPosBaixar, plblStatusEnviarNota: TLabel);
+begin
+
+  if trim(pStatusBaixar.Text) <> '' then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  select  * from STATUS_VENDA_TRAY    ');
+    FDataSet.SQL.Add(' WHERE  ID = :ID                      ');
+    FDataSet.ParamByName('ID').AsString := pStatusBaixar.Text;
+    FDataSet.Open;
+
+    plblStatusBaixar.Caption := FDataSet.fieldbyname('DESCRICAO').AsString;
+  end;
+
+  if trim(pStatusPosBaixar.Text) <> '' then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  select  * from STATUS_VENDA_TRAY    ');
+    FDataSet.SQL.Add(' WHERE  ID = :ID                      ');
+    FDataSet.ParamByName('ID').AsString := pStatusPosBaixar.Text;
+    FDataSet.Open;
+
+    plblStatusPosBaixar.Caption := FDataSet.fieldbyname('DESCRICAO').AsString;
+  end;
+
+  if trim(pStatusEnviarNota.Text) <> '' then
+  begin
+    FDataSet.Close;
+    FDataSet.SQL.Clear;
+    FDataSet.SQL.Add('  select  * from STATUS_VENDA_TRAY    ');
+    FDataSet.SQL.Add(' WHERE  ID = :ID                      ');
+    FDataSet.ParamByName('ID').AsString := pStatusEnviarNota.Text;
+    FDataSet.Open;
+
+    plblStatusEnviarNota.Caption := FDataSet.fieldbyname('DESCRICAO').AsString;
+  end;
+end;
+
+function TConexaoAPI.CarregaIntervaloTempoEnvio: Integer;
+begin
+  FDataSet.Close;
+  FDataSet.SQL.Clear;
+  FDataSet.SQL.Add(' select                       ');
+  FDataSet.SQL.Add(' INTERVALO_ENVIO              ');
+  FDataSet.SQL.Add(' from TBL_CONFIGURACAO_TRAY   ');
+  FDataSet.Open;
+
+  if FDataSet.fieldbyname('INTERVALO_ENVIO').AsString = '10 minutos' then
+  begin
+    result := 600000;
+  end
+  else if FDataSet.fieldbyname('INTERVALO_ENVIO').AsString = '30 minutos' then
+  begin
+    result := 1800000;
+  end
+  else if FDataSet.fieldbyname('INTERVALO_ENVIO').AsString = '60 minutos' then
+  begin
+    result := 3600000;
+  end
+  else
+  begin
+    result := 0;
+  end;
+
+end;
+
+function TConexaoAPI.CarregaNFeInserirSite: Boolean;
+begin
+  FConsultaDFe.Close;
+  FConsultaDFe.SQL.Clear;
+  FConsultaDFe.SQL.Add(' SELECT * FROM TB_DFE                              ');
+  FConsultaDFe.SQL.Add(' WHERE XMOTIVO = ''Autorizado o uso da NF-e''      ');
+  FConsultaDFe.SQL.Add(' AND integrado = ''N''                             ');
+  FConsultaDFe.SQL.Add(' AND TIPO_DFE = 55                                 ');
+  FConsultaDFe.SQL.Add(' and ORIGEM is not null                            ');
+  FConsultaDFe.SQL.Add(' order by ID                                       ');
+  FConsultaDFe.Open;
+  result := FConsultaDFe.RecordCount > 0;
+end;
+
+function TConexaoAPI.CarregaNFeParaEnvio(pMemoEnviados: TMemo; pgauControle: TGauge): string;
+var
+  lNFe: TNFeXml;
+  i, TotalNotas: Integer;
+  lJson, ltxtNaoEnviados, lResposta: string;
+  lExisteNfe: Boolean;
+
+  procedure EnviaNota;
+  begin
+    FConsultaDFe.First;
+    pgauControle.progress := 0;
+    pgauControle.update;
+    pgauControle.MaxValue := FConsultaDFe.RecordCount;
+
+    while not(FConsultaDFe.Eof) do
+    begin
+      lJson := '';
+      FCodVendaSite := '';
+
+      pgauControle.progress := FConsultaDFe.Recno;
+      lNFe := TNFeXml.Create;
+      FCodVendaSite := FConsultaDFe.fieldbyname('ORIGEM').AsString;
+      lNFe.key := FConsultaDFe.fieldbyname('CHAVE_ACESSO').AsString;
+      lNFe.number := Copy(trim(FConsultaDFe.fieldbyname('CHAVE_ACESSO').AsString), 26, 9);
+      lNFe.serie := Copy(trim(FConsultaDFe.fieldbyname('CHAVE_ACESSO').AsString), 23, 3);
+      lNFe.issue_date := DecodificarData(FConsultaDFe.fieldbyname('DT_EMISSAO').asdatetime);
+      lNFe.xml_danfe := FConsultaDFe.fieldbyname('XML').AsString;
+      lNFe.Value := FConsultaDFe.fieldbyname('VL_TOTAL_NF').AsFloat;
+
+      lJson := lNFe.ToJson.ToString; // showmessage(lJson);
+
+      if trim(lJson) <> '' then
+      begin
+        EnviaNotaXML(lJson);
+
+        if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+        begin
+          AtualizaStatusEDataEnvioXml(FConsultaDFe.fieldbyname('ID').AsString);
+          pMemoEnviados.Lines.Add('Venda site: ' + FCodVendaSite + ' - ' + lNFe.key + ' ' + lNFe.number + ' - Enviado');
+        end
+        else
+        begin
+          FEnviarNFe := false;
+
+          if FRestResponse.StatusCode = 400 then
+          begin
+            if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+            begin
+              lResposta := ' - Motivo/Erro: ' + RetornaCausaErroEnvioNFe;
+            end;
+          end;
+
+          pMemoEnviados.Lines.Add('Venda site: ' + FCodVendaSite + ' - ' + lNFe.key + ' ' + lNFe.number +
+            ' - Não Enviado' + lResposta);
+          ltxtNaoEnviados := ltxtNaoEnviados + sLineBreak + lNFe.key + ' ' + lNFe.number + ' - Não Enviado' + lResposta;
+
+          GravaArquivoTxtLog(FRestResponse.Content, 'NFE');
+        end;
+      end;
+
+      FConsultaDFe.Next;
+    end;
+  end;
+
+begin
+  FDataInicio := now;
+  lExisteNfe := True;
+  BuscaConfiguracoesTray;
+  if ValidaCamposConfigAPI then
+  begin
+
+    if not(CarregaNFeInserirSite) then
+    begin
+      FMensagem := ('Não há NFe a ser enviado.');
+      result := '';
+      lExisteNfe := false;
+    end
+    else
+    begin
+      ltxtNaoEnviados := '';
+
+      FEnviarNFe := True;
+
+      if FConsultaDFe.RecordCount > 0 then
+      begin
+        EnviaNota;
+      end;
+
+      if trim(ltxtNaoEnviados) <> '' then
+      begin
+        GravaArquivoTxtLog(ltxtNaoEnviados, 'NFe_nao_enviados');
+      end;
+    end;
+
+  end
+  else
+  begin
+    FMensagem := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+end;
+
+function TConexaoAPI.CarregaProdutosParaEnvio(pMemoEnviados, pMemoRecusados: TMemo; pgauControle: TGauge): string;
+var
+  lProduto: TProduto;
+  lProdutoVariacao: TProdutoVariacao;
+  lObjectJson, lJsonRetornoInsert: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  i: Integer;
+  lJson, lIDProdutoTray, ltxtNaoEnviados: string;
+  lExisteProdutos, lExisteProdutosInserir, lExisteProdutosUpdate, lExisteVariacaoProdutos: Boolean;
+  lData: TDateTime;
+  lResposta, lDescVar: string;
+
+  procedure TratamentoRetornoHttpEnvioProduto;
+  begin
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      lIDProdutoTray := '';
+
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+      begin
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('id') <> '' then
+        begin
+          lIDProdutoTray := lObjectJson.GetValue<string>('id');
+        end;
+      end;
+
+      FTotalProdutosIncluidos := FTotalProdutosIncluidos + 1;
+      AtualizaStatusEDataEnvioProduto(FConsulta.fieldbyname('AC03CODI').AsString, lIDProdutoTray, lProduto.SKU);
+      AtualizaStatusEnviadoTabelaIntegracao(FConsulta.fieldbyname('AC03CODI').AsString);
+      pMemoEnviados.Lines.Add('ID Site: ' + lIDProdutoTray + ' - ID MC: ' + FConsulta.fieldbyname('AC03CODI').AsString +
+        ' - ' + lProduto.Descricao + ' - Enviado');
+    end
+    else
+    begin
+      lResposta := '';
+      if FRestResponse.StatusCode = 400 then
+      begin
+        if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+        begin
+          lResposta := ' - Motivo/Erro: ' + RetornaCausaErroEnvioProduto(FConsulta.fieldbyname('AC03CODI').AsString);
+        end;
+      end;
+
+      // FStatusError := FStatusError + 1;
+
+      FEnviarProdutos := false;
+      FTotalProdutosIncluirErro := FTotalProdutosIncluirErro + 1;
+      pMemoRecusados.Lines.Add('ID MC: ' + FConsulta.fieldbyname('AC03CODI').AsString + ' ' + lProduto.Descricao +
+        ' - Não Enviado ' + lResposta);
+
+      ltxtNaoEnviados := ltxtNaoEnviados + sLineBreak + FConsulta.fieldbyname('AC03CODI').AsString + ' ' +
+        lProduto.Descricao + ' - Não Enviado ' + lResposta;
+    end;
+  end;
+
+  procedure TratamentoRetornoHttpUpdateProduto;
+  begin
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FTotalProdutosAlterados := FTotalProdutosAlterados + 1;
+      AtualizaStatusEDataEnvioProduto(FConsultaUP.fieldbyname('AC03CODI').AsString, '', '');
+      AtualizaStatusEnviadoTabelaIntegracao(FConsultaUP.fieldbyname('AC03CODI').AsString);
+      pMemoEnviados.Lines.Add('ID MC: ' + lProduto.SKU + ' - ' + lProduto.Descricao + ' - Alterado');
+    end
+    else
+    begin
+      FTotalProdutosAlterarErro := FTotalProdutosAlterarErro + 1;
+      FStatusError := FStatusError + 1;
+      FEnviarProdutos := false;
+
+      lResposta := '';
+      if FRestResponse.StatusCode = 400 then
+      begin
+        if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+        begin
+          lResposta := ' - Motivo/Erro: ' + RetornaCausaErroEnvioProduto(FConsultaUP.fieldbyname('AC03CODI').AsString);
+        end;
+      end;
+      FStatusError := FStatusError + 1;
+      FEnviarProdutos := false;
+      pMemoRecusados.Lines.Add('ID MC: ' + lProduto.SKU + ' - ' + lProduto.Descricao + ' - Não Alterado ' + lResposta);
+
+      ltxtNaoEnviados := ltxtNaoEnviados + sLineBreak + lProduto.SKU + ' ' + lProduto.Descricao +
+        ' - Não Alterado - Motivo/Erro: ' + IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content;
+
+      GravaArquivoTxtLog(ltxtNaoEnviados, 'Log_Produto_Nao_Alterado')
+    end;
+  end;
+  procedure TratamentoRetornoHttpUpdateVariacao;
+  begin
+    if (TamString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      pMemoEnviados.Lines.Add('ID MC: ' + lProdutoVariacao.SKU + ' ' + lDescVar + ' - ' +
+        lProdutoVariacao.CodigoVariacao + ' - Variação Alterada');
+    end
+    else
+    begin
+      FStatusError := FStatusError + 1;
+      FEnviarProdutos := false;
+
+      lResposta := '';
+      if FRestResponse.StatusCode = 400 then
+      begin
+        if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+        begin
+          lResposta := ' - Motivo/Erro: ' + RetornaCausaErroEnvioProduto(FConsultaUP.fieldbyname('AC03CODI').AsString);
+        end;
+      end;
+
+      pMemoRecusados.Lines.Add('ID MC: ' + lProdutoVariacao.SKU + ' - ' + lProdutoVariacao.CodigoVariacao +
+        ' - Variação Não Alterada ' + lResposta);
+
+      ltxtNaoEnviados := ltxtNaoEnviados + sLineBreak + lProdutoVariacao.SKU + ' ' + lDescVar + ' ' +
+        lProdutoVariacao.CodigoVariacao + ' - Variação Não Alterada - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content;
+
+      GravaArquivoTxtLog(ltxtNaoEnviados, 'Log_Produto_variacao_Nao_Alterada');
+    end;
+  end;
+
+  procedure InsertProdutoSite;
+  begin
+    FConsulta.First;
+    pgauControle.progress := 0;
+    pgauControle.update;
+    pgauControle.MaxValue := FConsulta.RecordCount;
+
+    while not(FConsulta.Eof) do
+    begin
+      lJson := '';
+      lIDProdutoTray := '';
+
+      lProduto := TProduto.Create;
+
+      if trim(FConsulta.fieldbyname('AC03_SKU').AsString) <> '' then
+      begin
+        lProduto.SKU := FConsulta.fieldbyname('AC03_SKU').AsString;
+      end
+      else
+      begin
+        lProduto.SKU := FConsulta.fieldbyname('AC03CODI').AsString;
+      end;
+
+      lProduto.Descricao := BuscaDescricao(FConsulta);
+      lProduto.DescricaoCurta := BuscaDescricaoCurta(FConsulta);
+      lProduto.DescricaoLonga := BuscaDescricaoLonga(FConsulta);
+
+      lProduto.CategoriaID := FConsulta.fieldbyname('ID_CATEGORIA_SITE').AsString;
+      lProduto.Modelo := 'Geral';
+      lProduto.Peso := Round(FConsulta.fieldbyname('AN03PESO_GRAMAS').AsFloat);
+
+      if FConsulta.fieldbyname('AN03_PROFUNDIDADE').AsFloat > 0 then
+      begin
+        lProduto.Comprimento := FConsulta.fieldbyname('AN03_PROFUNDIDADE').AsString;
+      end;
+
+      if FConsulta.fieldbyname('AN03_LARGURA').AsFloat > 0 then
+      begin
+        lProduto.Largura := FConsulta.fieldbyname('AN03_LARGURA').AsString;
+      end;
+
+      if FConsulta.fieldbyname('AN03_ALTURA').AsFloat > 0 then
+      begin
+        lProduto.Altura := FConsulta.fieldbyname('AN03_ALTURA').AsString;
+      end;
+
+      lProduto.CodigoBarras := FConsulta.fieldbyname('AC03CBR').AsString;
+      lProduto.Custo := FConsulta.fieldbyname('AN03CTCO').AsFloat;
+      lProduto.Preco := BuscaPrecoCorreto(FConsulta);
+
+      if FConsulta.fieldbyname('AC03_PROD_PROMO_SITE').AsString = 'S' then
+      begin
+        lProduto.PrecoPromocao := FConsulta.fieldbyname('AN03_PRECO_SITE_PROMO').AsFloat;
+        lProduto.InicioPromocao := DecodificarData(FConsulta.fieldbyname('AD03_DT_INI_PROM_SITE').asdatetime);
+        lProduto.FimPromocao := DecodificarData(FConsulta.fieldbyname('AD03_DT_FIM_PROM_SITE').asdatetime);
+      end;
+
+      lProduto.Marca := FConsulta.fieldbyname('AC03_MARCA').AsString;
+      lProduto.ProdutoDisponivel := 1;
+      lProduto.DataLancamento := DecodificarData(now);
+      lProduto.ProdutoVirtual := 0;
+      lProduto.NCM := FConsulta.fieldbyname('AC03_CODIGO_DCB').AsString;
+
+      if FConsulta.fieldbyname('AN03SLAM').AsFloat > 0 then
+      begin
+        lProduto.Estoque := Round(FConsulta.fieldbyname('AN03SLAM').AsFloat);
+      end
+      else
+      begin
+        lProduto.Estoque := 0;
+      end;
+
+      lJson := lProduto.ToJson.ToString; // ShowMessage(lJson);
+
+      if trim(lJson) <> '' then
+      begin
+        EnviaProdutos(lJson);
+        TratamentoRetornoHttpEnvioProduto;
+      end;
+
+      FConsulta.Next;
+      pgauControle.progress := FConsulta.Recno;
+    end;
+  end;
+
+  procedure UpdateProdutoSite;
+  var
+    lJsonUpdate: string;
+    lSku: string;
+  begin
+    FConsultaUP.First;
+    pgauControle.progress := 0;
+    pgauControle.update;
+    pgauControle.MaxValue := FConsultaUP.RecordCount;
+
+    while not(FConsultaUP.Eof) do
+    begin
+      lJson := '';
+      lIDProdutoTray := '';
+
+      lProduto := TProduto.Create;
+      if trim(FConsultaUP.fieldbyname('AC03_SKU').AsString) <> '' then
+      begin
+        lProduto.SKU := FConsultaUP.fieldbyname('AC03_SKU').AsString;
+      end
+      else
+      begin
+        lProduto.SKU := FConsultaUP.fieldbyname('AC03CODI').AsString;
+      end;
+
+      lProduto.Descricao := BuscaDescricaoUpdate(FConsultaUP);
+      lProduto.DescricaoCurta := BuscaDescricaoCurta(FConsultaUP);
+      lProduto.DescricaoLonga := BuscaDescricaoLonga(FConsultaUP);
+
+      lProduto.CategoriaID := FConsultaUP.fieldbyname('ID_CATEGORIA_SITE').AsString;
+      lProduto.Modelo := 'Geral';
+      if FConsultaUP.fieldbyname('AN03PESO_GRAMAS').AsFloat > 0 then
+      begin
+        lProduto.Peso := Round(FConsultaUP.fieldbyname('AN03PESO_GRAMAS').AsFloat);
+      end;
+      if FConsultaUP.fieldbyname('AN03_PROFUNDIDADE').AsFloat > 0 then
+      begin
+        lProduto.Comprimento := (FConsultaUP.fieldbyname('AN03_PROFUNDIDADE').AsString);
+      end;
+      if FConsultaUP.fieldbyname('AN03_LARGURA').AsFloat > 0 then
+      begin
+        lProduto.Largura := (FConsultaUP.fieldbyname('AN03_LARGURA').AsString);
+      end;
+      if FConsultaUP.fieldbyname('AN03_ALTURA').AsFloat > 0 then
+      begin
+        lProduto.Altura := (FConsultaUP.fieldbyname('AN03_ALTURA').AsString);
+      end;
+      lProduto.CodigoBarras := FConsultaUP.fieldbyname('AC03CBR').AsString;
+      lProduto.Custo := FConsultaUP.fieldbyname('AN03CTCO').AsFloat;
+      lProduto.Preco := BuscaPrecoCorreto(FConsultaUP);
+
+      if FConsultaUP.fieldbyname('AC03_PROD_PROMO_SITE').AsString = 'S' then
+      begin
+        lProduto.PrecoPromocao := FConsultaUP.fieldbyname('AN03_PRECO_SITE_PROMO').AsFloat;
+        lProduto.InicioPromocao := DecodificarData(FConsultaUP.fieldbyname('AD03_DT_INI_PROM_SITE').asdatetime);
+        lProduto.FimPromocao := DecodificarData(FConsultaUP.fieldbyname('AD03_DT_FIM_PROM_SITE').asdatetime);
+      end;
+
+      if FConsultaUP.fieldbyname('AN03SLAM').AsFloat > 0 then
+      begin
+        lProduto.Estoque := Round(FConsultaUP.fieldbyname('AN03SLAM').AsFloat);
+      end
+      else
+      begin
+        lProduto.Estoque := 0;
+      end;
+
+      lJson := lProduto.ToJson.ToString; // ShowMessage(lJson);
+
+      if trim(lJson) <> '' then
+      begin
+
+        if FConsultaUP.fieldbyname('AC03_SKU').AsString <> '' then
+        begin
+          lSku := FConsultaUP.fieldbyname('AC03_SKU').AsString;
+        end
+        else
+        begin
+          lSku := FConsultaUP.fieldbyname('AC03CODI').AsString;
+        end;
+
+        UpdateProduto(lJson, FConsultaUP.fieldbyname('ID_SITE').AsString, lSku);
+        TratamentoRetornoHttpUpdateProduto;
+      end;
+
+      FConsultaUP.Next;
+      pgauControle.progress := FConsultaUP.Recno;
+    end;
+  end;
+
+  procedure UpdateProdutoVariacaoSite;
+  var
+    lJsonUpdate: string;
+    lSku: string;
+  begin
+    FConsultaVar.First;
+
+    while not(FConsultaVar.Eof) do
+    begin
+      lJson := '';
+      lIDProdutoTray := '';
+      lDescVar := '';
+      lDescVar := BuscaDescricaoUpdate(FConsultaVar);
+
+      lProdutoVariacao := TProdutoVariacao.Create;
+
+      if trim(FConsultaVar.fieldbyname('AC03_SKU').AsString) <> '' then
+      begin
+        lProdutoVariacao.SKU := FConsultaVar.fieldbyname('AC03_SKU').AsString;
+      end
+      else
+      begin
+        lProdutoVariacao.SKU := FConsultaVar.fieldbyname('AC03CODI').AsString;
+      end;
+
+      lProdutoVariacao.Custo := FConsultaVar.fieldbyname('AN03CTCO').AsFloat;
+      lProdutoVariacao.Preco := BuscaPrecoCorreto(FConsultaVar);
+
+      if FConsultaVar.fieldbyname('AN03SLAM').AsFloat > 0 then
+      begin
+        lProdutoVariacao.Estoque := Round(FConsultaVar.fieldbyname('AN03SLAM').AsFloat);
+      end
+      else
+      begin
+        lProdutoVariacao.Estoque := 0;
+      end;
+
+      lJson := lProdutoVariacao.ToJson.ToString; // showmessage(lJson);
+
+      if trim(lJson) <> '' then
+      begin
+
+        if FConsultaVar.fieldbyname('AC03_SKU').AsString <> '' then
+        begin
+          lSku := FConsultaVar.fieldbyname('AC03_SKU').AsString;
+        end
+        else
+        begin
+          lSku := FConsultaVar.fieldbyname('AC03CODI').AsString;
+        end;
+
+        UpdateVariacaoProduto(lJson, FConsultaVar.fieldbyname('AC03_IDVARIACAO').AsString, lSku);
+        TratamentoRetornoHttpUpdateVariacao;
+      end;
+
+      FConsultaVar.Next;
+    end;
+  end;
+  procedure TotalizadorRegistrosNoMemo;
+  begin
+
+    // pMemoEnviados
+    if FTotalProdutosIncluidos > 0 then
+    begin
+      // tmemo
+    end;
+
+    if FTotalProdutosAlterados > 0 then
+    begin
+
+    end;
+
+    if FTotalProdutosIncluirErro > 0 then
+    begin
+
+    end;
+
+    if FTotalProdutosAlterarErro > 0 then
+    begin
+
+    end;
+  end;
+
+begin
+  FDataInicio := now;
+  FStatusError := 0;
+
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalProdutosIncluidos := 0;
+  FTotalProdutosAlterados := 0;
+  FTotalProdutosAlterarErro := 0;
+  FTotalProdutosIncluirErro := 0;
+
+  BuscaConfiguracoesTray;
+
+  if ValidaCamposConfigAPI then
+  begin
+    lExisteProdutosInserir := CarregaQryProdutosInserirSite(UltimaDataAttProdutosAPI);
+    lExisteProdutosUpdate := CarregaQryProdutosUpdateSite(UltimaDataAttProdutosAPI);
+    lExisteVariacaoProdutos := CarregaQryProdutosVariacaoUpdateSite(UltimaDataAttProdutosAPI);
+
+    if not(lExisteProdutosInserir) and not(lExisteProdutosUpdate) and not(lExisteVariacaoProdutos) then
+    begin
+      Mensagem := ('Não há mais produtos a ser enviado.');
+      result := '';
+      lExisteProdutos := false;
+    end
+    else
+    begin
+      ltxtNaoEnviados := '';
+      FEnviarProdutos := True;
+      lExisteProdutos := True;
+
+      if FConsulta.RecordCount > 0 then
+      begin
+        InsertProdutoSite;
+      end;
+
+      if FConsultaUP.RecordCount > 0 then
+      begin
+        UpdateProdutoSite;
+      end;
+
+      if FConsultaVar.RecordCount > 0 then
+      begin
+        UpdateProdutoVariacaoSite;
+      end;
+
+      if trim(ltxtNaoEnviados) <> '' then
+      begin
+        GravaArquivoTxtLog(ltxtNaoEnviados, 'Produtos_nao_enviados');
+      end;
+
+      TotalizadorRegistrosNoMemo;
+
+      // if FStatusError > 5 then
+      // begin
+      // ShowMessage('Problemas no envio/alterações dos produto, pode ser problemas de conexão.');
+      // end;
+    end;
+
+    if FEnviarProdutos then
+    begin
+      AttUltimaDataProdutosAPI(IncSecond(FDataInicio, 3));
+    end;
+
+  end
+  else
+  begin
+    FMensagem := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+initialization
+
+finalization
+
+TConexaoAPI.ReleaseMe;
+
+end.

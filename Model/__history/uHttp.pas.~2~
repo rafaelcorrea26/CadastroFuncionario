@@ -1,0 +1,45 @@
+unit uHttp;
+
+interface
+
+uses
+  System.JSON, REST.JSON, System.Generics.Collections, FireDAC.Comp.Client,
+  System.SysUtils;
+
+type
+  TTratamentosHttp = class;
+
+  TTratamentosHttp = class
+  private
+    FStatusRetorno: string;
+    FCausaErro: string;
+    FMensagemRetorno: string;
+
+  public
+    destructor Destroy; override;
+    property StatusRetorno: string read FStatusRetorno write FStatusRetorno;
+    property CausaErro: string read FCausaErro write FCausaErro;
+    property MensagemRetorno: string read FMensagemRetorno write FMensagemRetorno;
+
+    function ToJson: TJSONObject;
+
+    constructor Create;
+  end;
+
+implementation
+
+function TTratamentosHttp.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonObject(self);
+end;
+
+constructor TTratamentosHttp.Create;
+begin
+end;
+
+destructor TTratamentosHttp.Destroy;
+begin
+  inherited;
+end;
+
+end.

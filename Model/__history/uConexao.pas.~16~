@@ -1,0 +1,198 @@
+unit uConexao;
+
+interface
+
+uses
+  FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
+  FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.FB,
+  FireDAC.Phys.FBDef, FireDAC.VCLUI.Wait, Data.DB, FireDAC.Comp.Client, Vcl.Dialogs, Vcl.Forms;
+
+Type
+  TConexao = class(TInterfacedObject)
+  private
+    FConexao, FConexaoDFe: TFDConnection;
+    function ReturnPathDataBase: string;
+    function ReturnPathDataBaseDFe: string;
+    function Diretorio: string;
+
+    class var FObjetoConexao: TConexao;
+    class function GetObjetoConexao: TConexao; static;
+
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function ConnectionMC: TFDConnection;
+    function ConnectionDFe: TFDConnection;
+    class procedure ReleaseMe;
+
+    class property ObjetoConexao: TConexao read GetObjetoConexao write FObjetoConexao;
+
+  end;
+
+implementation
+
+uses
+  System.SysUtils;
+
+{ TConexao }
+
+function TConexao.ConnectionDFe: TFDConnection;
+begin
+  Result := FConexaoDFe;
+end;
+
+function TConexao.ConnectionMC: TFDConnection;
+begin
+  Result := FConexao;
+end;
+
+constructor TConexao.Create;
+begin
+  FConexao := TFDConnection.Create(nil);
+  FConexao.Params.DriverID := 'FB';
+  FConexao.Params.Database := ReturnPathDataBase;
+  FConexao.Params.UserName := 'SYSDBA';
+  FConexao.Params.Password := 'masterkey';
+  FConexao.Connected := true;
+
+  FConexaoDFe := TFDConnection.Create(nil);
+  FConexaoDFe.Params.DriverID := 'FB';
+  FConexaoDFe.Params.Database := ReturnPathDataBaseDFe;
+  FConexaoDFe.Params.UserName := 'SYSDBA';
+  FConexaoDFe.Params.Password := 'masterkey';
+  FConexaoDFe.Connected := true;
+  // showmessage('Banco conectou!.');
+end;
+
+destructor TConexao.Destroy;
+begin
+  FreeAndNil(FConexao);
+  FreeAndNil(FConexaoDFe);
+  inherited;
+end;
+
+function TConexao.ReturnPathDataBase: string;
+var
+  sArquivo: TextFile;
+  cHost: string;
+  cLocal: string;
+  cLocal2: String;
+  cCaminho, cTipo: string;
+  ARQUIVO_INI: string;
+  chora, cdata: string;
+  cGHost: string;
+
+begin
+  cGHost := '';
+
+  ARQUIVO_INI := Diretorio + 'McBancoFB.ini';
+
+  if FileExists(ARQUIVO_INI) then
+  begin
+    AssignFile(sArquivo, ARQUIVO_INI);
+    Reset(sArquivo);
+    Readln(sArquivo, cHost);
+    Readln(sArquivo, cLocal);
+    Readln(sArquivo, cTipo);
+    cHost := trim(Copy(cHost, 6, 100));
+    cLocal := trim(Copy(cLocal, 7, 150));
+    cTipo := trim(Copy(cTipo, 6, 15));
+
+    CloseFile(sArquivo);
+
+    cGHost := cHost;
+
+    cCaminho := cHost + ':' + cLocal;
+    // ShowMessage(cCaminho);
+    Result := cCaminho;
+
+  end;
+end;
+
+function TConexao.ReturnPathDataBaseDFe: string;
+var
+  sArquivo: TextFile;
+  cHost: string;
+  lLocal: string;
+  cLocal2: String;
+  lPath, cTipo: string;
+  ARQUIVO_INI: string;
+  chora, cdata: string;
+  cGHost: string;
+  lInteiro: Integer;
+
+begin
+  cGHost := '';
+
+  ARQUIVO_INI := Diretorio + 'McBancoFB.ini';
+
+  if FileExists(ARQUIVO_INI) then
+  begin
+    AssignFile(sArquivo, ARQUIVO_INI);
+    Reset(sArquivo);
+    Readln(sArquivo, cHost);
+    Readln(sArquivo, lLocal);
+    Readln(sArquivo, cTipo);
+    cHost := trim(Copy(cHost, 6, 100));
+    lLocal := trim(Copy(lLocal, 7, 150));
+    cTipo := trim(Copy(cTipo, 6, 15));
+
+    CloseFile(sArquivo);
+
+    cGHost := cHost;
+
+    lInteiro := POS('MCSISTEMASFB', lLocal);
+    if lInteiro = 0 then
+    begin
+      lPath := StringReplace(lLocal, 'MCEMPRESAFB.FDB', 'MCDFEFB.FDB', [rfReplaceAll]) // 20.04.00
+    end
+    else
+    begin
+      lPath := StringReplace(lLocal, 'MCSISTEMASFB.FDB', 'MCDFEFB.FDB', [rfReplaceAll]); // 20.04.00
+    end;
+
+    lPath := cHost + ':' + lPath;
+    // ShowMessage(cCaminho);
+
+    Result := lPath;
+
+  end;
+end;
+
+function TConexao.Diretorio: string;
+var
+  cDir: string;
+
+begin
+  cDir := ExtractFilePath(Application.exeName);
+  if Copy(cDir, Length(cDir), 1) <> '\' then
+    cDir := cDir + '\';
+  Result := cDir;
+end;
+
+class function TConexao.GetObjetoConexao: TConexao;
+begin
+  if NOT Assigned(FObjetoConexao) then
+  begin
+    FObjetoConexao := TConexao.Create;
+  end;
+
+  Result := FObjetoConexao;
+end;
+
+class procedure TConexao.ReleaseMe;
+begin
+  if Assigned(FObjetoConexao) then
+  begin
+    FreeAndNil(FObjetoConexao);
+  end;
+end;
+
+initialization
+
+finalization
+
+TConexao.ReleaseMe;
+
+end.

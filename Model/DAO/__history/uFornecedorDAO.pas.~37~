@@ -1,0 +1,538 @@
+unit uFornecedorDAO;
+
+interface
+
+uses
+  FireDAC.Comp.Client,
+  System.SysUtils,
+  System.StrUtils,
+  uConnection,
+  uInterfacesEntity,
+  uQuery,
+  uFornecedor,
+  uFunctions,
+  REST.JSON.Types, Vcl.Dialogs;
+
+type
+  TFornecedorDAO = class(TInterfacedObject, iFornecedorDAO)
+  private
+
+  public
+    class function Limpar(pFornecedor: TFornecedor): boolean;
+    class function Carrega(pFornecedor: TFornecedor): boolean;
+    class function Incluir(pFornecedor: TFornecedor): boolean;
+    class function Alterar(pFornecedor: TFornecedor): boolean;
+    class function Excluir(pCodigo: Integer): boolean;
+    class function Existe(pCodigo: Integer): boolean;
+    class function BuscaCodigoPeloCnpj(pCnpj: string): Integer;
+    class function BuscaCodigoPeloCpf(pCpf: string): Integer;
+    class function GeraProximoCodigo: Integer;
+
+  end;
+
+implementation
+
+{ TFornecedorMC }
+
+class function TFornecedorDAO.Alterar(pFornecedor: TFornecedor): boolean;
+var
+  lQuery: TQuery;
+begin
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('UPDATE MC02FORNEC SET                          ');
+    lQuery.SQL.Add('    MC02CODIGO          = :MC02CODIGO          ');
+    lQuery.SQL.Add('  , MC02NOME            = :MC02NOME            ');
+    lQuery.SQL.Add('  , MC02FANTASIA        = :MC02FANTASIA        ');
+    lQuery.SQL.Add('  , MC02ENDERECO        = :MC02ENDERECO        ');
+    lQuery.SQL.Add('  , MC02BAIRRO          = :MC02BAIRRO          ');
+    lQuery.SQL.Add('  , MC02CIDADE          = :MC02CIDADE          ');
+    lQuery.SQL.Add('  , MC02CEP             = :MC02CEP             ');
+    lQuery.SQL.Add('  , MC02UF              = :MC02UF              ');
+    lQuery.SQL.Add('  , MC02FONE            = :MC02FONE            ');
+    lQuery.SQL.Add('  , MC02FAX             = :MC02FAX             ');
+    lQuery.SQL.Add('  , MC02CELULAR         = :MC02CELULAR         ');
+    lQuery.SQL.Add('  , MC02EMAIL           = :MC02EMAIL           ');
+    lQuery.SQL.Add('  , MC02FISJUR          = :MC02FISJUR          ');
+    lQuery.SQL.Add('  , MC02ATIINATIVO      = :MC02ATIINATIVO      ');
+    lQuery.SQL.Add('  , MC02DTNASCTO        = :MC02DTNASCTO        ');
+    lQuery.SQL.Add('  , MC02CPF             = :MC02CPF             ');
+    lQuery.SQL.Add('  , MC02CI              = :MC02CI              ');
+    lQuery.SQL.Add('  , MC02CGC             = :MC02CGC             ');
+    lQuery.SQL.Add('  , MC02IE              = :MC02IE              ');
+    lQuery.SQL.Add('  , MC02ENDCOB          = :MC02ENDCOB          ');
+    lQuery.SQL.Add('  , MC02CIDADECOB       = :MC02CIDADECOB       ');
+    lQuery.SQL.Add('  , MC02BAIRROCOB       = :MC02BAIRROCOB       ');
+    lQuery.SQL.Add('  , MC02UFCOB           = :MC02UFCOB           ');
+    lQuery.SQL.Add('  , MC02CONTATO         = :MC02CONTATO         ');
+    lQuery.SQL.Add('  , MC02OBSGERAL        = :MC02OBSGERAL        ');
+    lQuery.SQL.Add('  , MC02DTMOV           = :MC02DTMOV           ');
+    lQuery.SQL.Add('  , MC02ULTIMANF        = :MC02ULTIMANF        ');
+    lQuery.SQL.Add('  , MC02VALORNF         = :MC02VALORNF         ');
+    lQuery.SQL.Add('  , MC02_ATACADO        = :MC02_ATACADO        ');
+    lQuery.SQL.Add('  , MC02TBLOCAL         = :MC02TBLOCAL         ');
+    lQuery.SQL.Add('  , MC02TBEXTRA         = :MC02TBEXTRA         ');
+    lQuery.SQL.Add('  , MC02FONE_CONTATO    = :MC02FONE_CONTATO    ');
+    lQuery.SQL.Add('  , MC02EMAIL_CONTATO   = :MC02EMAIL_CONTATO   ');
+    lQuery.SQL.Add('  , MC02_SEQUENCIA      = :MC02_SEQUENCIA      ');
+    lQuery.SQL.Add('  , MC02_SITE           = :MC02_SITE           ');
+    lQuery.SQL.Add('  , MC02_OBS1           = :MC02_OBS1           ');
+    lQuery.SQL.Add('  , MC02_OBS2           = :MC02_OBS2           ');
+    lQuery.SQL.Add('  , MC02_SPED_SN        = :MC02_SPED_SN        ');
+    lQuery.SQL.Add('  , MC02_COD_SEFAZ      = :MC02_COD_SEFAZ      ');
+    lQuery.SQL.Add('  , MC02_NR             = :MC02_NR             ');
+    lQuery.SQL.Add('  , MC02_ALTERAR_CUSTOS = :MC02_ALTERAR_CUSTOS ');
+    lQuery.SQL.Add('  , MC02REGIME          = :MC02REGIME          ');
+    lQuery.SQL.Add('  , MC02CNAE            = :MC02CNAE            ');
+    lQuery.SQL.Add('  , MC02CRT             = :MC02CRT             ');
+    lQuery.SQL.Add('WHERE MC02CODIGO        = :MC02CODIGO          ');
+    lQuery.ParamByName('MC02CODIGO').AsInteger := pFornecedor.Codigo;
+    lQuery.ParamByName('MC02NOME').AsString := copy(pFornecedor.Nome, 1, 35);
+    lQuery.ParamByName('MC02FANTASIA').AsString := copy(pFornecedor.Fantasia, 1, 20);
+    lQuery.ParamByName('MC02ENDERECO').AsString := copy(pFornecedor.Endereco, 1, 35);
+    lQuery.ParamByName('MC02BAIRRO').AsString := copy(pFornecedor.Bairro, 1, 20);
+    lQuery.ParamByName('MC02CIDADE').AsString := copy(pFornecedor.Cidade, 1, 30);
+    lQuery.ParamByName('MC02CEP').AsString := copy(pFornecedor.Cep, 1, 10);
+    lQuery.ParamByName('MC02UF').AsString := copy(pFornecedor.Uf, 1, 2);
+    lQuery.ParamByName('MC02FONE').AsString := copy(pFornecedor.Fone, 1, 15);
+    lQuery.ParamByName('MC02FAX').AsString := copy(pFornecedor.Fax, 1, 15);
+    lQuery.ParamByName('MC02CELULAR').AsString := copy(pFornecedor.Celular, 1, 15);
+    lQuery.ParamByName('MC02EMAIL').AsString := copy(pFornecedor.Email, 1, 50);
+    lQuery.ParamByName('MC02DTCADASTRO').AsDateTime := StrToDateTimedef(pFornecedor.data_cadastro, now);
+    lQuery.ParamByName('MC02FISJUR').AsString := tfunctions.GetSN(pFornecedor.pessoa_fisica);
+    lQuery.ParamByName('MC02ATIINATIVO').AsString := tfunctions.GetSN(pFornecedor.Ativo);
+    lQuery.ParamByName('MC02DTNASCTO').AsDate := StrToDatedef(pFornecedor.data_nascimento,now);
+    lQuery.ParamByName('MC02CPF').AsString := copy(pFornecedor.Cpf, 1, 11);
+    lQuery.ParamByName('MC02CI').AsString := copy(pFornecedor.carteira_identidade, 1, 10);
+    lQuery.ParamByName('MC02CGC').AsString := copy(pFornecedor.Cnpj, 1, 14);
+    lQuery.ParamByName('MC02IE').AsString := copy(pFornecedor.Ie, 1, 20);
+    lQuery.ParamByName('MC02ENDCOB').AsString := copy(pFornecedor.endereco_cobranca, 1, 35);
+    lQuery.ParamByName('MC02CIDADECOB').AsString := copy(pFornecedor.cidade_cobranca, 1, 30);
+    lQuery.ParamByName('MC02BAIRROCOB').AsString := copy(pFornecedor.bairro_cobranca, 1, 20);
+    lQuery.ParamByName('MC02UFCOB').AsString := copy(pFornecedor.uf_cobranca, 1, 2);
+    lQuery.ParamByName('MC02CONTATO').AsString := copy(pFornecedor.nome_representante, 1, 50);
+    lQuery.ParamByName('MC02OBSGERAL').AsString := pFornecedor.observacao_geral;
+    lQuery.ParamByName('MC02DTMOV').AsDate := StrToDatedef(pFornecedor.emissao_ultimo_movimento,now);
+    lQuery.ParamByName('MC02ULTIMANF').AsString := copy(pFornecedor.nota_fiscal_ultimo_movimento, 1, 10);
+    lQuery.ParamByName('MC02VALORNF').AsFloat := pFornecedor.valor_nota_fiscal_ultimo_movimento;
+    lQuery.ParamByName('MC02_ATACADO').AsString := tfunctions.GetSN(pFornecedor.utilizar_rotina_atacado);
+    lQuery.ParamByName('MC02TBLOCAL').AsInteger := pFornecedor.Localizacao;
+    lQuery.ParamByName('MC02TBEXTRA').AsInteger := pFornecedor.Extra;
+    lQuery.ParamByName('MC02FONE_CONTATO').AsString := copy(pFornecedor.fone_representante, 1, 15);
+    lQuery.ParamByName('MC02EMAIL_CONTATO').AsString := copy(pFornecedor.email_representante, 1, 50);
+    lQuery.ParamByName('MC02_SEQUENCIA').AsInteger := pFornecedor.Sequencia;
+    lQuery.ParamByName('MC02_SITE').AsString := copy(pFornecedor.Site, 1, 100);
+    lQuery.ParamByName('MC02_OBS1').AsString := copy(pFornecedor.Observacao1, 1, 150);
+    lQuery.ParamByName('MC02_OBS2').AsString := copy(pFornecedor.Observacao2, 1, 150);
+    lQuery.ParamByName('MC02_USU_CADASTRO').AsInteger := pFornecedor.usuario_cadastro;
+    lQuery.ParamByName('MC02_SPED_SN').AsString := tfunctions.GetSN(pFornecedor.Sped);
+    lQuery.ParamByName('MC02_COD_SEFAZ').AsString := copy(pFornecedor.codigo_cidade_ibge, 1, 14);
+    lQuery.ParamByName('MC02_NR').AsString := copy(pFornecedor.Numero, 1, 15);
+    lQuery.ParamByName('MC02_ALTERAR_CUSTOS').AsString := tfunctions.GetSN(pFornecedor.alterar_custos);
+    lQuery.ParamByName('MC02REGIME').AsInteger := pFornecedor.regime_tributario;
+    lQuery.ParamByName('MC02CNAE').AsString := copy(pFornecedor.CNAE, 1, 15);
+    lQuery.ParamByName('MC02CRT').AsInteger := pFornecedor.Crt;
+    lQuery.ExecSQL;
+
+    lQuery.Connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFornecedorDAO.BuscaCodigoPeloCnpj(pCnpj: string): Integer;
+var
+  lQuery: TQuery;
+  lIE: string;
+begin
+  Result := 0;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT MC02CODIGO FROM MC02FORNEC    ');
+    lQuery.SQL.Add(' WHERE MC02CGC = :CNPJ               ');
+    lQuery.ParamByName('CNPJ').AsString := pCnpj;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFornecedorDAO.BuscaCodigoPeloCpf(pCpf: string): Integer;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT MC02CPF FROM MC02FORNEC ');
+    lQuery.SQL.Add(' WHERE MC02CPF = :CPF          ');
+    lQuery.ParamByName('CPF').AsString := pCpf;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFornecedorDAO.Carrega(pFornecedor: TFornecedor): boolean;
+var
+  lConsulta: TQuery;
+begin
+
+  lConsulta := TQuery.Create(nil);
+  try
+    lConsulta.Close;
+    lConsulta.SQL.Clear;
+    lConsulta.SQL.Add(' select * from MC02FORNEC where MC02CODIGO = :CODIGO ');
+    lConsulta.ParamByName('CODIGO').AsInteger := pFornecedor.Codigo;
+    lConsulta.Open;
+
+    if lConsulta.RecordCount > 0 then
+    begin
+      // carrega dados
+      pFornecedor.Codigo := lConsulta.FieldByName('MC02CODIGO').AsInteger;
+      pFornecedor.Nome := lConsulta.FieldByName('MC02NOME').AsString;
+      pFornecedor.Fantasia := lConsulta.FieldByName('MC02FANTASIA').AsString;
+      pFornecedor.Endereco := lConsulta.FieldByName('MC02ENDERECO').AsString;
+      pFornecedor.Numero := lConsulta.FieldByName('MC02_NR').AsString;
+      pFornecedor.Bairro := lConsulta.FieldByName('MC02BAIRRO').AsString;
+      pFornecedor.Cidade := lConsulta.FieldByName('MC02CIDADE').AsString;
+      pFornecedor.Cep := lConsulta.FieldByName('MC02CEP').AsString;
+      pFornecedor.Ie := lConsulta.FieldByName('MC02IE').AsString;
+      pFornecedor.Fone := lConsulta.FieldByName('MC02FONE').AsString;
+      pFornecedor.Fax := lConsulta.FieldByName('MC02FAX').AsString;
+      pFornecedor.Celular := lConsulta.FieldByName('MC02CELULAR').AsString;
+      pFornecedor.Email := lConsulta.FieldByName('MC02EMAIL').AsString;
+      pFornecedor.codigo_cidade_ibge := lConsulta.FieldByName('MC02_COD_SEFAZ').AsString;
+      pFornecedor.Uf := lConsulta.FieldByName('MC02UF').AsString;
+      pFornecedor.Sped := lConsulta.FieldByName('MC02_SPED_SN').AsString = 'S';
+      pFornecedor.usuario_cadastro := lConsulta.FieldByName('MC02_USU_CADASTRO').AsInteger;
+      pFornecedor.Usuario_Alteracao := lConsulta.FieldByName('MC02_USU_ALTERACAO').AsInteger;
+      pFornecedor.Data_Alteracao := tfunctions.DecodeDateJson(lConsulta.FieldByName('MC02_DT_ALTERCAO').AsDateTime);
+      pFornecedor.data_cadastro := tfunctions.DecodeDateHourJson(lConsulta.FieldByName('MC02DTCADASTRO').AsDateTime);
+      pFornecedor.Ativo := (lConsulta.FieldByName('MC02ATIINATIVO').AsString = 'S');
+      pFornecedor.pessoa_fisica := (lConsulta.FieldByName('MC02FISJUR').AsString = 'S');
+      pFornecedor.Cpf := lConsulta.FieldByName('MC02CPF').AsString;
+      pFornecedor.Cnpj := lConsulta.FieldByName('MC02CGC').AsString;
+      pFornecedor.Site := lConsulta.FieldByName('MC02_SITE').AsString;
+      pFornecedor.Observacao1 := lConsulta.FieldByName('MC02_OBS1').AsString;
+      pFornecedor.Observacao2 := lConsulta.FieldByName('MC02_OBS2').AsString;
+      pFornecedor.endereco_cobranca := lConsulta.FieldByName('MC02ENDCOB').AsString;
+      pFornecedor.bairro_cobranca := lConsulta.FieldByName('MC02BAIRROCOB').AsString;
+      pFornecedor.cidade_cobranca := lConsulta.FieldByName('MC02CIDADECOB').AsString;
+      pFornecedor.Cep_Cobranca := lConsulta.FieldByName('MC02CEP').AsString;
+      pFornecedor.uf_cobranca := lConsulta.FieldByName('MC02UFCOB').AsString;
+      pFornecedor.Localizacao := lConsulta.FieldByName('MC02TBLOCAL').AsInteger;
+      pFornecedor.Extra := lConsulta.FieldByName('MC02TBEXTRA').AsInteger;
+      pFornecedor.utilizar_rotina_atacado := lConsulta.FieldByName('MC02_ATACADO').AsString = 'S';
+      pFornecedor.observacao_geral := lConsulta.FieldByName('MC02OBSGERAL').AsString;
+      pFornecedor.nome_representante := lConsulta.FieldByName('MC02CONTATO').AsString;
+      pFornecedor.fone_representante := lConsulta.FieldByName('MC02FONE_CONTATO').AsString;
+      pFornecedor.email_representante := lConsulta.FieldByName('MC02EMAIL_CONTATO').AsString;
+      pFornecedor.emissao_ultimo_movimento := tfunctions.DecodeDateJson(lConsulta.FieldByName('MC02DTMOV').AsDateTime);
+      pFornecedor.nota_fiscal_ultimo_movimento := lConsulta.FieldByName('MC02ULTIMANF').AsString;
+      pFornecedor.valor_nota_fiscal_ultimo_movimento := lConsulta.FieldByName('MC02VALORNF').AsFloat;
+      pFornecedor.data_nascimento := tfunctions.DecodeDateJson((lConsulta.FieldByName('MC02DTNASCTO').AsDateTime));
+      pFornecedor.carteira_identidade := lConsulta.FieldByName('MC02CI').AsString;
+      pFornecedor.Sequencia := lConsulta.FieldByName('MC02_SEQUENCIA').AsInteger;
+      pFornecedor.alterar_custos := lConsulta.FieldByName('MC02_ALTERAR_CUSTOS').AsString <> 'N';
+      pFornecedor.regime_tributario := lConsulta.FieldByName('MC02REGIME').AsInteger; // HS-100 // Vagner Oliveira
+      pFornecedor.Crt := lConsulta.FieldByName('MC02CRT').AsInteger; // HS-100 // Vagner Oliveira
+      pFornecedor.CNAE := lConsulta.FieldByName('MC02CNAE').AsString;
+    end;
+  finally
+    lConsulta.Free;
+  end;
+end;
+
+class function TFornecedorDAO.Limpar(pFornecedor: TFornecedor): boolean;
+begin
+  pFornecedor.Codigo := 0;
+  pFornecedor.Nome := emptystr;
+  pFornecedor.Fantasia := emptystr;
+  pFornecedor.Endereco := emptystr;
+  pFornecedor.Numero := emptystr;
+  pFornecedor.Bairro := emptystr;
+  pFornecedor.Cidade := emptystr;
+  pFornecedor.Cep := emptystr;
+  pFornecedor.Ie := emptystr;
+  pFornecedor.Fone := emptystr;
+  pFornecedor.Fax := emptystr;
+  pFornecedor.Celular := emptystr;
+  pFornecedor.Email := emptystr;
+  pFornecedor.codigo_cidade_ibge := emptystr;
+  pFornecedor.Uf := emptystr;
+  pFornecedor.Sped := false;
+  pFornecedor.usuario_cadastro := 0;
+  pFornecedor.Usuario_Alteracao := 0;
+  pFornecedor.Data_Alteracao := '';
+  pFornecedor.data_cadastro := '';
+  pFornecedor.Ativo := true;
+  pFornecedor.pessoa_fisica := true;
+  pFornecedor.Cpf := emptystr;
+  pFornecedor.Cnpj := emptystr;
+  pFornecedor.Site := emptystr;
+  pFornecedor.Observacao1 := emptystr;
+  pFornecedor.Observacao2 := emptystr;
+  pFornecedor.endereco_cobranca := emptystr;
+  pFornecedor.bairro_cobranca := emptystr;
+  pFornecedor.cidade_cobranca := emptystr;
+  pFornecedor.Cep_Cobranca := emptystr;
+  pFornecedor.uf_cobranca := emptystr;
+  pFornecedor.Localizacao := 0;
+  pFornecedor.Extra := 0;
+  pFornecedor.utilizar_rotina_atacado := false;
+  pFornecedor.observacao_geral := emptystr;
+  pFornecedor.nome_representante := emptystr;
+  pFornecedor.fone_representante := emptystr;
+  pFornecedor.email_representante := emptystr;
+  pFornecedor.emissao_ultimo_movimento := '';
+  pFornecedor.nota_fiscal_ultimo_movimento := emptystr;
+  pFornecedor.valor_nota_fiscal_ultimo_movimento := 0;
+  pFornecedor.data_nascimento := '';
+  pFornecedor.carteira_identidade := emptystr;
+  pFornecedor.Sequencia := 0;
+  pFornecedor.alterar_custos := false;
+  pFornecedor.regime_tributario := 0;
+  pFornecedor.Crt := 0;
+  pFornecedor.CNAE := emptystr;
+end;
+
+class function TFornecedorDAO.Excluir(pCodigo: Integer): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('DELETE FROM MC02FORNEC WHERE MC02CODIGO = :MC02CODIGO ');
+    lQuery.ParamByName('MC02CODIGO').AsInteger := pCodigo;
+    lQuery.ExecSQL;
+    lQuery.Connection.commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFornecedorDAO.Existe(pCodigo: Integer): boolean;
+var
+  lQuery: TQuery;
+begin
+  Result := false;
+  lQuery := TQuery.Create(nil);
+  try
+
+    lQuery.Connection := Tconnection.ObjectConnection.Connection;
+    lQuery.SQL.Add('SELECT * FROM MC02FORNEC WHERE MC02CODIGO = :CODIGO');
+    lQuery.ParamByName('CODIGO').AsInteger := pCodigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := true;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFornecedorDAO.GeraProximoCodigo: Integer;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT MAX(MC02CODIGO) + 1 PROXIMO_CODIGO FROM MC02FORNEC ');
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      Result := lQuery.FieldByName('PROXIMO_CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFornecedorDAO.Incluir(pFornecedor: TFornecedor): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('INSERT INTO MC02FORNEC (   ');
+    lQuery.SQL.Add('    MC02CODIGO             ');
+    lQuery.SQL.Add('  , MC02NOME               ');
+    lQuery.SQL.Add('  , MC02FANTASIA           ');
+    lQuery.SQL.Add('  , MC02ENDERECO           ');
+    lQuery.SQL.Add('  , MC02BAIRRO             ');
+    lQuery.SQL.Add('  , MC02CIDADE             ');
+    lQuery.SQL.Add('  , MC02CEP                ');
+    lQuery.SQL.Add('  , MC02UF                 ');
+    lQuery.SQL.Add('  , MC02FONE               ');
+    lQuery.SQL.Add('  , MC02FAX                ');
+    lQuery.SQL.Add('  , MC02CELULAR            ');
+    lQuery.SQL.Add('  , MC02EMAIL              ');
+    lQuery.SQL.Add('  , MC02DTCADASTRO         ');
+    lQuery.SQL.Add('  , MC02FISJUR             ');
+    lQuery.SQL.Add('  , MC02ATIINATIVO         ');
+    lQuery.SQL.Add('  , MC02DTNASCTO           ');
+    lQuery.SQL.Add('  , MC02CPF                ');
+    lQuery.SQL.Add('  , MC02CI                 ');
+    lQuery.SQL.Add('  , MC02CGC                ');
+    lQuery.SQL.Add('  , MC02IE                 ');
+    lQuery.SQL.Add('  , MC02ENDCOB             ');
+    lQuery.SQL.Add('  , MC02CIDADECOB          ');
+    lQuery.SQL.Add('  , MC02BAIRROCOB          ');
+    lQuery.SQL.Add('  , MC02UFCOB              ');
+    lQuery.SQL.Add('  , MC02CONTATO            ');
+    lQuery.SQL.Add('  , MC02OBSGERAL           ');
+    lQuery.SQL.Add('  , MC02DTMOV              ');
+    lQuery.SQL.Add('  , MC02ULTIMANF           ');
+    lQuery.SQL.Add('  , MC02VALORNF            ');
+    lQuery.SQL.Add('  , MC02_ATACADO           ');
+    lQuery.SQL.Add('  , MC02TBLOCAL            ');
+    lQuery.SQL.Add('  , MC02TBEXTRA            ');
+    lQuery.SQL.Add('  , MC02FONE_CONTATO       ');
+    lQuery.SQL.Add('  , MC02EMAIL_CONTATO      ');
+    lQuery.SQL.Add('  , MC02_SEQUENCIA         ');
+    lQuery.SQL.Add('  , MC02_SITE              ');
+    lQuery.SQL.Add('  , MC02_OBS1              ');
+    lQuery.SQL.Add('  , MC02_OBS2              ');
+    lQuery.SQL.Add('  , MC02_USU_CADASTRO      ');
+    lQuery.SQL.Add('  , MC02_SPED_SN           ');
+    lQuery.SQL.Add('  , MC02_COD_SEFAZ         ');
+    lQuery.SQL.Add('  , MC02_NR                ');
+    lQuery.SQL.Add('  , MC02_ALTERAR_CUSTOS    ');
+    lQuery.SQL.Add('  , MC02REGIME             ');
+    lQuery.SQL.Add('  , MC02CNAE               ');
+    lQuery.SQL.Add('  , MC02CRT                ');
+    lQuery.SQL.Add(' )VALUES (                 ');
+    lQuery.SQL.Add('    :MC02CODIGO            ');
+    lQuery.SQL.Add('  , :MC02NOME              ');
+    lQuery.SQL.Add('  , :MC02FANTASIA          ');
+    lQuery.SQL.Add('  , :MC02ENDERECO          ');
+    lQuery.SQL.Add('  , :MC02BAIRRO            ');
+    lQuery.SQL.Add('  , :MC02CIDADE            ');
+    lQuery.SQL.Add('  , :MC02CEP               ');
+    lQuery.SQL.Add('  , :MC02UF                ');
+    lQuery.SQL.Add('  , :MC02FONE              ');
+    lQuery.SQL.Add('  , :MC02FAX               ');
+    lQuery.SQL.Add('  , :MC02CELULAR           ');
+    lQuery.SQL.Add('  , :MC02EMAIL             ');
+    lQuery.SQL.Add('  , :MC02DTCADASTRO        ');
+    lQuery.SQL.Add('  , :MC02FISJUR            ');
+    lQuery.SQL.Add('  , :MC02ATIINATIVO        ');
+    lQuery.SQL.Add('  , :MC02DTNASCTO          ');
+    lQuery.SQL.Add('  , :MC02CPF               ');
+    lQuery.SQL.Add('  , :MC02CI                ');
+    lQuery.SQL.Add('  , :MC02CGC               ');
+    lQuery.SQL.Add('  , :MC02IE                ');
+    lQuery.SQL.Add('  , :MC02ENDCOB            ');
+    lQuery.SQL.Add('  , :MC02CIDADECOB         ');
+    lQuery.SQL.Add('  , :MC02BAIRROCOB         ');
+    lQuery.SQL.Add('  , :MC02UFCOB             ');
+    lQuery.SQL.Add('  , :MC02CONTATO           ');
+    lQuery.SQL.Add('  , :MC02OBSGERAL          ');
+    lQuery.SQL.Add('  , :MC02DTMOV             ');
+    lQuery.SQL.Add('  , :MC02ULTIMANF          ');
+    lQuery.SQL.Add('  , :MC02VALORNF           ');
+    lQuery.SQL.Add('  , :MC02_ATACADO          ');
+    lQuery.SQL.Add('  , :MC02TBLOCAL           ');
+    lQuery.SQL.Add('  , :MC02TBEXTRA           ');
+    lQuery.SQL.Add('  , :MC02FONE_CONTATO      ');
+    lQuery.SQL.Add('  , :MC02EMAIL_CONTATO     ');
+    lQuery.SQL.Add('  , :MC02_SEQUENCIA        ');
+    lQuery.SQL.Add('  , :MC02_SITE             ');
+    lQuery.SQL.Add('  , :MC02_OBS1             ');
+    lQuery.SQL.Add('  , :MC02_OBS2             ');
+    lQuery.SQL.Add('  , :MC02_USU_CADASTRO     ');
+    lQuery.SQL.Add('  , :MC02_SPED_SN          ');
+    lQuery.SQL.Add('  , :MC02_COD_SEFAZ        ');
+    lQuery.SQL.Add('  , :MC02_NR               ');
+    lQuery.SQL.Add('  , :MC02_ALTERAR_CUSTOS   ');
+    lQuery.SQL.Add('  , :MC02REGIME            ');
+    lQuery.SQL.Add('  , :MC02CNAE              ');
+    lQuery.SQL.Add('  , :MC02CRT               ');
+    lQuery.SQL.Add('  )                        ');
+    lQuery.ParamByName('MC02CODIGO').AsInteger := pFornecedor.Codigo;
+    lQuery.ParamByName('MC02NOME').AsString := copy(pFornecedor.Nome, 1, 35);
+    lQuery.ParamByName('MC02FANTASIA').AsString := copy(pFornecedor.Fantasia, 1, 20);
+    lQuery.ParamByName('MC02ENDERECO').AsString := copy(pFornecedor.Endereco, 1, 35);
+    lQuery.ParamByName('MC02BAIRRO').AsString := copy(pFornecedor.Bairro, 1, 20);
+    lQuery.ParamByName('MC02CIDADE').AsString := copy(pFornecedor.Cidade, 1, 30);
+    lQuery.ParamByName('MC02CEP').AsString := copy(pFornecedor.Cep, 1, 10);
+    lQuery.ParamByName('MC02UF').AsString := copy(pFornecedor.Uf, 1, 2);
+    lQuery.ParamByName('MC02FONE').AsString := copy(pFornecedor.Fone, 1, 15);
+    lQuery.ParamByName('MC02FAX').AsString := copy(pFornecedor.Fax, 1, 15);
+    lQuery.ParamByName('MC02CELULAR').AsString := copy(pFornecedor.Celular, 1, 15);
+    lQuery.ParamByName('MC02EMAIL').AsString := copy(pFornecedor.Email, 1, 50);
+    lQuery.ParamByName('MC02DTCADASTRO').AsDateTime := StrToDateTimedef(pFornecedor.data_cadastro, now);
+    lQuery.ParamByName('MC02FISJUR').AsString := tfunctions.GetSN(pFornecedor.pessoa_fisica);
+    lQuery.ParamByName('MC02ATIINATIVO').AsString := tfunctions.GetSN(pFornecedor.Ativo);
+    lQuery.ParamByName('MC02DTNASCTO').AsDate := StrToDatedef(pFornecedor.data_nascimento,now);
+    lQuery.ParamByName('MC02CPF').AsString := copy(pFornecedor.Cpf, 1, 11);
+    lQuery.ParamByName('MC02CI').AsString := copy(pFornecedor.carteira_identidade, 1, 10);
+    lQuery.ParamByName('MC02CGC').AsString := copy(pFornecedor.Cnpj, 1, 14);
+    lQuery.ParamByName('MC02IE').AsString := copy(pFornecedor.Ie, 1, 20);
+    lQuery.ParamByName('MC02ENDCOB').AsString := copy(pFornecedor.endereco_cobranca, 1, 35);
+    lQuery.ParamByName('MC02CIDADECOB').AsString := copy(pFornecedor.cidade_cobranca, 1, 30);
+    lQuery.ParamByName('MC02BAIRROCOB').AsString := copy(pFornecedor.bairro_cobranca, 1, 20);
+    lQuery.ParamByName('MC02UFCOB').AsString := copy(pFornecedor.uf_cobranca, 1, 2);
+    lQuery.ParamByName('MC02CONTATO').AsString := copy(pFornecedor.nome_representante, 1, 50);
+    lQuery.ParamByName('MC02OBSGERAL').AsString := pFornecedor.observacao_geral;
+    lQuery.ParamByName('MC02DTMOV').AsDate := StrToDatedef(pFornecedor.emissao_ultimo_movimento,now);
+    lQuery.ParamByName('MC02ULTIMANF').AsString := copy(pFornecedor.nota_fiscal_ultimo_movimento, 1, 10);
+    lQuery.ParamByName('MC02VALORNF').AsFloat := pFornecedor.valor_nota_fiscal_ultimo_movimento;
+    lQuery.ParamByName('MC02_ATACADO').AsString := tfunctions.GetSN(pFornecedor.utilizar_rotina_atacado);
+    lQuery.ParamByName('MC02TBLOCAL').AsInteger := pFornecedor.Localizacao;
+    lQuery.ParamByName('MC02TBEXTRA').AsInteger := pFornecedor.Extra;
+    lQuery.ParamByName('MC02FONE_CONTATO').AsString := copy(pFornecedor.fone_representante, 1, 15);
+    lQuery.ParamByName('MC02EMAIL_CONTATO').AsString := copy(pFornecedor.email_representante, 1, 50);
+    lQuery.ParamByName('MC02_SEQUENCIA').AsInteger := pFornecedor.Sequencia;
+    lQuery.ParamByName('MC02_SITE').AsString := copy(pFornecedor.Site, 1, 100);
+    lQuery.ParamByName('MC02_OBS1').AsString := copy(pFornecedor.Observacao1, 1, 150);
+    lQuery.ParamByName('MC02_OBS2').AsString := copy(pFornecedor.Observacao2, 1, 150);
+    lQuery.ParamByName('MC02_USU_CADASTRO').AsInteger := pFornecedor.usuario_cadastro;
+    lQuery.ParamByName('MC02_SPED_SN').AsString := tfunctions.GetSN(pFornecedor.Sped);
+    lQuery.ParamByName('MC02_COD_SEFAZ').AsString := copy(pFornecedor.codigo_cidade_ibge, 1, 14);
+    lQuery.ParamByName('MC02_NR').AsString := copy(pFornecedor.Numero, 1, 15);
+    lQuery.ParamByName('MC02_ALTERAR_CUSTOS').AsString := tfunctions.GetSN(pFornecedor.alterar_custos);
+    lQuery.ParamByName('MC02REGIME').AsInteger := pFornecedor.regime_tributario;
+    lQuery.ParamByName('MC02CNAE').AsString := copy(pFornecedor.CNAE, 1, 15);
+    lQuery.ParamByName('MC02CRT').AsInteger := pFornecedor.Crt;
+    lQuery.ExecSQL;
+    lQuery.Connection.commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+end.

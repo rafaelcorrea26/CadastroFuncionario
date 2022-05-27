@@ -1,0 +1,453 @@
+unit uFunctions;
+
+interface
+
+uses
+  System.SysUtils,
+  Winapi.Windows,
+  Vcl.Forms,
+  uQuery,
+  uConnection,
+  System.Win.Registry,
+  Vcl.Dialogs,
+  System.Classes,
+  System.NetEncoding,
+  System.DateUtils;
+
+type
+  TFunctions = class;
+
+  TFunctions = class
+  private
+
+  public
+    destructor Destroy; override;
+    constructor Create;
+
+    class procedure UpdateLastDateSyncAPI(pDateTime: TDateTime);
+    class procedure CreateFileTxtLog(pJson, pNameTXT: string);
+    class procedure RegisterAppOnWindows(pProgram: string);
+    class procedure UpdateSentIntegrationTable(pTitle: string; pLastDateAtt: TDateTime);
+
+    class function SystemVersion: string;
+    class function ReturnNameCompany: string;
+    class function ReturnCodeCompany: string;
+    class function ReturnsLastDateSync: TDateTime; overload;
+    class function UploadTimeIntervalSend(pInterval: Integer): Integer;
+    class function TriggerValidation(pNameTrigger: string): Boolean;
+    class function DateServer: TDateTime;
+    class function IsDigit(pString: string): Boolean;
+    class function DecodeDateHour: string;
+    class function DecodeDateHourJson(pDate: TDateTime): string;
+    class function DecodeDateJson(pDate: TDateTime): string;
+    class function DecodeDateToken(pDate: string): TDateTime;
+    class function LengthString(pString: string; pLength: Integer): string;
+    class function ReturnAutorizationBase64String(pPassword: String): string;
+    class function FormatDateToString(pData: TDateTime): string;
+    class function RemoveCharac(aText: string; aOld: String = ''; aNew: String = '';
+      aRemoveTrim: Boolean = false): string;
+
+    class function CheckItsOkConfigAPI: Boolean;
+    class function ThereWasMovementInTheAPIConnection: Boolean;
+  end;
+
+implementation
+
+class procedure TFunctions.CreateFileTxtLog(pJson, pNameTXT: string);
+var
+  FBackupTxt: TStringList;
+  lPublicAppDirectory, lFileNameTxt, lFullPathFile: string;
+begin
+  FBackupTxt := TStringList.Create;
+  try
+    FBackupTxt.Text := pJson;
+    lPublicAppDirectory := ExtractFilePath(application.exeName) + 'Log_Erros\';
+    lFileNameTxt := pNameTXT + '_' + DecodeDateHour + '.txt';
+    lFullPathFile := lPublicAppDirectory + lFileNameTxt;
+
+    if not DirectoryExists(lPublicAppDirectory) then
+    begin
+      ForceDirectories(lPublicAppDirectory);
+    end;
+
+    if DirectoryExists(lPublicAppDirectory) then
+    begin
+      FBackupTxt.SaveToFile(lFullPathFile);
+    end;
+  finally
+    FBackupTxt.Free;
+  end;
+end;
+
+class procedure TFunctions.RegisterAppOnWindows(pProgram: string);
+var
+  REG: TRegistry;
+begin
+  REG := TRegistry.Create;
+  try
+    REG.RootKey := HKEY_CURRENT_USER;
+    REG.OpenKey('Software\Microsoft\Windows\CurrentVersion\Run\', true);
+    REG.WriteString(pProgram, ParamStr(0));
+    REG.CloseKey;
+    ShowMessage('Programa adicionado na inicialização do Windows com sucesso!');
+  finally
+    REG.Free;
+  end;
+end;
+
+class function TFunctions.RemoveCharac(aText, aOld, aNew: String; aRemoveTrim: Boolean): string;
+const
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: Integer;
+begin
+  xTexto := aText;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := UpperCase(StringReplace(xTexto, UpperCase(xCarExt[i]), '', [rfReplaceAll]));
+  end;
+
+  if (aOld <> EmptyStr) and (aNew <> EmptyStr) then
+  begin
+    xTexto := UpperCase(StringReplace(xTexto, UpperCase(aOld), aNew, [rfReplaceAll]));
+  end;
+
+  if aRemoveTrim then
+  begin
+    xTexto := StringReplace(xTexto, ' ', '', [rfReplaceAll]);
+  end;
+
+  result := UpperCase(xTexto);
+
+end;
+
+class function TFunctions.CheckItsOkConfigAPI: Boolean;
+begin
+
+end;
+
+constructor TFunctions.Create;
+begin
+end;
+
+class function TFunctions.FormatDateToString(pData: TDateTime): string;
+var
+  lData: string;
+begin
+  lData := FormatDateTime('mm/dd/yyyy', (pData));
+  result := lData;
+
+end;
+
+class function TFunctions.DateServer: TDateTime;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT ');
+    lQuery.SQL.Add('   CURRENT_TIMESTAMP ');
+    lQuery.SQL.Add(' FROM RDB$DATABASE ');
+    lQuery.Open;
+
+    result := lQuery.FieldByName('CURRENT_TIMESTAMP').AsDateTime;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TFunctions.DecodeDateHour: string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(now, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + FormatFloat('00', lMonth) + FormatFloat('00', lDay) + FormatFloat('00', lHour) +
+    FormatFloat('00', lMin) + FormatFloat('00', lSec);
+
+end;
+
+class function TFunctions.DecodeDateHourJson(pDate: TDateTime): string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(pDate, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + '-' + FormatFloat('00', lMonth) + '-' + FormatFloat('00', lDay) + ' ' +
+    FormatFloat('00', lHour) + ':' + FormatFloat('00', lMin) + ':' + FormatFloat('00', lSec);
+
+end;
+
+class function TFunctions.DecodeDateJson(pDate: TDateTime): string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(pDate, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + '-' + FormatFloat('00', lMonth) + '-' + FormatFloat('00', lDay);
+
+end;
+
+class function TFunctions.DecodeDateToken(pDate: string): TDateTime;
+var
+  lDate, lDay, lMonth, lYear, lTime: string;
+begin
+  // "date_expiration_access_token": "2021-03-04 18:26:01",
+  // "date_expiration_refresh_token": "2021-04-03 15:26:01",
+  // "date_activated": "2021-03-04 15:26:01",
+
+  pDate := StringReplace(pDate, '-', '', [rfReplaceAll]);
+
+  lDay := Copy(pDate, 7, 2);
+  lMonth := Copy(pDate, 5, 2);
+  lYear := Copy(pDate, 1, 4);
+  lTime := Copy(pDate, 9, 9);
+  lDate := lDay + '/' + lMonth + '/' + lYear + ' ' + lTime;
+  result := StrToDateTime(lDate);
+
+end;
+
+destructor TFunctions.Destroy;
+begin
+  inherited;
+end;
+
+class function TFunctions.IsDigit(pString: string): Boolean;
+begin
+  result := true;
+  Try
+    strtoint(pString);
+  Except
+    result := false;
+  end;
+end;
+
+class function TFunctions.LengthString(pString: string; pLength: Integer): string;
+begin
+  result := Copy(pString, 1, pLength);
+end;
+
+class function TFunctions.ReturnAutorizationBase64String(pPassword: String): string;
+var
+  lTexto, lResult: string;
+  Base64: TBase64Encoding;
+begin
+
+  try
+    Base64 := TBase64Encoding.Create;
+    lResult := Base64.decode(lTexto);
+    lResult := Copy(lResult, 35, lResult.Length);
+
+    result := lResult;
+  except
+    on E: Exception do
+    begin
+      result := pPassword;
+    end;
+  end;
+
+end;
+
+class function TFunctions.ReturnCodeCompany: string;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    result := EmptyStr;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('  SELECT CODIGO_EMPRESA FROM TBL_CONFIGURACAO_CP  ');
+    lQuery.Open;
+    lQuery.FetchAll;
+    if lQuery.RecordCount > 0 then
+    begin
+      result := lQuery.FieldByName('CODIGO_EMPRESA').AsString;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFunctions.ReturnNameCompany: string;
+var
+  lQuery: TQuery;
+  lNomeEmpresa: string;
+begin
+
+  lNomeEmpresa := ReturnCodeCompany;
+
+  if trim(lNomeEmpresa) <> EmptyStr then
+  begin
+    lQuery := TQuery.Create(nil);
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' SELECT * FROM MC27PROP      ');
+      lQuery.SQL.Add(' WHERE AN27CODI = :AN27CODI  ');
+      lQuery.ParamByName('AN27CODI').AsString := lNomeEmpresa;
+      lQuery.Open;
+      result := 'Empresa: ' + lQuery.FieldByName('AN27CODI').AsString + ' - ' + lQuery.FieldByName('AC27NOME').AsString;
+    finally
+      lQuery.Free;
+    end;
+  end;
+end;
+
+class function TFunctions.ReturnsLastDateSync: TDateTime;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Open(' SELECT * FROM TBL_CONFIGURACAO_CP WHERE ID = 1');
+    result := lQuery.FieldByName('ULTIMA_SINC').AsDateTime;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFunctions.SystemVersion: string;
+var
+  VerInfoSize, VerValueSize, Dummy: DWORD;
+  VerInfo: Pointer;
+  VerValue: PVSFixedFileInfo;
+  V1, V2, V3: Word;
+  cV1, cV2, cV3: string;
+  FileName: string;
+begin
+  FileName := application.exeName;
+  VerInfoSize := GetFileVersionInfoSize(PChar(FileName), Dummy);
+  GetMem(VerInfo, VerInfoSize);
+  GetFileVersionInfo(PChar(FileName), 0, VerInfoSize, VerInfo);
+  VerQueryValue(VerInfo, '', Pointer(VerValue), VerValueSize);
+  with VerValue^ do
+  begin
+    V1 := dwFileVersionMS shr 16;
+    V2 := dwFileVersionMS and $FFFF;
+    V3 := dwFileVersionLS shr 16;
+    // V4 := dwFileVersionLS and $FFFF;
+  end;
+  FreeMem(VerInfo, VerInfoSize);
+
+  cV1 := IntToStr(V1);
+  cV2 := IntToStr(V2);
+  cV3 := IntToStr(V3);
+  result := cV1 + '.' + cV2 + '.' + cV3;
+
+end;
+
+class function TFunctions.ThereWasMovementInTheAPIConnection: Boolean;
+begin
+
+end;
+
+class function TFunctions.TriggerValidation(pNameTrigger: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+
+  lQuery := TQuery.Create(nil);
+  try
+    result := false;
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT * FROM RDB$TRIGGERS                                            ');
+    lQuery.SQL.Add(' WHERE UPPER(RDB$TRIGGER_NAME) = UPPER(' + QuotedStr(pNameTrigger) + ')');
+    lQuery.Open;
+    lQuery.FetchAll;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      result := true;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class procedure TFunctions.UpdateLastDateSyncAPI(pDateTime: TDateTime);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_CONFIGURACAO_CP     ');
+    lQuery.SQL.Add(' (ID, ULTIMA_SINC)                             ');
+    lQuery.SQL.Add(' VALUES (1 , :ULTIMA_SINC)                     ');
+    lQuery.SQL.Add(' MATCHING (ID)                                 ');
+    lQuery.ParamByName('ULTIMA_SINC').AsDateTime := pDateTime;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class procedure TFunctions.UpdateSentIntegrationTable(pTitle: string; pLastDateAtt: TDateTime);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' update TBL_INTEG_CP set               ');
+    lQuery.SQL.Add(' ENVIADO = ''S'',                      ');
+    lQuery.SQL.Add(' DATA_ATUALIZACAO = :DATA_ATUALIZACAO  ');
+    lQuery.SQL.Add(' where (TITULO = :TITULO)              ');
+    lQuery.ParamByName('TITULO').AsString := pTitle;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(pLastDateAtt, -1);
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TFunctions.UploadTimeIntervalSend(pInterval: Integer): Integer;
+begin
+  if pInterval = 0 then
+  begin
+    result := 60000;
+  end
+  else if pInterval = 1 then
+  begin
+    result := 120000;
+  end
+  else if pInterval = 2 then
+  begin
+    result := 300000;
+  end
+  else if pInterval = 3 then
+  begin
+    result := 600000;
+  end
+  else if pInterval = 4 then
+  begin
+    result := 1800000;
+  end
+  else if pInterval = 5 then
+  begin
+    result := 3600000;
+  end
+  else
+  begin
+    result := 0;
+  end;
+end;
+
+end.

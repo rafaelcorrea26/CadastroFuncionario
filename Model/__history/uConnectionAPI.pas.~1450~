@@ -1,0 +1,2867 @@
+unit uConnectionAPI;
+
+interface
+
+uses
+  REST.Client,
+  IPPeerClient,
+  Data.Bind.Components,
+  Data.Bind.ObjectScope,
+  REST.Response.Adapter,
+  REST.Types,
+  System.JSON,
+  System.Classes,
+  System.SysUtils,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  System.DateUtils,
+  REST.Authenticator.OAuth,
+  Vcl.StdCtrls,
+  FireDAC.VCLUI.Wait,
+  FireDAC.Stan.Intf,
+  FireDAC.Stan.Option,
+  FireDAC.Stan.Param,
+  FireDAC.Stan.Error,
+  FireDAC.DatS,
+  FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf,
+  FireDAC.Stan.Async,
+  FireDAC.DApt,
+  Data.DB,
+  FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client,
+  uSystem,
+  Winapi.Windows,
+  Vcl.ExtCtrls,
+  System.Math,
+  System.StrUtils,
+  Vcl.Grids,
+  System.Win.Registry,
+  Vcl.Samples.Gauges,
+  REST.Authenticator.Basic,
+  System.NetEncoding,
+  uQuery, uService, uConnection, uContasPagar, uFornecedor, uContasPagarMC,
+  uFornecedorMC;
+
+type
+  TConnectionAPI = class
+  private const
+    FUrlAPI: string = 'https://webmc.com.br/api_cpagar/public/api'; // 'http://192.168.1.121:8080/api'; //
+    FEmail: string = 'mcsistemas@mcsistemas.eti.br';
+    FSenha: string = '@mc2021!';
+
+  var
+    FChaveEmpresa: string;
+    FMainCompany: Boolean;
+    FLiberadoParaUso: Boolean;
+    FAutomaticSend: Boolean;
+    FConfigAutoSend: Boolean;
+    FIntervalSend: integer;
+    FAllowsUpdatingDateConfig: Boolean;
+    FCodeCompany: string;
+
+    FRefresh_Token: string;
+    FAccess_Token: string;
+    FRefresh_Token_Expires: TDateTime;
+    FAccess_Token_Expires: TDateTime;
+
+    FMessage: string;
+    FTotalCPGet: integer;
+    FTotalCPPosted: integer;
+    FTotalCPPut: integer;
+    FTotalCPDelete: integer;
+    FTotalCPError: integer;
+    FTotalCPPostedError: integer;
+    FTotalCPPutError: integer;
+
+    FTotalFNGet: integer;
+    FTotalFNPosted: integer;
+    FTotalFNPut: integer;
+    FTotalFNDelete: integer;
+    FTotalFNError: integer;
+    FTotalFNPostedError: integer;
+    FTotalFNPutError: integer;
+    FID: String;
+    FCnpjFN: string;
+    FDateTimeCP: string;
+    FTitle: string;
+    FContador: integer;
+
+{$REGION 'Status (HttpStatusCodeb)API'}
+    {
+      200 - OK.
+
+      401 - Unauthorized   - Valida do token.
+
+      404 - Not Found  - Não encontrou registro para put/delete.
+
+      409 - Conflict - registro já existe na api.
+
+      428 - Precondition Required - Fornecedor da cp não existe, dai chamo envio dele.
+
+      500 Internal Server Error - Problemas na API, caiu ou está tentando fazer algo que não existe
+    }
+{$ENDREGION}
+{$REGION 'Components for connection with API/Data Base'}
+    FConnection, FConnectionDFe: TFDConnection;
+    FRestClient: TRESTClient;
+    FRestRequest: TRESTRequest;
+    FRestResponse: TRESTResponse;
+    FBasicAuth: THTTPBasicAuthenticator;
+    FQueryInsertOneFN, FQueryUpdate, FQueryInsert, FQueryDelete, FQuerySearch: TFDQuery;
+
+    class var FConnectionAPI: TConnectionAPI;
+{$ENDREGION}
+{$REGION 'Méthods for configuration and connettion with API'}
+    procedure UrlRestClient(pType: TServiceAPI);
+    procedure ConfigConnectionAPI(pMethod: TRESTRequestMethod; pServico: TServiceAPI; pJson: string);
+    function ReturnKeyCompany: string;
+    class function GetConnectionAPI: TConnectionAPI; static;
+{$ENDREGION}
+{$REGION 'Méthods TOKEN'}
+    procedure CheckTokenValidity;
+    procedure GenerateToken;
+    procedure GenerateTokenAcess;
+
+    function ResultRefreshToken: String;
+    function ResultAccessToken: String;
+    function SaveAccessToken(pAccess: String; pDt_Access: TDateTime): Boolean;
+    function SaveToken(pRefresh, pAccess: String; pDt_Refresh, pDt_Access, pDateActive: TDateTime): Boolean;
+{$ENDREGION}
+{$REGION 'Méthods and Functions private'}
+    procedure UpdateSentIntegrationTable(pTitle: string; pLastDateAtt: TDateTime);
+
+    function IsDigit(pString: string): Boolean;
+    function RemoveCharac(aText: string; aOld: String = ''; aNew: String = ''; aRemoveTrim: Boolean = false): string;
+    function DecodeDateHour: string;
+    function DecodeDateHourJson(pDate: TDateTime): string;
+    function DecodeDateJson(pDate: TDateTime): string;
+    function DecodeDateToken(pDate: string): TDateTime;
+    function LengthString(pString: string; pLength: integer): string;
+    function ReturnAutorizationBase64String(pPassword: String): string;
+    function FormatDateToString(pData: TDateTime): string;
+
+    function LoadQryOneFNInsert(pCodeFN: String): Boolean;
+    function LoadQryFNInsert(pAll: Boolean = false): Boolean;
+    function LoadQryFNUpdate(pAll: Boolean = false): Boolean;
+    function LoadQryCPInsert(pAll: Boolean = false): Boolean;
+    function LoadQryCPUpdate(pAll: Boolean = false): Boolean;
+    function LoadQryCPDelete(pAll: Boolean = false): Boolean;
+
+    function UpdateFNsend(pCodeFN: string): Boolean;
+    function UpdateCPTitleEmp(pTitulo: string): Boolean;
+    function UpdateFNforResend(pCodeFN: string): Boolean;
+    function UpdateCPforResend(pTitle: string): Boolean;
+    function UpdateContaPagarSend(pTitle: string; pLastDateAtt: TDateTime): Boolean; overload;
+    function UpdateContaPagarSend(pTitle: string): Boolean; overload;
+    function ReturnFN(pCPF_CNPJ: String): integer;
+{$ENDREGION}
+{$REGION 'Messages'}
+{$ENDREGION}
+  public
+{$REGION ' Timers API'}
+    tmrCP: TTimer;
+{$ENDREGION}
+    constructor Create;
+    destructor Destroy; override;
+{$REGION 'Méthods Post'}
+    function LoadCPtoSend(pmmoGet, pmmoError: TMemo; pStartTime: TDateTime; pAll: Boolean = false): Boolean;
+    function LoadFNtoSend(pmmoGet, pmmoError: TMemo; pAll: Boolean = false): Boolean;
+
+    function SendOneFN(pCodeFN: String): Boolean;
+    function PostCPLoaded(pJson: String): Boolean;
+    function PostFNLoaded(pJson: String): Boolean;
+{$ENDREGION}
+{$REGION 'Méthods Get'}
+    function GetContasPagar(pmmoGet, pmmoError: TMemo; pAll: Boolean = false): Boolean;
+    function GetFornecedor(pmmoGet, pmmoError: TMemo): Boolean;
+    function GetFNbyCNPJ(pCNPJ: String): integer;
+{$ENDREGION}
+{$REGION 'Méthods Delete'}
+    function DeleteContasPagar(pTitulo, pData: String): Boolean;
+    function DeleteFornecedor(pCNPJ: String): Boolean;
+{$ENDREGION}
+{$REGION 'Méthods Update'}
+    function PutContasPagar(pJson: String): Boolean;
+    function PutFornecedor(pJson, pCNPJ: String): Boolean;
+{$ENDREGION}
+{$REGION 'Méthods and Functions publics'}
+    procedure ConfigAPI;
+    procedure ServerResponseToFile;
+    procedure RegisterAppOnWindows(pProgram: string);
+    procedure CreateFileTxtLog(pJson, pNameTXT: string);
+    procedure UpdateLastDateSyncAPI(pDateTime: TDateTime);
+
+    function ThereWasMovementInTheAPIConnection: Boolean;
+    function CheckItsOkConfigAPI: Boolean;
+
+    function SystemVersion: string;
+    function ReturnNameCompany: string;
+    function ReturnCodeCompany: string;
+    function ReturnsLastDateSync: TDateTime; overload;
+    function UploadTimeIntervalSend: integer;
+    function TriggerValidation(pNameTrigger: string): Boolean;
+    function DateServer: TDateTime;
+{$ENDREGION}
+    property TotalCPGet: integer read FTotalCPGet write FTotalCPGet;
+    property TotalCPPosted: integer read FTotalCPPosted write FTotalCPPosted;
+    property TotalCPPut: integer read FTotalCPPut write FTotalCPPut;
+    property TotalCPDelete: integer read FTotalCPDelete write FTotalCPDelete;
+    property TotalCPError: integer read FTotalCPError write FTotalCPError;
+    property TotalCPPostedError: integer read FTotalCPPostedError write FTotalCPPostedError;
+    property TotalCPPutError: integer read FTotalCPPutError write FTotalCPPutError;
+    property TotalFNGet: integer read FTotalFNGet write FTotalFNGet;
+    property TotalFNPosted: integer read FTotalFNPosted write FTotalFNPosted;
+    property TotalFNPut: integer read FTotalFNPut write FTotalFNPut;
+    property TotalFNDelete: integer read FTotalFNDelete write FTotalFNDelete;
+    property TotalFNError: integer read FTotalFNError write FTotalFNError;
+    property TotalFNPostedError: integer read FTotalFNPostedError write FTotalFNPostedError;
+    property TotalFNPutError: integer read FTotalFNPutError write FTotalFNPutError;
+    property MainCompany: Boolean read FMainCompany write FMainCompany;
+    property AllowsUpdatingDateConfig: Boolean read FAllowsUpdatingDateConfig write FAllowsUpdatingDateConfig;
+    property ConfigAutoSend: Boolean read FConfigAutoSend write FConfigAutoSend;
+    property AutomaticSend: Boolean read FAutomaticSend write FAutomaticSend;
+    property Contador: integer read FContador write FContador;
+    property Message: string read FMessage write FMessage;
+
+    class procedure ReleaseMe;
+    class property ConnectionAPI: TConnectionAPI read GetConnectionAPI write FConnectionAPI;
+  end;
+
+implementation
+
+{ TConnectionAPI }
+
+procedure TConnectionAPI.UpdateLastDateSyncAPI(pDateTime: TDateTime);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_CONFIGURACAO_CP     ');
+    lQuery.SQL.Add(' (ID, ULTIMA_SINC)                             ');
+    lQuery.SQL.Add(' VALUES (1 , :ULTIMA_SINC)                     ');
+    lQuery.SQL.Add(' MATCHING (ID)                                 ');
+    lQuery.ParamByName('ULTIMA_SINC').AsDateTime := pDateTime;
+    lQuery.ExecSQL;
+    FConnection.Commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+procedure TConnectionAPI.UpdateSentIntegrationTable(pTitle: string; pLastDateAtt: TDateTime);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' update TBL_INTEG_CP set               ');
+    lQuery.SQL.Add(' ENVIADO = ''S'',                      ');
+    lQuery.SQL.Add(' DATA_ATUALIZACAO = :DATA_ATUALIZACAO  ');
+    lQuery.SQL.Add(' where (TITULO = :TITULO)              ');
+    lQuery.ParamByName('TITULO').AsString := pTitle;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(pLastDateAtt, -1);
+    lQuery.ExecSQL;
+    FConnection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.LoadCPtoSend(pmmoGet, pmmoError: TMemo; pStartTime: TDateTime; pAll: Boolean = false): Boolean;
+var
+  lCP: TContasPagar;
+  lObjectJson, lJsonRetornoInsert: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  i: integer;
+  lJson, lIDFN, lMensagemErro: string;
+  lExisteCP, lExisteCPUpdate, lExisteCPDelete: Boolean;
+  lResposta, lTitulo: string;
+  lLastDateSinc: TDateTime;
+
+  procedure TratamentoRetornoHttpEnvio;
+  begin
+    if FRestResponse.StatusCode = 428 then
+    begin
+      UpdateFNforResend(FQueryInsert.FieldByName('AN08FORNEC').AsString);
+      SendOneFN(FQueryInsert.FieldByName('AN08FORNEC').AsString);
+      PostCPLoaded(lJson);
+    end;
+
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      lIDFN := '';
+      FTotalCPPosted := FTotalCPPosted + 1;
+      UpdateContaPagarSend(lTitulo, lLastDateSinc);
+      UpdateCPTitleEmp(lTitulo);
+      pmmoGet.Lines.Add('POST - Contas Pagar: ' + lTitulo + ' - Enviado - ' + DateTimeToStr(DateServer));
+    end
+    else if FRestResponse.StatusCode = 409 then
+    begin
+      UpdateContaPagarSend(lTitulo);
+      pmmoGet.Lines.Add('POST - Contas Pagar: ' + lTitulo + ' - Ja existia na API, o status foi trocado para enviado - '
+        + DateTimeToStr(DateServer));
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := false;
+      FTotalCPError := FTotalCPError + 1;
+      FTotalCPPostedError := FTotalCPPostedError + 1;
+
+      lMensagemErro := 'POST - Contas Pagar: ' + lTitulo + ' - ' + lCP.emissao + ' - Não Enviado - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content + ' - ' + DateTimeToStr(DateServer);
+      pmmoError.Lines.Add(lMensagemErro);
+      CreateFileTxtLog(lMensagemErro, 'log_cp_nao_enviados');
+    end;
+  end;
+
+  procedure TratamentoRetornoHttpUpdate;
+  begin
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FTotalCPPut := FTotalCPPut + 1;
+      UpdateSentIntegrationTable(lTitulo, lLastDateSinc);
+      pmmoGet.Lines.Add('PUT - Contas Pagar: ' + lTitulo + ' - ' + lCP.emissao + ' - Alterado - ' +
+        DateTimeToStr(DateServer));
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := false;
+
+      if FRestResponse.StatusCode = 428 then
+      begin
+        LoadFNtoSend(pmmoGet, pmmoError);
+        PostCPLoaded(lJson);
+      end;
+
+      if FRestResponse.StatusCode = 404 then
+      begin
+        UpdateCPforResend(lTitulo);
+      end;
+
+      if FRestResponse.StatusCode <> 200 then
+      begin
+        FTotalCPError := FTotalCPError + 1;
+        FTotalCPPutError := FTotalCPPutError + 1;
+      end;
+
+      lMensagemErro := 'PUT - Contas Pagar: ' + lTitulo + ' - Não Alterado - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content + ' - ' + DateTimeToStr(DateServer);
+      pmmoError.Lines.Add(lMensagemErro);
+      CreateFileTxtLog(lMensagemErro, 'LogCP_nao_alterado')
+    end;
+
+  end;
+
+  procedure TratamentoRetornoHttpDelete;
+  begin
+    if (FRestResponse.StatusCode = 200) or (FRestResponse.StatusCode = 404) then
+    begin
+      FTotalCPDelete := FTotalCPDelete + 1;
+      UpdateSentIntegrationTable(lTitulo, lLastDateSinc);
+      pmmoGet.Lines.Add('DELETE - Contas Pagar: ' + lTitulo + ' - Excluido - ' + DateTimeToStr(DateServer));
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := false;
+      FTotalCPError := FTotalCPError + 1;
+
+      lMensagemErro := lMensagemErro + sLineBreak + 'DELETE - Contas Pagar: ' + lTitulo +
+        ' - Não Excluido - Motivo/Erro: ' + IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content + ' - ' +
+        DateTimeToStr(DateServer);
+      pmmoError.Lines.Add(lMensagemErro);
+      CreateFileTxtLog(lMensagemErro, 'LogCP_Nao_Excluido');
+    end;
+
+  end;
+  function RetornaJsonEnvio: String;
+  begin
+
+    lTitulo := EmptyStr;
+    lJson := EmptyStr;
+    lIDFN := EmptyStr;
+    lTitulo := FQueryInsert.FieldByName('AC08TIT').AsString;
+    lCP := TContasPagar.Create;
+    lCP.data_ultima_alteracao := DecodeDateHourJson(IncSecond(pStartTime, -1));
+    lCP.chave_empresa := FChaveEmpresa;
+    lCP.titulo := ReturnCodeCompany + '-' + lTitulo;
+    lCP.emissao := DecodeDateJson(FQueryInsert.FieldByName('AD08EMISSAO').AsDateTime);
+    lCP.data_vencimento := DecodeDateJson(FQueryInsert.FieldByName('AD08VCTO').AsDateTime);
+    lCP.data_fluxo_caixa := DecodeDateJson(FQueryInsert.FieldByName('AD08FLUXO').AsDateTime);
+    lCP.data_pagamento := DecodeDateJson(FQueryInsert.FieldByName('AD08DTPGTO').AsDateTime);
+    lCP.origem_documento := FQueryInsert.FieldByName('AC08ORIG').AsString;
+    if trim(FQueryInsert.FieldByName('mc02cgc').AsString) <> EmptyStr then
+    begin
+      lCP.fornecedor := FQueryInsert.FieldByName('mc02cgc').AsString;
+    end
+    else if trim(FQueryInsert.FieldByName('mc02cpf').AsString) <> EmptyStr then
+    begin
+      lCP.fornecedor := FQueryInsert.FieldByName('mc02cpf').AsString;
+    end;
+    lCP.forma_pagamento := FQueryInsert.FieldByName('AC08FRPGTO').AsInteger;
+    lCP.conta_dre := FQueryInsert.FieldByName('AC08_CTA').AsString;
+    lCP.codigo_de_barras := FQueryInsert.FieldByName('AC08_COD_BARRAS').AsString;
+    lCP.situacao_documento := FQueryInsert.FieldByName('AC08SIT').AsString;
+    lCP.valor_original := FQueryInsert.FieldByName('An08Valor').AsFloat;
+    lCP.total_pago := FQueryInsert.FieldByName('An08TotalPago').AsFloat;
+    lCP.pagamentos := FQueryInsert.FieldByName('An08VlPago').AsFloat;
+    lCP.descontos := FQueryInsert.FieldByName('AN08DESC').AsFloat;
+    lCP.juros_pagos := FQueryInsert.FieldByName('AN08JUROS').AsFloat;
+    lCP.obs1 := FQueryInsert.FieldByName('AC08_OBS1').AsString;
+    lCP.obs2 := FQueryInsert.FieldByName('AC08_OBS2').AsString;
+    result := lCP.ToJson.ToString; // ShowMessage(result);
+  end;
+
+  function RetornaJsonUpdate: String;
+  begin
+    lJson := EmptyStr;
+    lIDFN := EmptyStr;
+    lTitulo := EmptyStr;
+    lTitulo := FQueryUpdate.FieldByName('AC08TIT').AsString;
+
+    lCP := TContasPagar.Create;
+    lCP.data_ultima_alteracao := DecodeDateHourJson(IncSecond(pStartTime, -1));
+    lCP.titulo := FQueryUpdate.FieldByName('AC08EMP_TIT').AsString;
+    lCP.emissao := DecodeDateJson(FQueryUpdate.FieldByName('AD08EMISSAO').AsDateTime);
+    lCP.data_vencimento := DecodeDateJson(FQueryUpdate.FieldByName('AD08VCTO').AsDateTime);
+    lCP.data_fluxo_caixa := DecodeDateJson(FQueryUpdate.FieldByName('AD08FLUXO').AsDateTime);
+    lCP.data_pagamento := DecodeDateJson(FQueryUpdate.FieldByName('AD08DTPGTO').AsDateTime);
+    lCP.origem_documento := FQueryUpdate.FieldByName('AC08ORIG').AsString;
+    if trim(FQueryUpdate.FieldByName('mc02cgc').AsString) <> EmptyStr then
+    begin
+      lCP.fornecedor := FQueryUpdate.FieldByName('mc02cgc').AsString;
+    end
+    else if trim(FQueryUpdate.FieldByName('mc02cpf').AsString) <> EmptyStr then
+    begin
+      lCP.fornecedor := FQueryUpdate.FieldByName('mc02cpf').AsString;
+    end;
+    lCP.forma_pagamento := FQueryUpdate.FieldByName('AC08FRPGTO').AsInteger;
+    lCP.conta_dre := FQueryUpdate.FieldByName('AC08_CTA').AsString;
+    lCP.codigo_de_barras := FQueryUpdate.FieldByName('AC08_COD_BARRAS').AsString;
+    lCP.situacao_documento := FQueryUpdate.FieldByName('AC08SIT').AsString;
+    lCP.valor_original := FQueryUpdate.FieldByName('An08Valor').AsFloat;
+    lCP.total_pago := FQueryUpdate.FieldByName('An08TotalPago').AsFloat;
+    lCP.pagamentos := FQueryUpdate.FieldByName('An08VlPago').AsFloat;
+    lCP.descontos := FQueryUpdate.FieldByName('AN08DESC').AsFloat;
+    lCP.juros_pagos := FQueryUpdate.FieldByName('AN08JUROS').AsFloat;
+    lCP.obs1 := FQueryUpdate.FieldByName('AC08_OBS1').AsString;
+    lCP.obs2 := FQueryUpdate.FieldByName('AC08_OBS2').AsString;
+    result := lCP.ToJson.ToString; // ShowMessage(result);
+  end;
+
+  procedure TotalizadorRegistrosNoMemo;
+  begin
+    if FTotalCPPosted > 0 then
+    begin
+      pmmoGet.Lines.Add('Total de CP incluidos: ' + TConnectionAPI.ConnectionAPI.TotalCPPosted.ToString);
+    end;
+
+    if FTotalCPPut > 0 then
+    begin
+      pmmoGet.Lines.Add('Total de CP alterados: ' + TConnectionAPI.ConnectionAPI.TotalCPPut.ToString);
+
+    end;
+
+    if FTotalCPPostedError > 0 then
+    begin
+      pmmoGet.Lines.Add('Total de CP inclusão com Erro: ' + TConnectionAPI.ConnectionAPI.TotalCPPostedError.ToString);
+    end;
+
+    if FTotalCPPutError > 0 then
+    begin
+      pmmoGet.Lines.Add('Total de CP alteração com Erro: ' + TConnectionAPI.ConnectionAPI.TotalCPPutError.ToString);
+    end;
+
+  end;
+
+begin
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalCPPosted := 0;
+  FTotalCPPut := 0;
+  FTotalCPDelete := 0;
+  FTotalCPPutError := 0;
+  FTotalCPPostedError := 0;
+  FTotalCPError := 0;
+  lLastDateSinc := IncMinute(ReturnsLastDateSync, -1);
+  result := true;
+
+  ConfigAPI;
+  if CheckItsOkConfigAPI then
+  begin
+    lExisteCP := LoadQryCPInsert;
+    lExisteCPUpdate := LoadQryCPUpdate;
+    lExisteCPDelete := LoadQryCPDelete;
+
+    if not(lExisteCP) and not(lExisteCPUpdate) and not(lExisteCPDelete) then
+    begin
+      FMessage := ('Não há mais Contas a serem enviadas.');
+      lExisteCP := false;
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := true;
+      lExisteCP := true;
+
+      if FQueryInsert.RecordCount > 0 then
+      begin
+        FQueryInsert.First;
+
+        while not(FQueryInsert.Eof) do
+        begin
+          lJson := RetornaJsonEnvio; // ShowMessage(lJson);
+
+          if trim(lJson) <> '' then
+          begin
+            PostCPLoaded(lJson);
+            TratamentoRetornoHttpEnvio;
+          end;
+          FQueryInsert.Next;
+        end;
+      end;
+
+      if FQueryUpdate.RecordCount > 0 then
+      begin
+        FQueryUpdate.First;
+
+        while not(FQueryUpdate.Eof) do
+        begin
+          lJson := RetornaJsonUpdate; // ShowMessage(lJson);
+
+          if trim(lJson) <> '' then
+          begin
+            PutContasPagar(lJson);
+            TratamentoRetornoHttpUpdate;
+          end;
+          FQueryUpdate.Next;
+        end;
+      end;
+
+      if FQueryDelete.RecordCount > 0 then
+      begin
+        FQueryDelete.First;
+
+        while not(FQueryDelete.Eof) do
+        begin
+          lTitulo := FQueryDelete.FieldByName('TITULO').AsString;
+          DeleteContasPagar(FQueryDelete.FieldByName('EMPRESA_TITULO').AsString,
+            DecodeDateHourJson(IncSecond(pStartTime, -1)));
+          TratamentoRetornoHttpDelete;
+          FQueryDelete.Next;
+        end;
+      end;
+
+      TotalizadorRegistrosNoMemo;
+    end;
+  end
+  else
+  begin
+    FMessage := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+function TConnectionAPI.LoadFNtoSend(pmmoGet, pmmoError: TMemo; pAll: Boolean = false): Boolean;
+var
+  lFN: Tfornecedor;
+  lObjectJson, lJsonRetornoInsert: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  i: integer;
+  lJson, lIDFN, lMensagemErro: string;
+  lExisteFN, lExisteFNUpdate: Boolean;
+  lResposta, lCodigoFN: string;
+  function RetornaJsonParaEnvioPost: String;
+  begin
+    lJson := EmptyStr;
+    lIDFN := EmptyStr;
+    lCodigoFN := EmptyStr;
+
+    lFN := Tfornecedor.Create;
+    lCodigoFN := FQueryInsert.FieldByName('MC02CODIGO').AsString;
+    lFN.cnpj := FQueryInsert.FieldByName('MC02CGC').AsString;
+    lFN.cpf := FQueryInsert.FieldByName('MC02CPF').AsString;
+    lFN.Nome := FQueryInsert.FieldByName('MC02NOME').AsString;
+    lFN.fantasia := FQueryInsert.FieldByName('MC02FANTASIA').AsString;
+    lFN.tipo := FQueryInsert.FieldByName('MC02FISJUR').AsString;
+    lFN.situacao := FQueryInsert.FieldByName('MC02ATIINATIVO').AsString;
+    lFN.endereco := FQueryInsert.FieldByName('MC02ENDERECO').AsString;
+    lFN.endereco_numero := FQueryInsert.FieldByName('MC02_NR').AsString;
+    lFN.endereco_bairro := FQueryInsert.FieldByName('MC02BAIRRO').AsString;
+    lFN.endereco_cidade := FQueryInsert.FieldByName('MC02CIDADE').AsString;
+    lFN.endereco_uf := FQueryInsert.FieldByName('MC02UF').AsString;
+    lFN.endereco_cep := FQueryInsert.FieldByName('MC02CEP').AsString;
+    lFN.codigo_cidade_sefaz := FQueryInsert.FieldByName('MC02_COD_SEFAZ').AsString;
+    lFN.telefone := FQueryInsert.FieldByName('MC02FONE').AsString;
+    lFN.celular := FQueryInsert.FieldByName('MC02CELULAR').AsString;;
+    lFN.email := FQueryInsert.FieldByName('MC02EMAIL').AsString;
+    lFN.cart_identidade := FQueryInsert.FieldByName('MC02CI').AsString;
+    lFN.insc_estadual := FQueryInsert.FieldByName('MC02IE').AsString;
+    lFN.obs1 := FQueryInsert.FieldByName('MC02_OBS1').AsString;
+    lFN.obs2 := FQueryInsert.FieldByName('MC02_OBS2').AsString;
+    lFN.atualizar_custos := FQueryInsert.FieldByName('MC02_ALTERAR_CUSTOS').AsString;
+    lFN.gerar_rel_sped := FQueryInsert.FieldByName('MC02_SPED_SN').AsString;
+    lFN.regime_tributario := FQueryInsert.FieldByName('MC02REGIME').AsInteger;
+    lFN.crt := FQueryInsert.FieldByName('MC02CRT').AsInteger;
+    lFN.cnae := FQueryInsert.FieldByName('MC02CNAE').AsString;
+    lFN.representante_nome := FQueryInsert.FieldByName('MC02CONTATO').AsString;
+    lFN.representante_telefone := FQueryInsert.FieldByName('MC02FONE_CONTATO').AsString;
+    lFN.representante_email := FQueryInsert.FieldByName('MC02EMAIL_CONTATO').AsString;
+    result := lFN.ToJson.ToString; // ShowMessage(lJson);
+  end;
+
+  function RetornaJsonParaEnvioPut: string;
+  begin
+    lJson := EmptyStr;
+    lIDFN := EmptyStr;
+    lCodigoFN := EmptyStr;
+    FCnpjFN := EmptyStr;
+
+    lFN := Tfornecedor.Create;
+    lCodigoFN := FQueryUpdate.FieldByName('MC02CODIGO').AsString;
+    lFN.cnpj := FQueryUpdate.FieldByName('MC02CGC').AsString;
+    lFN.cpf := FQueryUpdate.FieldByName('MC02CPF').AsString;
+    lFN.Nome := FQueryUpdate.FieldByName('MC02NOME').AsString;
+    lFN.fantasia := FQueryUpdate.FieldByName('MC02FANTASIA').AsString;
+    lFN.tipo := FQueryUpdate.FieldByName('MC02FISJUR').AsString;
+    lFN.situacao := FQueryUpdate.FieldByName('MC02ATIINATIVO').AsString;
+    lFN.endereco := FQueryUpdate.FieldByName('MC02ENDERECO').AsString;
+    lFN.endereco_numero := FQueryUpdate.FieldByName('MC02_NR').AsString;
+    lFN.endereco_bairro := FQueryUpdate.FieldByName('MC02BAIRRO').AsString;
+    lFN.endereco_cidade := FQueryUpdate.FieldByName('MC02CIDADE').AsString;
+    lFN.endereco_uf := FQueryUpdate.FieldByName('MC02UF').AsString;
+    lFN.endereco_cep := FQueryUpdate.FieldByName('MC02CEP').AsString;
+    lFN.codigo_cidade_sefaz := FQueryUpdate.FieldByName('MC02_COD_SEFAZ').AsString;
+    lFN.telefone := FQueryUpdate.FieldByName('MC02FONE').AsString;
+    lFN.celular := FQueryUpdate.FieldByName('MC02CELULAR').AsString;;
+    lFN.email := FQueryUpdate.FieldByName('MC02EMAIL').AsString;
+    lFN.cart_identidade := FQueryUpdate.FieldByName('MC02CI').AsString;
+    lFN.insc_estadual := FQueryUpdate.FieldByName('MC02IE').AsString;
+    lFN.obs1 := FQueryUpdate.FieldByName('MC02_OBS1').AsString;
+    lFN.obs2 := FQueryUpdate.FieldByName('MC02_OBS2').AsString;
+    lFN.atualizar_custos := FQueryUpdate.FieldByName('MC02_ALTERAR_CUSTOS').AsString;
+    lFN.gerar_rel_sped := FQueryUpdate.FieldByName('MC02_SPED_SN').AsString;
+    lFN.regime_tributario := FQueryUpdate.FieldByName('MC02REGIME').AsInteger;
+    lFN.crt := FQueryUpdate.FieldByName('MC02CRT').AsInteger;
+    lFN.cnae := FQueryUpdate.FieldByName('MC02CNAE').AsString;
+    lFN.representante_nome := FQueryUpdate.FieldByName('MC02CONTATO').AsString;
+    lFN.representante_telefone := FQueryUpdate.FieldByName('MC02FONE_CONTATO').AsString;
+    lFN.representante_email := FQueryUpdate.FieldByName('MC02EMAIL_CONTATO').AsString;
+
+    result := lFN.ToJson.ToString; // ShowMessage(lJson);
+
+  end;
+
+  procedure TratamentoRetornoHttpEnvio;
+  begin
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      lIDFN := '';
+      FTotalFNPosted := FTotalFNPosted + 1;
+      UpdateFNsend(lCodigoFN);
+      pmmoGet.Lines.Add('POST - Fornecedor: ' + lFN.Nome + ' - Enviado');
+    end
+    else if FRestResponse.StatusCode = 409 then
+    begin
+      UpdateFNsend(lCodigoFN);
+      pmmoGet.Lines.Add('POST - Fornecedor: ' + lFN.Nome + ' - Ja existia na API, o status foi trocado para enviado - '
+        + DateTimeToStr(DateServer));
+    end
+    else
+    begin
+      FAllowsUpdatingDateConfig := false;
+      result := false;
+
+      FTotalFNError := FTotalFNError + 1;
+      FTotalFNPostedError := FTotalFNPostedError + 1;
+      lMensagemErro := 'POST - Fornecedor: ' + lFN.Nome + ' - Não Enviado - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content + ' - ' + DateTimeToStr(DateServer);
+      pmmoError.Lines.Add(lMensagemErro);
+      CreateFileTxtLog(lMensagemErro, 'LogFN_nao_enviado');
+    end;
+  end;
+  procedure TratamentoRetornoHttpUpdate;
+  begin
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      FTotalFNPut := FTotalFNPut + 1;
+      UpdateFNsend(lCodigoFN);
+      pmmoGet.Lines.Add('PUT - Fornecedor: ' + lFN.Nome + ' - Alterado - ' + DateTimeToStr(DateServer));
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := false;
+      FTotalFNPutError := FTotalFNPutError + 1;
+      FTotalFNError := FTotalFNError + 1;
+      result := false;
+
+      if FRestResponse.StatusCode = 404 then
+      begin
+        UpdateFNforResend(lCodigoFN);
+      end;
+
+      lMensagemErro := 'PUT - Fornecedor: ' + lFN.Nome + ' - Não Alterado - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content + ' - ' + DateTimeToStr(DateServer);
+
+      pmmoError.Lines.Add(lMensagemErro);
+      CreateFileTxtLog(lMensagemErro, 'LogFN_Nao_Alterado')
+    end;
+
+  end;
+  procedure TotalizerMemoRecords;
+  var
+    lTemRegistros: Boolean;
+  begin
+
+    lTemRegistros := (FTotalCPPosted > 0) or (FTotalCPPut > 0) or (FTotalCPPostedError > 0) or (FTotalCPPutError > 0);
+
+    if lTemRegistros then
+    begin
+      if FTotalCPPosted > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de FN incluidos: ' + TConnectionAPI.ConnectionAPI.TotalFNPosted.ToString);
+      end;
+
+      if FTotalCPPut > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de FN alterados: ' + TConnectionAPI.ConnectionAPI.TotalFNPut.ToString);
+      end;
+
+      if FTotalCPPostedError > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de FN inclusão com Erro: ' + TConnectionAPI.ConnectionAPI.TotalFNPostedError.ToString);
+      end;
+
+      if FTotalCPPutError > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de FN alteração com Erro: ' + TConnectionAPI.ConnectionAPI.TotalFNPutError.ToString);
+      end;
+
+      pmmoGet.Lines.Add('----------------------------------------------------');
+    end;
+  end;
+
+begin
+  // variaveis para totalizar registros enviados/recebidos
+  FTotalFNPosted := 0;
+  FTotalFNPut := 0;
+  FTotalFNDelete := 0;
+  FTotalFNPutError := 0;
+  FTotalFNPostedError := 0;
+  result := true;
+  ConfigAPI;
+
+  if CheckItsOkConfigAPI then
+  begin
+    lExisteFN := LoadQryFNInsert;
+    lExisteFNUpdate := LoadQryFNUpdate;
+
+    if not(lExisteFN) and not(lExisteFNUpdate) then
+    begin
+      FMessage := ('Não há mais Fornecedores a ser enviado.');
+      lExisteFN := false;
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := true;
+      lExisteFN := true;
+
+      // Insert
+      if FQueryInsert.RecordCount > 0 then
+      begin
+        FQueryInsert.First;
+
+        while not(FQueryInsert.Eof) do
+        begin
+          lJson := RetornaJsonParaEnvioPost;
+          if trim(lJson) <> EmptyStr then
+          begin
+            PostFNLoaded(lJson);
+            TratamentoRetornoHttpEnvio;
+          end;
+          FQueryInsert.Next;
+        end;
+      end;
+
+      // Update
+      if FQueryUpdate.RecordCount > 0 then
+      begin
+        FQueryUpdate.First;
+
+        while not(FQueryUpdate.Eof) do
+        begin
+          lJson := RetornaJsonParaEnvioPost;
+          if trim(lJson) <> '' then
+          begin
+            if (trim(lFN.cnpj) <> EmptyStr) and (lFN.tipo = 'N') then
+            begin
+              PutFornecedor(lJson, lFN.cnpj);
+              TratamentoRetornoHttpUpdate;
+            end
+            else if (trim(lFN.cpf) <> EmptyStr) and (lFN.tipo = 'S') then
+            begin
+              PutFornecedor(lJson, lFN.cpf);
+              TratamentoRetornoHttpUpdate;
+            end;
+          end;
+          FQueryUpdate.Next;
+        end;
+      end;
+
+      TotalizerMemoRecords;
+    end;
+  end
+  else
+  begin
+    FMessage := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+function TConnectionAPI.UploadTimeIntervalSend: integer;
+begin
+  if FIntervalSend = 0 then
+  begin
+    result := 60000;
+  end
+  else if FIntervalSend = 1 then
+  begin
+    result := 120000;
+  end
+  else if FIntervalSend = 2 then
+  begin
+    result := 300000;
+  end
+  else if FIntervalSend = 3 then
+  begin
+    result := 600000;
+  end
+  else if FIntervalSend = 4 then
+  begin
+    result := 1800000;
+  end
+  else if FIntervalSend = 5 then
+  begin
+    result := 3600000;
+  end
+  else
+  begin
+    result := 0;
+  end;
+end;
+
+function TConnectionAPI.LoadQryCPInsert(pAll: Boolean = false): Boolean;
+begin
+  FQueryInsert.Close;
+  FQueryInsert.SQL.Clear;
+  FQueryInsert.SQL.Add(' select                                                                           ');
+  FQueryInsert.SQL.Add('   P.AC08TIT                                                                      ');
+  FQueryInsert.SQL.Add(' , P.AD08EMISSAO                                                                  ');
+  FQueryInsert.SQL.Add(' , P.AD08VCTO                                                                     ');
+  FQueryInsert.SQL.Add(' , P.AD08FLUXO                                                                    ');
+  FQueryInsert.SQL.Add(' , P.AD08DTPGTO                                                                   ');
+  FQueryInsert.SQL.Add(' , P.AC08ORIG                                                                     ');
+  FQueryInsert.SQL.Add(' , P.AC08SIT                                                                      ');
+  FQueryInsert.SQL.Add(' , P.AN08FORNEC                                                                   ');
+  FQueryInsert.SQL.Add(' , F.mc02cgc                                                                      ');
+  FQueryInsert.SQL.Add(' , F.mc02cpf                                                                      ');
+  FQueryInsert.SQL.Add(' , P.AC08FRPGTO                                                                   ');
+  FQueryInsert.SQL.Add(' , P.AC08_CTA                                                                     ');
+  FQueryInsert.SQL.Add(' , P.AC08_COD_BARRAS                                                              ');
+  FQueryInsert.SQL.Add(' , P.An08TotalPago                                                                ');
+  FQueryInsert.SQL.Add(' , P.An08Valor                                                                    ');
+  FQueryInsert.SQL.Add(' , P.An08VlPago                                                                   ');
+  FQueryInsert.SQL.Add(' , P.AN08DESC                                                                     ');
+  FQueryInsert.SQL.Add(' , P.AN08JUROS                                                                    ');
+  FQueryInsert.SQL.Add(' , P.AC08_OBS1                                                                    ');
+  FQueryInsert.SQL.Add(' , P.AC08_OBS2                                                                    ');
+  FQueryInsert.SQL.Add(' , P.AC08EMP_TIT                                                                  ');
+  FQueryInsert.SQL.Add(' , I.DATA_ATUALIZACAO dt_att                                                      ');
+  FQueryInsert.SQL.Add(' from MC08CPAG  P                                                                 ');
+  FQueryInsert.SQL.Add(' inner join  TBL_INTEG_CP I                                                       ');
+  FQueryInsert.SQL.Add(' on (P.AC08TIT = I.TITULO)                                                        ');
+  FQueryInsert.SQL.Add(' inner join  mc02fornec F                                                         ');
+  FQueryInsert.SQL.Add(' on (P.AN08FORNEC = F.mc02codigo)                                                 ');
+  FQueryInsert.SQL.Add(' WHERE I.DATA_ATUALIZACAO >= :ULTIMO_SINC                                         ');
+  FQueryInsert.SQL.Add(' and ((I.ENVIADO <> ' + QuotedStr('S') + ')  or (I.ENVIADO is null))              ');
+  FQueryInsert.SQL.Add(' order by P.AD08VCTO, P.AC08TIT                                                   ');
+  if pAll then
+  begin
+    FQueryInsert.ParamByName('ULTIMO_SINC').AsString := '01/01/2000 00:00:00';
+  end
+  else
+  begin
+    FQueryInsert.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  end;
+  FQueryInsert.Open;
+
+  result := FQueryInsert.RecordCount > 0;
+end;
+
+function TConnectionAPI.LoadQryCPUpdate(pAll: Boolean = false): Boolean;
+begin
+  FQueryUpdate.Close;
+  FQueryUpdate.SQL.Clear;
+  FQueryUpdate.SQL.Add(' select                                                                           ');
+  FQueryUpdate.SQL.Add('   P.AC08TIT                                                                      ');
+  FQueryUpdate.SQL.Add(' , P.AD08EMISSAO                                                                  ');
+  FQueryUpdate.SQL.Add(' , P.AD08VCTO                                                                     ');
+  FQueryUpdate.SQL.Add(' , P.AD08FLUXO                                                                    ');
+  FQueryUpdate.SQL.Add(' , P.AD08DTPGTO                                                                   ');
+  FQueryUpdate.SQL.Add(' , P.AC08ORIG                                                                     ');
+  FQueryUpdate.SQL.Add(' , P.AC08SIT                                                                      ');
+  FQueryUpdate.SQL.Add(' , P.AN08FORNEC                                                                   ');
+  FQueryUpdate.SQL.Add(' , F.mc02cgc                                                                      ');
+  FQueryUpdate.SQL.Add(' , F.mc02cpf                                                                      ');
+  FQueryUpdate.SQL.Add(' , P.AC08FRPGTO                                                                   ');
+  FQueryUpdate.SQL.Add(' , P.AC08_CTA                                                                     ');
+  FQueryUpdate.SQL.Add(' , P.AC08_COD_BARRAS                                                              ');
+  FQueryUpdate.SQL.Add(' , P.An08TotalPago                                                                ');
+  FQueryUpdate.SQL.Add(' , P.An08VlPago                                                                   ');
+  FQueryUpdate.SQL.Add(' , P.An08Valor                                                                    ');
+  FQueryUpdate.SQL.Add(' , P.AN08DESC                                                                     ');
+  FQueryUpdate.SQL.Add(' , P.AN08JUROS                                                                    ');
+  FQueryUpdate.SQL.Add(' , P.AC08_OBS1                                                                    ');
+  FQueryUpdate.SQL.Add(' , P.AC08_OBS2                                                                    ');
+  FQueryUpdate.SQL.Add(' , P.AC08EMP_TIT                                                                  ');
+  FQueryUpdate.SQL.Add(' , I.DATA_ATUALIZACAO dt_att                                                      ');
+  FQueryUpdate.SQL.Add(' from MC08CPAG  P                                                                 ');
+  FQueryUpdate.SQL.Add(' inner join  TBL_INTEG_CP I                                                       ');
+  FQueryUpdate.SQL.Add(' on (P.AC08TIT = I.TITULO)                                                        ');
+  FQueryUpdate.SQL.Add(' inner join  mc02fornec F                                                         ');
+  FQueryUpdate.SQL.Add(' on (P.AN08FORNEC = F.mc02codigo)                                                 ');
+  FQueryUpdate.SQL.Add(' WHERE I.DATA_ATUALIZACAO >= :ULTIMO_SINC                                         ');
+  FQueryUpdate.SQL.Add(' and I.ENVIADO = ''S''                                                            ');
+  FQueryUpdate.SQL.Add(' order by P.AD08VCTO, P.AC08TIT                                                   ');
+
+  if pAll then
+  begin
+    FQueryUpdate.ParamByName('ULTIMO_SINC').AsString := '01/01/2000 00:00:00';
+  end
+  else
+  begin
+    FQueryUpdate.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  end;
+
+  FQueryUpdate.Open;
+
+  result := FQueryUpdate.RecordCount > 0;
+end;
+
+function TConnectionAPI.LoadQryCPDelete(pAll: Boolean = false): Boolean;
+begin
+  FQueryDelete.Close;
+  FQueryDelete.SQL.Clear;
+  FQueryDelete.SQL.Add(' SELECT                                      ');
+  FQueryDelete.SQL.Add('    TITULO                                   ');
+  FQueryDelete.SQL.Add(' ,  EMPRESA_TITULO                           ');
+  FQueryDelete.SQL.Add(' , DATA_ATUALIZACAO dt_att                   ');
+  FQueryDelete.SQL.Add(' from TBL_INTEG_CP                           ');
+  FQueryDelete.SQL.Add(' WHERE DATA_ATUALIZACAO >= :ULTIMO_SINC      ');
+  FQueryDelete.SQL.Add(' and ENVIADO = ''S''                         ');
+  FQueryDelete.SQL.Add(' and EXCLUIDO = ''S''                        ');
+  FQueryDelete.SQL.Add(' order by EMPRESA_TITULO asc                 ');
+  if pAll then
+  begin
+    FQueryDelete.ParamByName('ULTIMO_SINC').AsString := '01/01/2000 00:00:00';
+  end
+  else
+  begin
+    FQueryDelete.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  end;
+  FQueryDelete.Open;
+
+  result := FQueryDelete.RecordCount > 0;
+end;
+
+function TConnectionAPI.LoadQryFNInsert(pAll: Boolean = false): Boolean;
+begin
+  FQueryInsert.Close;
+  FQueryInsert.SQL.Clear;
+  FQueryInsert.SQL.Add('    select                                                                ');
+  FQueryInsert.SQL.Add('    F.MC02CODIGO                                                          ');
+  FQueryInsert.SQL.Add('  , F.MC02CGC                                                             ');
+  FQueryInsert.SQL.Add('  , F.MC02CPF                                                             ');
+  FQueryInsert.SQL.Add('  , F.MC02NOME                                                            ');
+  FQueryInsert.SQL.Add('  , F.MC02FANTASIA                                                        ');
+  FQueryInsert.SQL.Add('  , F.MC02FISJUR                                                          ');
+  FQueryInsert.SQL.Add('  , F.MC02ATIINATIVO                                                      ');
+  FQueryInsert.SQL.Add('  , F.MC02ENDERECO                                                        ');
+  FQueryInsert.SQL.Add('  , F.MC02_NR                                                             ');
+  FQueryInsert.SQL.Add('  , F.MC02BAIRRO                                                          ');
+  FQueryInsert.SQL.Add('  , F.MC02CIDADE                                                          ');
+  FQueryInsert.SQL.Add('  , F.MC02UF                                                              ');
+  FQueryInsert.SQL.Add('  , F.MC02CEP                                                             ');
+  FQueryInsert.SQL.Add('  , F.MC02_COD_SEFAZ                                                      ');
+  FQueryInsert.SQL.Add('  , F.MC02FONE                                                            ');
+  FQueryInsert.SQL.Add('  , F.MC02CELULAR                                                         ');
+  FQueryInsert.SQL.Add('  , F.MC02EMAIL                                                           ');
+  FQueryInsert.SQL.Add('  , F.mc02ci                                                              ');
+  FQueryInsert.SQL.Add('  , F.MC02IE                                                              ');
+  FQueryInsert.SQL.Add('  , F.MC02_OBS1                                                           ');
+  FQueryInsert.SQL.Add('  , F.MC02_OBS2                                                           ');
+  FQueryInsert.SQL.Add('  , F.MC02_ALTERAR_CUSTOS                                                 ');
+  FQueryInsert.SQL.Add('  , F.MC02_SPED_SN                                                        ');
+  FQueryInsert.SQL.Add('  , F.MC02REGIME                                                          ');
+  FQueryInsert.SQL.Add('  , F.MC02CRT                                                             ');
+  FQueryInsert.SQL.Add('  , F.MC02CNAE                                                            ');
+  FQueryInsert.SQL.Add('  , F.MC02CONTATO                                                         ');
+  FQueryInsert.SQL.Add('  , F.MC02FONE_CONTATO                                                    ');
+  FQueryInsert.SQL.Add('  , F.MC02EMAIL_CONTATO                                                   ');
+  FQueryInsert.SQL.Add('  , F.MC02CI                                                              ');
+  FQueryInsert.SQL.Add('  , I.DATA_ATUALIZACAO dt_att                                             ');
+  FQueryInsert.SQL.Add('  from MC02FORNEC F                                                       ');
+  FQueryInsert.SQL.Add('  inner join  tbl_integ_fn I                                              ');
+  FQueryInsert.SQL.Add('  on (F.MC02CODIGO = I.codigo)                                            ');
+  FQueryInsert.SQL.Add('  WHERE I.DATA_ATUALIZACAO >= :ULTIMO_SINC                                ');
+  FQueryInsert.SQL.Add(' and ((I.ENVIADO <> ' + QuotedStr('S') + ')  or (I.ENVIADO is null))      ');
+  FQueryInsert.SQL.Add('  order by MC02CODIGO asc                                                 ');
+  if pAll then
+  begin
+    FQueryInsert.ParamByName('ULTIMO_SINC').AsString := '01/01/2000 00:00:00';
+  end
+  else
+  begin
+    FQueryInsert.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  end;
+  FQueryInsert.Open;
+  FQueryInsert.FetchAll;
+
+  result := FQueryInsert.RecordCount > 0;
+end;
+
+function TConnectionAPI.LoadQryFNUpdate(pAll: Boolean = false): Boolean;
+begin
+  FQueryUpdate.Close;
+  FQueryUpdate.SQL.Clear;
+  FQueryUpdate.SQL.Add('     select                                       ');
+  FQueryUpdate.SQL.Add('    F.MC02CODIGO                                  ');
+  FQueryUpdate.SQL.Add('  , F.MC02CGC                                     ');
+  FQueryUpdate.SQL.Add('  , F.MC02CPF                                     ');
+  FQueryUpdate.SQL.Add('  , F.MC02NOME                                    ');
+  FQueryUpdate.SQL.Add('  , F.MC02FANTASIA                                ');
+  FQueryUpdate.SQL.Add('  , F.MC02FISJUR                                  ');
+  FQueryUpdate.SQL.Add('  , F.MC02ATIINATIVO                              ');
+  FQueryUpdate.SQL.Add('  , F.MC02ENDERECO                                ');
+  FQueryUpdate.SQL.Add('  , F.MC02_NR                                     ');
+  FQueryUpdate.SQL.Add('  , F.MC02BAIRRO                                  ');
+  FQueryUpdate.SQL.Add('  , F.MC02CIDADE                                  ');
+  FQueryUpdate.SQL.Add('  , F.MC02UF                                      ');
+  FQueryUpdate.SQL.Add('  , F.MC02CEP                                     ');
+  FQueryUpdate.SQL.Add('  , F.MC02_COD_SEFAZ                              ');
+  FQueryUpdate.SQL.Add('  , F.MC02FONE                                    ');
+  FQueryUpdate.SQL.Add('  , F.MC02CELULAR                                 ');
+  FQueryUpdate.SQL.Add('  , F.MC02EMAIL                                   ');
+  FQueryUpdate.SQL.Add('  , F.mc02ci                                      ');
+  FQueryUpdate.SQL.Add('  , F.MC02IE                                      ');
+  FQueryUpdate.SQL.Add('  , F.MC02_OBS1                                   ');
+  FQueryUpdate.SQL.Add('  , F.MC02_OBS2                                   ');
+  FQueryUpdate.SQL.Add('  , F.MC02_ALTERAR_CUSTOS                         ');
+  FQueryUpdate.SQL.Add('  , F.MC02_SPED_SN                                ');
+  FQueryUpdate.SQL.Add('  , F.MC02REGIME                                  ');
+  FQueryUpdate.SQL.Add('  , F.MC02CRT                                     ');
+  FQueryUpdate.SQL.Add('  , F.MC02CNAE                                    ');
+  FQueryUpdate.SQL.Add('  , F.MC02CONTATO                                 ');
+  FQueryUpdate.SQL.Add('  , F.MC02FONE_CONTATO                            ');
+  FQueryUpdate.SQL.Add('  , F.MC02EMAIL_CONTATO                           ');
+  FQueryUpdate.SQL.Add('  , F.MC02CI                                      ');
+  FQueryUpdate.SQL.Add('  , I.DATA_ATUALIZACAO dt_att                     ');
+  FQueryUpdate.SQL.Add('  from MC02FORNEC F                               ');
+  FQueryUpdate.SQL.Add('  inner join  tbl_integ_fn I                      ');
+  FQueryUpdate.SQL.Add('  on (F.MC02CODIGO = I.codigo)                    ');
+  FQueryUpdate.SQL.Add('  WHERE I.DATA_ATUALIZACAO >= :ULTIMO_SINC        ');
+  FQueryUpdate.SQL.Add('  and I.ENVIADO = ''S''                           ');
+  FQueryUpdate.SQL.Add('  order by MC02CODIGO asc                         ');
+  if pAll then
+  begin
+    FQueryUpdate.ParamByName('ULTIMO_SINC').AsString := '01/01/2000 00:00:00';
+  end
+  else
+  begin
+    FQueryUpdate.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  end;
+  FQueryUpdate.Open;
+  FQueryUpdate.FetchAll;
+  result := FQueryUpdate.RecordCount > 0;
+end;
+
+function TConnectionAPI.LoadQryOneFNInsert(pCodeFN: String): Boolean;
+begin
+  FQueryInsertOneFN.Close;
+  FQueryInsertOneFN.SQL.Clear;
+  FQueryInsertOneFN.SQL.Add('    select first 1                                     ');
+  FQueryInsertOneFN.SQL.Add('    F.MC02CODIGO                                       ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CGC                                          ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CPF                                          ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02NOME                                         ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02FANTASIA                                     ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02FISJUR                                       ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02ATIINATIVO                                   ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02ENDERECO                                     ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_NR                                          ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02BAIRRO                                       ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CIDADE                                       ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02UF                                           ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CEP                                          ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_COD_SEFAZ                                   ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02FONE                                         ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CELULAR                                      ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02EMAIL                                        ');
+  FQueryInsertOneFN.SQL.Add('  , F.mc02ci                                           ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02IE                                           ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_OBS1                                        ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_OBS2                                        ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_ALTERAR_CUSTOS                              ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02_SPED_SN                                     ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02REGIME                                       ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CRT                                          ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CNAE                                         ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CONTATO                                      ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02FONE_CONTATO                                 ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02EMAIL_CONTATO                                ');
+  FQueryInsertOneFN.SQL.Add('  , F.MC02CI                                           ');
+  FQueryInsertOneFN.SQL.Add('  , I.DATA_ATUALIZACAO dt_att                          ');
+  FQueryInsertOneFN.SQL.Add('  from MC02FORNEC F                                    ');
+  FQueryInsertOneFN.SQL.Add('  inner join  tbl_integ_fn I                           ');
+  FQueryInsertOneFN.SQL.Add('  on (F.MC02CODIGO = I.codigo)                         ');
+  FQueryInsertOneFN.SQL.Add('  WHERE I.DATA_ATUALIZACAO >= :ULTIMO_SINC             ');
+  FQueryInsertOneFN.SQL.Add('   and ((I.ENVIADO <> ''S'')  or (I.ENVIADO is null))  ');
+  FQueryInsertOneFN.SQL.Add('  and MC02CODIGO = :CODIGO                             ');
+  FQueryInsertOneFN.SQL.Add('  order by MC02CODIGO                                  ');
+  FQueryInsertOneFN.ParamByName('ULTIMO_SINC').AsDateTime := ReturnsLastDateSync;
+  FQueryInsertOneFN.ParamByName('CODIGO').AsString := pCodeFN;
+  FQueryInsertOneFN.Open;
+  FQueryInsertOneFN.FetchAll;
+
+  result := FQueryInsertOneFN.RecordCount > 0;
+end;
+
+function TConnectionAPI.CheckItsOkConfigAPI: Boolean;
+begin
+  FCodeCompany := ReturnCodeCompany;
+  result := (trim(FUrlAPI) <> '') and (trim(FChaveEmpresa) <> '') and (trim(FAccess_Token) <> '') and (FLiberadoParaUso)
+    and (trim(FCodeCompany) <> '');
+end;
+
+procedure TConnectionAPI.CheckTokenValidity;
+begin
+  if (FAccess_Token = EmptyStr) and (now > FAccess_Token_Expires) then
+  begin
+    GenerateToken;
+    if now > FAccess_Token_Expires then
+    begin
+      GenerateToken
+    end;
+  end;
+end;
+
+procedure TConnectionAPI.ConfigAPI;
+begin
+  FQuerySearch.Close;
+  FQuerySearch.SQL.Clear;
+  FQuerySearch.SQL.Add(' SELECT * FROM TBL_CONFIGURACAO_CP    ');
+  FQuerySearch.SQL.Add(' where id = 1                         ');
+  FQuerySearch.Open;
+
+  if FQuerySearch.RecordCount > 0 then
+  begin
+    FAccess_Token := FQuerySearch.FieldByName('ACCESS_TOKEN').AsString;
+    FAccess_Token_Expires := FQuerySearch.FieldByName('ACCESS_TOKEN_EXPIRES').AsDateTime;
+    FIntervalSend := FQuerySearch.FieldByName('INTERVALO_ENVIO').AsInteger;
+    FChaveEmpresa := FQuerySearch.FieldByName('CHAVE_EMPRESA').AsString;
+    FMainCompany := FQuerySearch.FieldByName('EMPRESA_PRINCIPAL').AsString = 'S';
+    FLiberadoParaUso := FQuerySearch.FieldByName('LIBERADO_PARA_USO').AsString = 'S';
+    FConfigAutoSend := FQuerySearch.FieldByName('ENVIO_AUTOMATICO').AsString = 'S';
+  end;
+
+  if FAccess_Token <> '' then
+  begin
+    if now < FAccess_Token_Expires then
+    begin
+      GenerateToken;
+    end;
+  end
+  else
+  begin
+    GenerateToken;
+  end;
+end;
+
+procedure TConnectionAPI.ConfigConnectionAPI(pMethod: TRESTRequestMethod; pServico: TServiceAPI; pJson: string);
+begin
+  try
+    FRestClient.ResetToDefaults;
+    UrlRestClient(pServico);
+    FRestResponse.ResetToDefaults;
+    FRestResponse.ContentEncoding := 'utf8';
+    FRestRequest.ResetToDefaults;
+    FRestRequest.Client := FRestClient;
+    FRestRequest.ClearBody;
+    FRestRequest.Response := FRestResponse;
+    FRestRequest.Params.Clear;
+    if FAccess_Token <> EmptyStr then
+    begin
+      FRestRequest.Params.AddHeader('Authorization', 'Bearer' + FAccess_Token);
+    end
+    else
+    begin
+      GenerateToken;
+      FRestRequest.Params.AddHeader('Authorization', 'Bearer' + FAccess_Token);
+    end;
+
+    if trim(pJson) <> '' then
+    begin
+      FRestRequest.AddBody(pJson, ctAPPLICATION_JSON);
+    end;
+
+    FRestRequest.Method := pMethod;
+    FRestRequest.Execute;
+  Except
+    on E: Exception do
+    begin
+      CreateFileTxtLog(pJson, 'jsoncomexception');
+      CreateFileTxtLog(FRestResponse.Content, 'responsecomexception');
+
+      if FConfigAutoSend then
+      begin
+        if FAutomaticSend then
+        begin
+          tmrCP.Enabled := false;
+          tmrCP.Enabled := true;
+        end;
+      end;
+    end;
+  end;
+end;
+
+constructor TConnectionAPI.Create;
+begin
+  FRestClient := TRESTClient.Create('');
+  FRestRequest := TRESTRequest.Create(nil);
+  FRestResponse := TRESTResponse.Create(nil);
+  FBasicAuth := THTTPBasicAuthenticator.Create(nil);
+
+  FConnection := TConnection.ObjectConnection.Connection;
+  FConnectionDFe := TConnection.ObjectConnection.ConnectionDFE;
+
+  FQuerySearch := TFDQuery.Create(nil);
+  FQuerySearch.Connection := FConnection;
+
+  FQueryUpdate := TFDQuery.Create(nil);
+  FQueryUpdate.Connection := FConnection;
+
+  FQueryInsert := TFDQuery.Create(nil);
+  FQueryInsert.Connection := FConnection;
+
+  FQueryDelete := TFDQuery.Create(nil);
+  FQueryDelete.Connection := FConnection;
+
+  FQueryInsertOneFN := TFDQuery.Create(nil);
+  FQueryInsertOneFN.Connection := FConnection;
+
+  tmrCP := TTimer.Create(nil);
+end;
+
+function TConnectionAPI.DataRel(pData: TDateTime):FormatDateToString;
+var
+  lData: string;
+begin
+  lData := FormatDateTime('mm/dd/yyyy', (pData));
+  result := lData;
+end;
+
+function TConnectionAPI.DateServer: TDateTime;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT ');
+    lQuery.SQL.Add('   CURRENT_TIMESTAMP ');
+    lQuery.SQL.Add(' FROM RDB$DATABASE ');
+    lQuery.Open;
+
+    result := lQuery.FieldByName('CURRENT_TIMESTAMP').AsDateTime;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TConnectionAPI.DecodeDateHour: string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(now, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + FormatFloat('00', lMonth) + FormatFloat('00', lDay) + FormatFloat('00', lHour) +
+    FormatFloat('00', lMin) + FormatFloat('00', lSec);
+end;
+
+function TConnectionAPI.DecodeDateHourJson(pDate: TDateTime): string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(pDate, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + '-' + FormatFloat('00', lMonth) + '-' + FormatFloat('00', lDay) + ' ' +
+    FormatFloat('00', lHour) + ':' + FormatFloat('00', lMin) + ':' + FormatFloat('00', lSec);
+end;
+
+function TConnectionAPI.DecodeDateJson(pDate: TDateTime): string;
+var
+  lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec: Word;
+begin
+  // "2021-11-17 20:21:56"
+  decodedatetime(pDate, lYear, lMonth, lDay, lHour, lMin, lSec, lMilisec);
+  result := lYear.ToString + '-' + FormatFloat('00', lMonth) + '-' + FormatFloat('00', lDay);
+
+end;
+
+function TConnectionAPI.DecodeDateToken(pDate: string): TDateTime;
+var
+  lDate, lDay, lMonth, lYear, lTime: string;
+begin
+  // "date_expiration_access_token": "2021-03-04 18:26:01",
+  // "date_expiration_refresh_token": "2021-04-03 15:26:01",
+  // "date_activated": "2021-03-04 15:26:01",
+
+  pDate := StringReplace(pDate, '-', '', [rfReplaceAll]);
+
+  lDay := Copy(pDate, 7, 2);
+  lMonth := Copy(pDate, 5, 2);
+  lYear := Copy(pDate, 1, 4);
+  lTime := Copy(pDate, 9, 9);
+  lDate := lDay + '/' + lMonth + '/' + lYear + ' ' + lTime;
+  result := StrToDateTime(lDate);
+end;
+
+function TConnectionAPI.DeleteContasPagar(pTitulo, pData: String): Boolean;
+var
+  lContaRegistros: integer;
+  lJson: string;
+
+begin
+  FTitle := pTitulo;
+  lJson := '{"titulo":"' + pTitulo + '", "data_ultima_alteracao":"' + pData + '"}';
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmDELETE, tDeleteCP, lJson);
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    result := true;
+    GenerateToken;
+    ConfigConnectionAPI(rmDELETE, tDeleteCP, lJson);
+  end;
+
+  if (FRestResponse.StatusCode = 200) or (FRestResponse.StatusCode = 404) then
+  begin
+    result := true;
+  end
+
+end;
+
+function TConnectionAPI.DeleteFornecedor(pCNPJ: String): Boolean;
+var
+  lContaRegistros: integer;
+
+begin
+  FCnpjFN := pCNPJ;
+  result := false;
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmDELETE, tDeleteFN, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmDELETE, tDeleteFN, '');
+  end;
+  if FRestResponse.StatusCode = 200 then
+  begin
+    result := true;
+  end;
+end;
+
+destructor TConnectionAPI.Destroy;
+begin
+  FRestClient.Free;
+  FRestRequest.Free;
+  FRestResponse.Free;
+  FBasicAuth.Free;
+  FQuerySearch.Free;
+  FQueryInsert.Free;
+  FQueryUpdate.Free;
+  FQueryInsertOneFN.Free;
+  tmrCP.Free;
+  inherited;
+end;
+
+function TConnectionAPI.ThereWasMovementInTheAPIConnection: Boolean;
+begin
+  result := (FTotalCPGet > 0) or (FTotalCPPosted > 0) or (FTotalCPPut > 0) or (FTotalCPDelete > 0) or (FTotalFNGet > 0)
+    or (FTotalFNPosted > 0) or (FTotalFNPut > 0) or (FTotalFNDelete > 0);
+end;
+
+procedure TConnectionAPI.GenerateToken;
+var
+  lTamanho: integer;
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  lNovoToken: Boolean;
+  lDateActive: TDateTime;
+begin
+  lNovoToken := false;
+
+  if (trim(FEmail) <> '') and (trim(FSenha) <> '') and (trim(FUrlAPI) <> '') then
+  begin
+    FRestClient.ResetToDefaults;
+    FRestClient.BaseURL := FUrlAPI + '/login';
+    FRestResponse.ResetToDefaults;
+    FRestRequest.ResetToDefaults;
+    FRestRequest.Client := FRestClient;
+    FRestRequest.Response := FRestResponse;
+    FRestRequest.Params.Clear;
+    FRestRequest.AddParameter('email', FEmail);
+    FRestRequest.AddParameter('senha', FSenha);
+    FRestRequest.Method := rmPOST;
+    FRestRequest.Execute;
+
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      lNovoToken := true;
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+      begin
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('access_token') <> '' then
+        begin
+          FAccess_Token := lObjectJson.GetValue<string>('access_token');
+        end;
+
+        if lObjectJson.GetValue<String>('expires_in') <> '' then
+        begin
+          FAccess_Token_Expires := IncMinute(now, lObjectJson.GetValue<integer>('expires_in'));
+        end;
+
+        if lNovoToken then
+        begin
+          SaveAccessToken(FAccess_Token, FAccess_Token_Expires);
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TConnectionAPI.GenerateTokenAcess;
+var
+  lTamanho: integer;
+  lObjectJson: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  lNewToken: Boolean;
+  lDateActive: TDateTime;
+begin
+  if (trim(FRefresh_Token) <> '') and (trim(FUrlAPI) <> '') then
+  begin
+    FRestClient.ResetToDefaults;
+    FRestClient.BaseURL := FUrlAPI;
+    FRestResponse.ResetToDefaults;
+    FRestRequest.ResetToDefaults;
+    FRestRequest.Client := FRestClient;
+    FRestRequest.Response := FRestResponse;
+    FRestRequest.Params.Clear;
+    FRestRequest.AddParameter('refresh_token', FRefresh_Token);
+    FRestRequest.Method := rmGET;
+    FRestRequest.Execute;
+
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) then
+      begin
+        lObjectJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+
+        if lObjectJson.GetValue<String>('access_token') <> '' then
+        begin
+          FAccess_Token := lObjectJson.GetValue<string>('access_token');
+        end;
+
+        if lObjectJson.GetValue<String>('refresh_token') <> '' then
+        begin
+          FRefresh_Token := lObjectJson.GetValue<string>('refresh_token');
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_access_token') <> '' then
+        begin
+          FAccess_Token_Expires := DecodeDateToken(lObjectJson.GetValue<string>('date_expiration_access_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_expiration_refresh_token') <> '' then
+        begin
+          FRefresh_Token_Expires := DecodeDateToken(lObjectJson.GetValue<string>('date_expiration_refresh_token'));
+        end;
+
+        if lObjectJson.GetValue<String>('date_activated') <> '' then
+        begin
+          lDateActive := DecodeDateToken(lObjectJson.GetValue<string>('date_activated'));
+        end;
+
+        if lNewToken then
+        begin
+          SaveToken(FRefresh_Token, FAccess_Token, FRefresh_Token_Expires, FAccess_Token_Expires, lDateActive);
+        end;
+      end;
+    end
+    else
+    begin
+      GenerateToken;
+    end;
+  end;
+end;
+
+function TConnectionAPI.GetContasPagar(pmmoGet, pmmoError: TMemo; pAll: Boolean = false): Boolean;
+var
+  lJson: TJSONObject;
+  lJsonArray: TJSONArray;
+  i: integer;
+  lContaRegistros, lTotalVendas: integer;
+  lDataUltimaSinc: TDateTime;
+  lCP: TContasPagarMC;
+  lExcluido: Boolean;
+  lResposta: string;
+
+  procedure TotalizerMemoRecords;
+  var
+    lTemRegistros: Boolean;
+  begin
+    lTemRegistros := (TotalCPGet > 0);
+
+    if lTemRegistros then
+    begin
+      if FTotalCPPosted > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de CP Baixados: ' + TConnectionAPI.ConnectionAPI.TotalCPGet.ToString);
+        pmmoGet.Lines.Add('----------------------------------------------------');
+      end;
+
+    end;
+  end;
+
+begin
+  FTotalCPGet := 0;
+  FTotalFNGet := 0;
+
+  lDataUltimaSinc := ReturnsLastDateSync;
+
+  result := true;
+  if pAll then
+  begin
+    FDateTimeCP := '2000/01/01 00:00:00';
+  end
+  else
+  begin
+    FDateTimeCP := DecodeDateHourJson(lDataUltimaSinc);
+  end;
+
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmGET, tGetCP, '');
+
+  // Token Expirado
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmGET, tGetCP, '');
+  end;
+
+  if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+  begin
+    try
+      lCP := TContasPagarMC.Create;
+      try
+        lJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+        lJsonArray := lJson.GetValue<TJSONArray>('contas') as TJSONArray;
+
+        if not(TJSONObject.ParseJSONValue(lJsonArray.ToString).Null) and
+          not(TJSONObject.ParseJSONValue(lJsonArray.ToString).ToString = '[]') then
+        begin
+          CreateFileTxtLog(FRestResponse.Content, 'GET');
+        end;
+
+        for i := 0 to lJsonArray.Count - 1 do
+        begin
+          if (lJsonArray <> nil) then
+          begin
+            lJson := lJsonArray.Items[i] as TJSONObject;
+            lJson := lJson.GetValue<TJSONObject> as TJSONObject;
+
+            lExcluido := lJson.GetValue<String>('excluido') = 'S';
+
+            if lExcluido then // Variavel Utilizada pra baixar ou deletar apartir do GET da api
+            begin
+              if lJson.GetValue<String>('titulo') <> '' then
+              begin
+                lCP.EmpresaTitulo := lJson.GetValue<String>('titulo');
+                if lCP.ExcluirTituloEmpresa(true) then
+                begin
+                  FTotalCPGet := FTotalCPGet + 1;
+                  pmmoGet.Lines.Add('GET - Exclusão do titulo: ' + lCP.RetornaTituloPeloTituloEmpresa
+                    (lJson.GetValue<String>('titulo')) + ' - Titulo Empresa: ' + lJson.GetValue<String>('titulo') +
+                    ' - ' + DateTimeToStr(DateServer));
+                end
+                else
+                begin
+                  pmmoError.Lines.Add('GET - Não encontrado para exclusão o titulo: ' +
+                    lCP.RetornaTituloPeloTituloEmpresa(lJson.GetValue<String>('titulo')) + ' - Titulo Empresa: ' +
+                    lJson.GetValue<String>('titulo') + ' - ' + DateTimeToStr(DateServer));
+                end;
+              end;
+            end
+            else
+            begin
+              lCP.clearClass;
+              if lJson.GetValue<String>('titulo') <> '' then
+              begin
+                lCP.EmpresaTitulo := lJson.GetValue<String>('titulo');
+              end;
+              if lJson.GetValue<String>('emissao') <> '' then
+              begin
+                lCP.emissao := lJson.GetValue<TDate>('emissao');
+              end;
+              if lJson.GetValue<String>('data_vencimento') <> '' then
+              begin
+                lCP.Vencimento := lJson.GetValue<TDate>('data_vencimento');
+              end;
+              if lJson.GetValue<String>('data_fluxo_caixa') <> '' then
+              begin
+                lCP.FluxoCaixa := lJson.GetValue<TDate>('data_fluxo_caixa');
+              end;
+              if lJson.GetValue<String>('data_pagamento') <> '' then
+              begin
+                lCP.DataPagamento := lJson.GetValue<TDate>('data_pagamento');
+              end;
+              if lJson.GetValue<String>('origem_documento') <> '' then
+              begin
+                lCP.Origem := lJson.GetValue<String>('origem_documento');
+              end;
+              if lJson.GetValue<String>('situacao_documento') <> '' then
+              begin
+                lCP.situacao := lJson.GetValue<String>('situacao_documento');
+              end;
+              if lJson.GetValue<String>('fornecedor') <> '' then
+              begin
+                lCP.fornecedor := ReturnFN(lJson.GetValue<String>('fornecedor'));
+              end;
+              if lJson.GetValue<String>('forma_pagamento') <> '' then
+              begin
+                lCP.FormaPagamento := lJson.GetValue<integer>('forma_pagamento');
+              end;
+              if lJson.GetValue<String>('conta_dre') <> '' then
+              begin
+                lCP.Conta := lJson.GetValue<String>('conta_dre');
+              end;
+              if lJson.GetValue<String>('codigo_de_barras') <> '' then
+              begin
+                lCP.CodigoBarras := lJson.GetValue<String>('codigo_de_barras');
+              end;
+              if lJson.GetValue<String>('valor_original') <> '' then
+              begin
+                lCP.Valor := lJson.GetValue<Double>('valor_original');
+              end;
+              if lJson.GetValue<String>('total_pago') <> '' then
+              begin
+                lCP.TotalPago := lJson.GetValue<Double>('total_pago');
+              end;
+              if lJson.GetValue<String>('pagamentos') <> '' then
+              begin
+                lCP.ValorPago := lJson.GetValue<Double>('pagamentos');
+              end;
+              if lJson.GetValue<String>('descontos') <> '' then
+              begin
+                lCP.Desconto := lJson.GetValue<Double>('descontos');
+              end;
+              if lJson.GetValue<String>('juros_pagos') <> '' then
+              begin
+                lCP.Juros := lJson.GetValue<Double>('juros_pagos');
+              end;
+              if lJson.GetValue<String>('obs1') <> '' then
+              begin
+                lCP.obs1 := lJson.GetValue<String>('obs1');
+              end;
+              if lJson.GetValue<String>('obs2') <> '' then
+              begin
+                lCP.obs2 := lJson.GetValue<String>('obs2');
+              end;
+              lCP.DataUltimoSincronismo := lDataUltimaSinc;
+              lCP.CodigoEmpresa := ReturnCodeCompany;
+              lResposta := lCP.IncluirOuAltera(FMainCompany);
+
+              pmmoGet.Lines.Add(lResposta + ' - ' + DateTimeToStr(DateServer));
+              FTotalCPGet := FTotalCPGet + 1;
+            end;
+          end;
+        end;
+      finally
+        lCP.Free;
+      end;
+    except
+      on E: Exception do
+      begin
+        result := false;
+      end;
+    end;
+
+    TotalizerMemoRecords;
+  end
+  else if (FRestResponse.StatusCode <> 400) then
+  begin
+    FMessage := ('Error:' + IntToStr(FRestResponse.StatusCode));
+  end;
+end;
+
+function TConnectionAPI.GetFornecedor(pmmoGet, pmmoError: TMemo): Boolean;
+var
+  lJson: TJSONObject;
+  lJsonArray: TJSONArray;
+  i, lCodigo: integer;
+  lContaRegistros, lTotalVendas: integer;
+  lFN: TFornecedorMC;
+
+  procedure TotalizerMemoRecords;
+  var
+    lTemRegistros: Boolean;
+  begin
+
+    lTemRegistros := (TotalFNGet > 0);
+
+    if lTemRegistros then
+    begin
+      if TotalFNGet > 0 then
+      begin
+        pmmoGet.Lines.Add('Total de FN Baixados: ' + TConnectionAPI.ConnectionAPI.TotalFNGet.ToString);
+        pmmoGet.Lines.Add('----------------------------------------------------');
+      end;
+
+    end;
+  end;
+
+begin
+  FCnpjFN := '';
+
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmGET, tGetFN, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmGET, tGetFN, '');
+  end
+  else if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+  begin
+    try
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+        not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+      begin
+        lFN := TFornecedorMC.Create;
+        try
+          lJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+          lJsonArray := lJson.GetValue<TJSONArray>('fornecedores') as TJSONArray;
+          for i := 0 to lJsonArray.Count - 1 do
+          begin
+            if (lJsonArray <> nil) then
+            begin
+              lJson := lJsonArray.Items[i] as TJSONObject;
+              lJson := lJson.GetValue<TJSONObject> as TJSONObject;
+              lFN.clearClass;
+              if lJson.GetValue<String>('cnpj') <> EmptyStr then
+              begin
+                lFN.cnpj := LengthString(lJson.GetValue<String>('cnpj'), 14);
+              end;
+              if lJson.GetValue<String>('cpf') <> EmptyStr then
+              begin
+                lFN.cpf := LengthString(lJson.GetValue<String>('cpf'), 11);
+              end;
+              if lJson.GetValue<String>('nome') <> EmptyStr then
+              begin
+                lFN.Nome := LengthString(lJson.GetValue<String>('nome'), 35);
+              end;
+              if lJson.GetValue<String>('fantasia') <> EmptyStr then
+              begin
+                lFN.fantasia := LengthString(lJson.GetValue<String>('fantasia'), 20);
+              end;
+              if lJson.GetValue<String>('tipo') <> EmptyStr then
+              begin
+                lFN.PessoaFisica := lJson.GetValue<String>('tipo') = 'F';
+              end;
+              if lJson.GetValue<String>('situacao') <> EmptyStr then
+              begin
+                lFN.Ativo := lJson.GetValue<String>('situacao') = 'S';
+              end;
+              if lJson.GetValue<String>('endereco') <> EmptyStr then
+              begin
+                lFN.endereco := LengthString(lJson.GetValue<String>('endereco'), 35);
+              end;
+              if lJson.GetValue<String>('endereco_numero') <> EmptyStr then
+              begin
+                lFN.Numero := LengthString(lJson.GetValue<String>('endereco_numero'), 15);
+              end;
+              if lJson.GetValue<String>('endereco_bairro') <> EmptyStr then
+              begin
+                lFN.bairro := LengthString(lJson.GetValue<String>('endereco_bairro'), 20);
+              end;
+              if lJson.GetValue<String>('endereco_cidade') <> EmptyStr then
+              begin
+                lFN.cidade := LengthString(lJson.GetValue<String>('endereco_cidade'), 30);
+              end;
+              if lJson.GetValue<String>('endereco_uf') <> EmptyStr then
+              begin
+                lFN.uf := LengthString(lJson.GetValue<String>('endereco_uf'), 2);
+              end;
+              if lJson.GetValue<String>('endereco_cep') <> EmptyStr then
+              begin
+                lFN.cep := LengthString(lJson.GetValue<String>('endereco_cep'), 10);
+              end;
+              if lJson.GetValue<String>('codigo_cidade_sefaz') <> EmptyStr then
+              begin
+                lFN.CodigoCidadeIbge := LengthString(lJson.GetValue<String>('codigo_cidade_sefaz'), 14);
+              end;
+              if lJson.GetValue<String>('telefone') <> EmptyStr then
+              begin
+                lFN.fone := LengthString(lJson.GetValue<String>('telefone'), 15);
+              end;
+              if lJson.GetValue<String>('celular') <> EmptyStr then
+              begin
+                lFN.celular := LengthString(lJson.GetValue<String>('celular'), 15);
+              end;
+              if lJson.GetValue<String>('email') <> EmptyStr then
+              begin
+                lFN.email := LengthString(lJson.GetValue<String>('email'), 15);
+              end;
+              if lJson.GetValue<String>('cart_identidade') <> EmptyStr then
+              begin
+                lFN.CarteiraIdentidade := LengthString(lJson.GetValue<String>('cart_identidade'), 10);
+              end;
+              if lJson.GetValue<String>('insc_estadual') <> EmptyStr then
+              begin
+                lFN.IE := LengthString(lJson.GetValue<String>('insc_estadual'), 20);
+              end;
+              if lJson.GetValue<String>('obs1') <> EmptyStr then
+              begin
+                lFN.Observacao1 := lJson.GetValue<String>('obs1');
+              end;
+              if lJson.GetValue<String>('obs2') <> EmptyStr then
+              begin
+                lFN.Observacao2 := lJson.GetValue<String>('obs2');
+              end;
+              if lJson.GetValue<String>('atualizar_custos') <> EmptyStr then
+              begin
+                lFN.AlterarCustos := lJson.GetValue<String>('atualizar_custos') = 'S';
+              end;
+              if lJson.GetValue<String>('gerar_rel_sped') <> EmptyStr then
+              begin
+                lFN.Sped := lJson.GetValue<String>('gerar_rel_sped') = 'S';
+              end;
+              if lJson.GetValue<String>('regime_tributario') <> EmptyStr then
+              begin
+                lFN.RegimeTributario := lJson.GetValue<integer>('regime_tributario');
+              end;
+              if lJson.GetValue<String>('crt') <> EmptyStr then
+              begin
+                lFN.crt := lJson.GetValue<integer>('crt');
+              end;
+              if lJson.GetValue<String>('cnae') <> EmptyStr then
+              begin
+                lFN.cnae := LengthString(lJson.GetValue<String>('cnae'), 15);
+              end;
+              if lJson.GetValue<String>('representante_nome') <> EmptyStr then
+              begin
+                lFN.NomeRepresentante := LengthString(lJson.GetValue<String>('representante_nome'), 50);
+              end;
+              if lJson.GetValue<String>('representante_telefone') <> EmptyStr then
+              begin
+                lFN.FoneRepresentante := LengthString(lJson.GetValue<String>('representante_telefone'), 15);
+              end;
+              if lJson.GetValue<String>('representante_email') <> EmptyStr then
+              begin
+                lFN.EmailRepresentante := LengthString(lJson.GetValue<String>('representante_email'), 50);
+              end;
+
+              lCodigo := lFN.GeraProximoCodigo;
+              lFN.codigo := lCodigo;
+              lFN.Incluir(true);
+            end;
+          end;
+        finally
+          lFN.Free;
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        // result := '';
+      end;
+    end;
+
+  end
+  else if (FRestResponse.StatusCode <> 400) then
+  begin
+    FMessage := ('Error:' + IntToStr(FRestResponse.StatusCode));
+  end;
+
+end;
+
+function TConnectionAPI.GetFNbyCNPJ(pCNPJ: String): integer;
+var
+  lJson: TJSONObject;
+  lJsonArray: TJSONArray;
+  i, lCodigo: integer;
+  lContaRegistros, lTotalVendas: integer;
+  lFN: TFornecedorMC;
+begin
+  result := 0;
+  FCnpjFN := pCNPJ;
+
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmGET, tGetFNCNPJ, '');
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmGET, tGetFNCNPJ, '');
+  end
+  else if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+  begin
+    try
+      if not(TJSONObject.ParseJSONValue(FRestResponse.Content).Null) and
+        not(TJSONObject.ParseJSONValue(FRestResponse.Content).ToString = '[]') then
+      begin
+        lFN := TFornecedorMC.Create;
+        try
+          lJson := TJSONObject.ParseJSONValue(FRestResponse.Content) as TJSONObject;
+          lJsonArray := lJson.GetValue<TJSONArray>('fornecedores') as TJSONArray;
+          for i := 0 to lJsonArray.Count - 1 do
+          begin
+            if (lJsonArray <> nil) then
+            begin
+              lJson := lJsonArray.Items[i] as TJSONObject;
+              lJson := lJson.GetValue<TJSONObject> as TJSONObject;
+
+              if lJson.GetValue<String>('cnpj') <> EmptyStr then
+              begin
+                lFN.cnpj := LengthString(lJson.GetValue<String>('cnpj'), 14);
+              end;
+              if lJson.GetValue<String>('cpf') <> EmptyStr then
+              begin
+                lFN.cpf := LengthString(lJson.GetValue<String>('cpf'), 11);
+              end;
+              if lJson.GetValue<String>('nome') <> EmptyStr then
+              begin
+                lFN.Nome := LengthString(lJson.GetValue<String>('nome'), 35);
+              end;
+              if lJson.GetValue<String>('fantasia') <> EmptyStr then
+              begin
+                lFN.fantasia := LengthString(lJson.GetValue<String>('fantasia'), 20);
+              end;
+              if lJson.GetValue<String>('tipo') <> EmptyStr then
+              begin
+                lFN.PessoaFisica := lJson.GetValue<String>('tipo') = 'F';
+              end;
+              if lJson.GetValue<String>('situacao') <> EmptyStr then
+              begin
+                lFN.Ativo := lJson.GetValue<String>('situacao') = 'S';
+              end;
+              if lJson.GetValue<String>('endereco') <> EmptyStr then
+              begin
+                lFN.endereco := LengthString(lJson.GetValue<String>('endereco'), 35);
+              end;
+              if lJson.GetValue<String>('endereco_numero') <> EmptyStr then
+              begin
+                lFN.Numero := LengthString(lJson.GetValue<String>('endereco_numero'), 15);
+              end;
+              if lJson.GetValue<String>('endereco_bairro') <> EmptyStr then
+              begin
+                lFN.bairro := LengthString(lJson.GetValue<String>('endereco_bairro'), 20);
+              end;
+              if lJson.GetValue<String>('endereco_cidade') <> EmptyStr then
+              begin
+                lFN.cidade := LengthString(lJson.GetValue<String>('endereco_cidade'), 30);
+              end;
+              if lJson.GetValue<String>('endereco_uf') <> EmptyStr then
+              begin
+                lFN.uf := LengthString(lJson.GetValue<String>('endereco_uf'), 2);
+              end;
+              if lJson.GetValue<String>('endereco_cep') <> EmptyStr then
+              begin
+                lFN.cep := LengthString(lJson.GetValue<String>('endereco_cep'), 10);
+              end;
+              if lJson.GetValue<String>('codigo_cidade_sefaz') <> EmptyStr then
+              begin
+                lFN.CodigoCidadeIbge := LengthString(lJson.GetValue<String>('codigo_cidade_sefaz'), 14);
+              end;
+              if lJson.GetValue<String>('telefone') <> EmptyStr then
+              begin
+                lFN.fone := LengthString(lJson.GetValue<String>('telefone'), 15);
+              end;
+              if lJson.GetValue<String>('celular') <> EmptyStr then
+              begin
+                lFN.celular := LengthString(lJson.GetValue<String>('celular'), 15);
+              end;
+              if lJson.GetValue<String>('email') <> EmptyStr then
+              begin
+                lFN.email := LengthString(lJson.GetValue<String>('email'), 15);
+              end;
+              if lJson.GetValue<String>('cart_identidade') <> EmptyStr then
+              begin
+                lFN.CarteiraIdentidade := LengthString(lJson.GetValue<String>('cart_identidade'), 10);
+              end;
+              if lJson.GetValue<String>('insc_estadual') <> EmptyStr then
+              begin
+                lFN.IE := LengthString(lJson.GetValue<String>('insc_estadual'), 20);
+              end;
+              if lJson.GetValue<String>('obs1') <> EmptyStr then
+              begin
+                lFN.Observacao1 := lJson.GetValue<String>('obs1');
+              end;
+              if lJson.GetValue<String>('obs2') <> EmptyStr then
+              begin
+                lFN.Observacao2 := lJson.GetValue<String>('obs2');
+              end;
+              if lJson.GetValue<String>('atualizar_custos') <> EmptyStr then
+              begin
+                lFN.AlterarCustos := lJson.GetValue<String>('atualizar_custos') = 'S';
+              end;
+              if lJson.GetValue<String>('gerar_rel_sped') <> EmptyStr then
+              begin
+                lFN.Sped := lJson.GetValue<String>('gerar_rel_sped') = 'S';
+              end;
+              if lJson.GetValue<String>('regime_tributario') <> EmptyStr then
+              begin
+                lFN.RegimeTributario := lJson.GetValue<integer>('regime_tributario');
+              end;
+              if lJson.GetValue<String>('crt') <> EmptyStr then
+              begin
+                lFN.crt := lJson.GetValue<integer>('crt');
+              end;
+              if lJson.GetValue<String>('cnae') <> EmptyStr then
+              begin
+                lFN.cnae := LengthString(lJson.GetValue<String>('cnae'), 15);
+              end;
+              if lJson.GetValue<String>('representante_nome') <> EmptyStr then
+              begin
+                lFN.NomeRepresentante := LengthString(lJson.GetValue<String>('representante_nome'), 50);
+              end;
+              if lJson.GetValue<String>('representante_telefone') <> EmptyStr then
+              begin
+                lFN.FoneRepresentante := LengthString(lJson.GetValue<String>('representante_telefone'), 15);
+              end;
+              if lJson.GetValue<String>('representante_email') <> EmptyStr then
+              begin
+                lFN.EmailRepresentante := LengthString(lJson.GetValue<String>('representante_email'), 50);
+              end;
+
+              lCodigo := lFN.GeraProximoCodigo;
+              lFN.codigo := lCodigo;
+              lFN.Incluir(true);
+              FTotalFNGet := FTotalFNGet + 1;
+              result := lCodigo;
+            end;
+          end;
+        finally
+          lFN.Free;
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        result := 0;
+      end;
+    end;
+
+  end
+  else if (FRestResponse.StatusCode <> 400) then
+  begin
+    FMessage := ('Error:' + IntToStr(FRestResponse.StatusCode));
+  end;
+
+end;
+
+class function TConnectionAPI.GetConnectionAPI: TConnectionAPI;
+begin
+  if NOT Assigned(FConnectionAPI) then
+  begin
+    FConnectionAPI := TConnectionAPI.Create;
+  end;
+
+  result := FConnectionAPI;
+end;
+
+procedure TConnectionAPI.CreateFileTxtLog(pJson, pNameTXT: string);
+var
+  FBackupTxt: TStringList;
+  lPublicAppDirectory, lFileNameTxt, lFullPathFile: string;
+begin
+  FBackupTxt := TStringList.Create;
+  try
+    FBackupTxt.Text := pJson;
+    lPublicAppDirectory := ExtractFilePath(application.exeName) + 'Log_Erros\';
+    lFileNameTxt := pNameTXT + '_' + DecodeDateHour + '.txt';
+    lFullPathFile := lPublicAppDirectory + lFileNameTxt;
+
+    if not DirectoryExists(lPublicAppDirectory) then
+    begin
+      ForceDirectories(lPublicAppDirectory);
+    end;
+
+    if DirectoryExists(lPublicAppDirectory) then
+    begin
+      FBackupTxt.SaveToFile(lFullPathFile);
+    end;
+  finally
+    FBackupTxt.Free;
+  end;
+end;
+
+function TConnectionAPI.IsDigit(pString: string): Boolean;
+begin
+  result := true;
+  Try
+    strtoint(pString);
+  Except
+    result := false;
+  end;
+end;
+
+procedure TConnectionAPI.RegisterAppOnWindows(pProgram: string);
+var
+  REG: TRegistry;
+begin
+  REG := TRegistry.Create;
+  try
+    REG.RootKey := HKEY_CURRENT_USER;
+    REG.OpenKey('Software\Microsoft\Windows\CurrentVersion\Run\', true);
+    REG.WriteString(pProgram, ParamStr(0));
+    REG.CloseKey;
+    ShowMessage('Programa adicionado na inicialização do Windows com sucesso!');
+  finally
+    REG.Free;
+  end;
+end;
+
+class procedure TConnectionAPI.ReleaseMe;
+begin
+  if Assigned(FConnectionAPI) then
+  begin
+    FreeAndNil(FConnectionAPI);
+  end;
+end;
+
+function TConnectionAPI.RemoveCharac(aText: string; aOld: String = ''; aNew: String = '';
+  aRemoveTrim: Boolean = false): string;
+const
+  xCarExt: array [1 .. 55] of string = ('<', '>', '!', '@', '#', '$', '%', '¨', '&', '*', '(', ')', '_', '+', '=', '{',
+    '}', '[', ']', '?', ';', ':', ',', '|', '*', '"', '~', '^', '´', '`', '¨', 'æ', 'Æ', 'ø', '£', 'Ø', 'ƒ', 'ª', 'º',
+    '¿', '®', '½', '¼', 'ß', 'µ', 'þ', 'ý', 'Ý', '÷', '×', '€', '-', '\', '/', '.');
+var
+  xTexto: string;
+  i: integer;
+begin
+  xTexto := aText;
+
+  for i := 1 to 55 do
+  begin
+    xTexto := UpperCase(StringReplace(xTexto, UpperCase(xCarExt[i]), '', [rfReplaceAll]));
+  end;
+
+  if (aOld <> EmptyStr) and (aNew <> EmptyStr) then
+  begin
+    xTexto := UpperCase(StringReplace(xTexto, UpperCase(aOld), aNew, [rfReplaceAll]));
+  end;
+
+  if aRemoveTrim then
+  begin
+    xTexto := StringReplace(xTexto, ' ', '', [rfReplaceAll]);
+  end;
+
+  result := UpperCase(xTexto);
+
+end;
+
+function TConnectionAPI.ResultAccessToken: String;
+begin
+
+end;
+
+function TConnectionAPI.ResultRefreshToken: String;
+begin
+
+end;
+
+function TConnectionAPI.ReturnKeyCompany: string;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Open(' SELECT * FROM TBL_CONFIGURACAO_CP WHERE ID = 1');
+    result := lQuery.FieldByName('CHAVE_EMPRESA').AsString;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.ReturnNameCompany: string;
+var
+  lQuery: TQuery;
+  lNomeEmpresa: string;
+begin
+
+  lNomeEmpresa := ReturnCodeCompany;
+
+  if trim(lNomeEmpresa) <> EmptyStr then
+  begin
+    lQuery := TQuery.Create(nil);
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' SELECT * FROM MC27PROP      ');
+      lQuery.SQL.Add(' WHERE AN27CODI = :AN27CODI  ');
+      lQuery.ParamByName('AN27CODI').AsString := lNomeEmpresa;
+      lQuery.Open;
+      result := 'Empresa: ' + lQuery.FieldByName('AN27CODI').AsString + ' - ' + lQuery.FieldByName('AC27NOME').AsString;
+    finally
+      lQuery.Free;
+    end;
+  end;
+end;
+
+function TConnectionAPI.ReturnsLastDateSync: TDateTime;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Open(' SELECT * FROM TBL_CONFIGURACAO_CP WHERE ID = 1');
+    result := lQuery.FieldByName('ULTIMA_SINC').AsDateTime;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.ReturnAutorizationBase64String(pPassword: String): string;
+var
+  lTexto, lResult: string;
+  Base64: TBase64Encoding;
+begin
+
+  try
+    Base64 := TBase64Encoding.Create;
+    lResult := Base64.decode(lTexto);
+    lResult := Copy(lResult, 35, lResult.Length);
+
+    result := lResult;
+  except
+    on E: Exception do
+    begin
+      result := pPassword;
+    end;
+  end;
+end;
+
+function TConnectionAPI.ReturnCodeCompany: string;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    result := EmptyStr;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('  SELECT CODIGO_EMPRESA FROM TBL_CONFIGURACAO_CP  ');
+    lQuery.Open;
+    lQuery.FetchAll;
+    if lQuery.RecordCount > 0 then
+    begin
+      result := lQuery.FieldByName('CODIGO_EMPRESA').AsString;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TConnectionAPI.ReturnFN(pCPF_CNPJ: String): integer;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' select * from MC02FORNEC ');
+    if pCPF_CNPJ.Length > 11 then
+    begin
+      lQuery.SQL.Add('  where  MC02CGC = :CODIGO ');
+    end
+    else
+    begin
+      lQuery.SQL.Add(' where  MC02CPF = :CODIGO ');
+    end;
+    lQuery.ParamByName('CODIGO').AsString := pCPF_CNPJ;
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      result := lQuery.FieldByName('MC02CODIGO').AsInteger;
+    end
+    else
+    begin
+      result := GetFNbyCNPJ(pCPF_CNPJ);
+    end;
+
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.SaveAccessToken(pAccess: String; pDt_Access: TDateTime): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('  UPDATE OR INSERT INTO TBL_CONFIGURACAO_CP(   ');
+      lQuery.SQL.Add('   ID                                          ');
+      lQuery.SQL.Add(' , ACCESS_TOKEN                                ');
+      lQuery.SQL.Add(' , ACCESS_TOKEN_EXPIRES                        ');
+      lQuery.SQL.Add(' ) VALUES(                                     ');
+      lQuery.SQL.Add('  :ID                                          ');
+      lQuery.SQL.Add(' ,:ACCESS_TOKEN                                ');
+      lQuery.SQL.Add(' ,:ACCESS_TOKEN_EXPIRES                        ');
+      lQuery.SQL.Add(' ) MATCHING (ID)                               ');
+      lQuery.ParamByName('access_token').AsString := pAccess;
+      lQuery.ParamByName('ACCESS_TOKEN_EXPIRES').AsDateTime := pDt_Access;
+      lQuery.ParamByName('id').AsInteger := 1;
+      lQuery.ExecSQL;
+      lQuery.Connection.Commit;
+    except
+      on E: Exception do
+      begin
+        result := false;
+      end;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.SaveToken(pRefresh, pAccess: String; pDt_Refresh, pDt_Access, pDateActive: TDateTime): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    try
+      lQuery.Close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('  UPDATE OR INSERT INTO TBL_CONFIGURACAO(     ');
+      lQuery.SQL.Add('   id                                          ');
+      lQuery.SQL.Add(' , dt_ativacao                                 ');
+      lQuery.SQL.Add(' , access_token                                ');
+      lQuery.SQL.Add(' , dt_validade_access_token                    ');
+      lQuery.SQL.Add(' , refresh_token                               ');
+      lQuery.SQL.Add(' , dt_validade_refresh_token                   ');
+      lQuery.SQL.Add(' ) VALUES(                                     ');
+      lQuery.SQL.Add('  :id                                          ');
+      lQuery.SQL.Add(' ,:dt_ativacao                                 ');
+      lQuery.SQL.Add(' ,:access_token                                ');
+      lQuery.SQL.Add(' ,:dt_validade_access_token                    ');
+      lQuery.SQL.Add(' ,:refresh_token                               ');
+      lQuery.SQL.Add(' ,:dt_validade_refresh_token                   ');
+      lQuery.SQL.Add(' ) MATCHING (id)                               ');
+      lQuery.ParamByName('dt_ativacao').AsDateTime := pDt_Access;
+      lQuery.ParamByName('access_token').AsString := pAccess;
+      lQuery.ParamByName('dt_validade_access_token').AsDateTime := pDt_Refresh;
+      lQuery.ParamByName('refresh_token').AsString := pRefresh;
+      lQuery.ParamByName('dt_validade_refresh_token').AsDateTime := pDt_Access;
+      lQuery.ParamByName('id').AsInteger := 1;
+      lQuery.ExecSQL;
+      lQuery.Connection.Commit;
+    except
+      on E: Exception do
+      begin
+        result := false;
+      end;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TConnectionAPI.SendOneFN(pCodeFN: String): Boolean;
+var
+  lFN: Tfornecedor;
+  lObjectJson, lJsonRetornoInsert: TJSONObject;
+  lObjectJsonArray: TJSONArray;
+  i: integer;
+  lJson, lIDFN, ltxtNaoEnviados: string;
+  lExisteFN, lExisteFNUpdate: Boolean;
+  lMensagemErro, lCodigoFN: string;
+
+  procedure TratamentoRetornoHttpEnvio;
+  begin
+    if (LengthString(IntToStr(FRestResponse.StatusCode), 1)) = '2' then
+    begin
+      lIDFN := EmptyStr;
+      FTotalFNPosted := FTotalFNPosted + 1;
+      UpdateFNsend(lCodigoFN);
+    end
+    else
+    begin
+      lMensagemErro := EmptyStr;
+      FAllowsUpdatingDateConfig := false;
+      result := false;
+
+      if FRestResponse.StatusCode = 409 then
+      begin
+        UpdateFNsend(lCodigoFN);
+      end;
+
+      lMensagemErro := 'Fornecedor: ' + lFN.Nome + ' - Não Alterado - Motivo/Erro: ' +
+        IntToStr(FRestResponse.StatusCode) + ' - ' + FRestResponse.Content;
+      CreateFileTxtLog(lMensagemErro, 'LogFN_Nao_Alterado')
+
+    end;
+  end;
+
+  procedure SendPost;
+  begin
+    lJson := EmptyStr;
+    lIDFN := EmptyStr;
+    lCodigoFN := EmptyStr;
+
+    lFN := Tfornecedor.Create;
+    lCodigoFN := FQueryInsertOneFN.FieldByName('MC02CODIGO').AsString;
+    lFN.cnpj := FQueryInsertOneFN.FieldByName('MC02CGC').AsString;
+    lFN.cpf := FQueryInsertOneFN.FieldByName('MC02CPF').AsString;
+    lFN.Nome := FQueryInsertOneFN.FieldByName('MC02NOME').AsString;
+    lFN.fantasia := FQueryInsertOneFN.FieldByName('MC02FANTASIA').AsString;
+    lFN.tipo := FQueryInsertOneFN.FieldByName('MC02FISJUR').AsString;
+    lFN.situacao := FQueryInsertOneFN.FieldByName('MC02ATIINATIVO').AsString;
+    lFN.endereco := FQueryInsertOneFN.FieldByName('MC02ENDERECO').AsString;
+    lFN.endereco_numero := FQueryInsertOneFN.FieldByName('MC02_NR').AsString;
+    lFN.endereco_bairro := FQueryInsertOneFN.FieldByName('MC02BAIRRO').AsString;
+    lFN.endereco_cidade := FQueryInsertOneFN.FieldByName('MC02CIDADE').AsString;
+    lFN.endereco_uf := FQueryInsertOneFN.FieldByName('MC02UF').AsString;
+    lFN.endereco_cep := FQueryInsertOneFN.FieldByName('MC02CEP').AsString;
+    lFN.codigo_cidade_sefaz := FQueryInsertOneFN.FieldByName('MC02_COD_SEFAZ').AsString;
+    lFN.telefone := FQueryInsertOneFN.FieldByName('MC02FONE').AsString;
+    lFN.celular := FQueryInsertOneFN.FieldByName('MC02CELULAR').AsString;;
+    lFN.email := FQueryInsertOneFN.FieldByName('MC02EMAIL').AsString;
+    lFN.cart_identidade := FQueryInsertOneFN.FieldByName('MC02CI').AsString;
+    lFN.insc_estadual := FQueryInsertOneFN.FieldByName('MC02IE').AsString;
+    lFN.obs1 := FQueryInsertOneFN.FieldByName('MC02_OBS1').AsString;
+    lFN.obs2 := FQueryInsertOneFN.FieldByName('MC02_OBS2').AsString;
+    lFN.atualizar_custos := FQueryInsertOneFN.FieldByName('MC02_ALTERAR_CUSTOS').AsString;
+    lFN.gerar_rel_sped := FQueryInsertOneFN.FieldByName('MC02_SPED_SN').AsString;
+    lFN.regime_tributario := FQueryInsertOneFN.FieldByName('MC02REGIME').AsInteger;
+    lFN.crt := FQueryInsertOneFN.FieldByName('MC02CRT').AsInteger;
+    lFN.cnae := FQueryInsertOneFN.FieldByName('MC02CNAE').AsString;
+    lFN.representante_nome := FQueryInsertOneFN.FieldByName('MC02CONTATO').AsString;
+    lFN.representante_telefone := FQueryInsertOneFN.FieldByName('MC02FONE_CONTATO').AsString;
+    lFN.representante_email := FQueryInsertOneFN.FieldByName('MC02EMAIL_CONTATO').AsString;
+    lJson := lFN.ToJson.ToString; // ShowMessage(lJson);
+
+    if trim(lJson) <> '' then
+    begin
+      PostFNLoaded(lJson);
+      TratamentoRetornoHttpEnvio;
+    end;
+  end;
+
+begin
+  result := true;
+  ConfigAPI;
+
+  if CheckItsOkConfigAPI then
+  begin
+    LoadQryOneFNInsert(pCodeFN);
+
+    if FQueryInsert.RecordCount > 0 then
+    begin
+      SendPost;
+    end;
+  end
+  else
+  begin
+    FMessage := ('Problemas na Configuração, entre em contato com a MC Sistemas para dar continuidade no uso.');
+  end;
+
+end;
+
+procedure TConnectionAPI.ServerResponseToFile;
+var
+  SomeStream: tmemorystream;
+  local_filename: string;
+begin
+{$IF DEFINED(MsWindows)}
+  local_filename := ExtractFilePath(ParamStr(0)); // + 'syncdownload/Northwindpers.sqlite3';
+{$ENDIF}
+  SomeStream := tmemorystream.Create;
+  SomeStream.WriteData(FRestResponse.RawBytes, Length(FRestResponse.RawBytes));
+  SomeStream.SaveToFile(local_filename);
+  SomeStream.Free;
+end;
+
+function TConnectionAPI.SystemVersion: string;
+var
+  VerInfoSize, VerValueSize, Dummy: DWORD;
+  VerInfo: Pointer;
+  VerValue: PVSFixedFileInfo;
+  V1, V2, V3: Word;
+  cV1, cV2, cV3: string;
+  FileName: string;
+begin
+  FileName := application.exeName;
+  VerInfoSize := GetFileVersionInfoSize(PChar(FileName), Dummy);
+  GetMem(VerInfo, VerInfoSize);
+  GetFileVersionInfo(PChar(FileName), 0, VerInfoSize, VerInfo);
+  VerQueryValue(VerInfo, '', Pointer(VerValue), VerValueSize);
+  with VerValue^ do
+  begin
+    V1 := dwFileVersionMS shr 16;
+    V2 := dwFileVersionMS and $FFFF;
+    V3 := dwFileVersionLS shr 16;
+    // V4 := dwFileVersionLS and $FFFF;
+  end;
+  FreeMem(VerInfo, VerInfoSize);
+
+  cV1 := IntToStr(V1);
+  cV2 := IntToStr(V2);
+  cV3 := IntToStr(V3);
+  result := cV1 + '.' + cV2 + '.' + cV3;
+end;
+
+function TConnectionAPI.TriggerValidation(pNameTrigger: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+
+  lQuery := TQuery.Create(nil);
+  try
+    result := false;
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT * FROM RDB$TRIGGERS                                            ');
+    lQuery.SQL.Add(' WHERE UPPER(RDB$TRIGGER_NAME) = UPPER(' + QuotedStr(pNameTrigger) + ')');
+    lQuery.Open;
+    lQuery.FetchAll;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      result := true;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.PostCPLoaded(pJson: String): Boolean;
+var
+  lContaRegistros: integer;
+
+begin
+  begin
+    CheckTokenValidity;
+    ConfigConnectionAPI(rmPOST, tPostCP, pJson);
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      GenerateToken;
+      ConfigConnectionAPI(rmPOST, tPostCP, pJson);
+    end;
+    if FRestResponse.StatusCode = 200 then
+    begin
+      // ShowMessage('Negocio fechado.');
+    end;
+  end;
+
+end;
+
+function TConnectionAPI.PostFNLoaded(pJson: String): Boolean;
+var
+  lContaRegistros: integer;
+
+begin
+  // result := '';
+
+  begin
+    CheckTokenValidity;
+    ConfigConnectionAPI(rmPOST, tPostFN, pJson);
+
+    if FRestResponse.StatusCode = 401 then
+    begin
+      GenerateToken;
+      ConfigConnectionAPI(rmPOST, tPostFN, pJson);
+    end;
+    if FRestResponse.StatusCode = 200 then
+    begin
+      // ShowMessage('Negocio fechado.');
+    end;
+  end;
+
+end;
+
+function TConnectionAPI.PutContasPagar(pJson: String): Boolean;
+var
+  lContaRegistros: integer;
+
+begin
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmPUT, tPutCP, pJson);
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmPUT, tPutCP, pJson);
+  end;
+  if FRestResponse.StatusCode = 200 then
+  begin
+    // ShowMessage('Negocio fechado.');
+  end;
+
+end;
+
+function TConnectionAPI.PutFornecedor(pJson, pCNPJ: String): Boolean;
+var
+  lContaRegistros: integer;
+
+begin
+  FCnpjFN := pCNPJ;
+  CheckTokenValidity;
+  ConfigConnectionAPI(rmPUT, tPutFN, pJson);
+
+  if FRestResponse.StatusCode = 401 then
+  begin
+    GenerateToken;
+    ConfigConnectionAPI(rmPUT, tPutFN, pJson);
+  end;
+  if FRestResponse.StatusCode = 200 then
+  begin
+    // ShowMessage('Negocio fechado.');
+  end;
+
+end;
+
+function TConnectionAPI.UpdateContaPagarSend(pTitle: string; pLastDateAtt: TDateTime): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (       ');
+    lQuery.SQL.Add(' TITULO,EXCLUIDO,ENVIADO, DATA_ATUALIZACAO  ');
+    lQuery.SQL.Add(' )VALUES(                                   ');
+    lQuery.SQL.Add(' :TITULO,''N'' ,''S'',:DATA_ATUALIZACAO)    ');
+    lQuery.SQL.Add(' MATCHING (TITULO);                         ');
+    lQuery.ParamByName('TITULO').AsString := pTitle;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(pLastDateAtt, -1);
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TConnectionAPI.UpdateContaPagarSend(pTitle: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (       ');
+    lQuery.SQL.Add(' TITULO,EXCLUIDO,ENVIADO                    ');
+    lQuery.SQL.Add(' )VALUES(                                   ');
+    lQuery.SQL.Add(' :TITULO,''N'' ,''S'')                      ');
+    lQuery.SQL.Add(' MATCHING (TITULO);                         ');
+    lQuery.ParamByName('TITULO').AsString := pTitle;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.UpdateCPforResend(pTitle: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_CP (       ');
+    lQuery.SQL.Add(' TITULO,EXCLUIDO,ENVIADO,DATA_ATUALIZACAO)  ');
+    lQuery.SQL.Add(' VALUES (                                   ');
+    lQuery.SQL.Add(' :CODIGO,''N'' ,''N'',:DATA_ATUALIZACAO)    ');
+    lQuery.SQL.Add(' MATCHING (CODIGO);                         ');
+    lQuery.ParamByName('TITULO').AsString := pTitle;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(ReturnsLastDateSync, 1);
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.UpdateCPTitleEmp(pTitulo: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' update MC08CPAG                               ');
+    lQuery.SQL.Add(' set AC08EMP_TIT = :AC08EMP_TIT                ');
+    lQuery.SQL.Add(' WHERE AC08TIT = :AC08TIT                      ');
+    lQuery.ParamByName('AC08TIT').AsString := pTitulo;
+    lQuery.ParamByName('AC08EMP_TIT').AsString := ReturnCodeCompany + '-' + pTitulo;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+function TConnectionAPI.UpdateFNforResend(pCodeFN: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_FN (       ');
+    lQuery.SQL.Add(' CODIGO,EXCLUIDO,ENVIADO,DATA_ATUALIZACAO)  ');
+    lQuery.SQL.Add(' VALUES (                                   ');
+    lQuery.SQL.Add(' :CODIGO,''N'' ,''N'',:DATA_ATUALIZACAO)    ');
+    lQuery.SQL.Add(' MATCHING (CODIGO);                         ');
+    lQuery.ParamByName('CODIGO').AsString := pCodeFN;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(ReturnsLastDateSync, 1);
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TConnectionAPI.UpdateFNsend(pCodeFN: string): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Connection := TConnection.ObjectConnection.Connection;
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' UPDATE OR INSERT INTO TBL_INTEG_FN (       ');
+    lQuery.SQL.Add(' CODIGO,EXCLUIDO,ENVIADO, DATA_ATUALIZACAO) ');
+    lQuery.SQL.Add(' VALUES (                                   ');
+    lQuery.SQL.Add(' :CODIGO,''N'' ,''S'',:DATA_ATUALIZACAO)    ');
+    lQuery.SQL.Add(' MATCHING (CODIGO);                         ');
+    lQuery.ParamByName('CODIGO').AsString := pCodeFN;
+    lQuery.ParamByName('DATA_ATUALIZACAO').AsDateTime := IncMinute(ReturnsLastDateSync, -1);;
+    lQuery.ExecSQL;
+    lQuery.Connection.Commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TConnectionAPI.UrlRestClient(pType: TServiceAPI);
+begin
+  case pType of
+{$REGION 'Login'}
+    tPostToken:
+      FRestClient.BaseURL := FUrlAPI + '/login';
+{$ENDREGION}
+{$REGION 'CP'}
+    tGetCP:
+      begin
+        if FMainCompany then
+        begin
+          FRestClient.BaseURL := FUrlAPI + '/tp_cpagar?data=' + FDateTimeCP;
+        end
+        else if FChaveEmpresa <> EmptyStr then
+        begin
+          FRestClient.BaseURL := FUrlAPI + '/tp_cpagar/' + FChaveEmpresa + '/?data=' + FDateTimeCP;
+        end;
+      end;
+
+    tPostCP:
+      FRestClient.BaseURL := FUrlAPI + '/tp_cpagar';
+
+    tPutCP:
+      FRestClient.BaseURL := FUrlAPI + '/tp_cpagar';
+
+    tDeleteCP:
+      FRestClient.BaseURL := FUrlAPI + '/tp_cpagar';
+
+{$ENDREGION}
+{$REGION 'FN'}
+    tGetFN:
+      FRestClient.BaseURL := FUrlAPI + '/tp_fornec';
+
+    tPostFN:
+      FRestClient.BaseURL := FUrlAPI + '/tp_fornec';
+
+    tGetFNCNPJ:
+      FRestClient.BaseURL := FUrlAPI + '/tp_fornec/' + FCnpjFN;
+
+    tPutFN:
+      FRestClient.BaseURL := FUrlAPI + '/tp_fornec/' + FCnpjFN;
+
+    tDeleteFN:
+      FRestClient.BaseURL := FUrlAPI + '/tp_fornec/' + FCnpjFN;
+{$ENDREGION}
+  end;
+end;
+
+function TConnectionAPI.LengthString(pString: string; pLength: integer): string;
+begin
+  result := Copy(pString, 1, pLength);
+end;
+
+initialization
+
+finalization
+
+TConnectionAPI.ReleaseMe;
+
+end.

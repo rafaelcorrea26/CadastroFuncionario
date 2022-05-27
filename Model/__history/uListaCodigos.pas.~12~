@@ -1,0 +1,64 @@
+unit uListaCodigos;
+
+interface
+
+uses
+  System.JSON, REST.JSON, System.Generics.Collections, FireDAC.Comp.Client, uConexao,
+  System.SysUtils;
+
+type
+  TListaCodigos = class;
+  TArrayListaCodigos = array of TListaCodigos;
+
+  TListaCodigos = class
+  private
+    FListaCodigos: TArrayListaCodigos;
+    FQuantidade: Double;
+    FCodigo: string;
+    procedure setListaCodigos(const Value: TArrayListaCodigos);
+  public
+
+    property ListaCodigos: TArrayListaCodigos read FListaCodigos write setListaCodigos;
+    property Quantidade: Double read FQuantidade write FQuantidade;
+    property Codigo: string read FCodigo write FCodigo;
+    procedure AddListaCodigos(pListaCodigos: TListaCodigos);
+    constructor Create;
+        destructor Destroy; override;
+  end;
+
+implementation
+
+{ TListaCodigos }
+
+procedure TListaCodigos.AddListaCodigos(pListaCodigos: TListaCodigos);
+begin
+  SetLength(FListaCodigos, Length(FListaCodigos) + 1);
+  FListaCodigos[Length(FListaCodigos) - 1] := pListaCodigos;
+end;
+
+constructor TListaCodigos.Create;
+begin
+
+end;
+
+destructor TListaCodigos.Destroy;
+var
+  i: integer;
+  lVendaItens: TListaCodigos;
+begin
+  for lVendaItens in FListaCodigos do
+  begin
+    lVendaItens.Free;
+  end;
+
+  SetLength(FListaCodigos, 0);
+
+  inherited;
+end;
+
+procedure TListaCodigos.setListaCodigos(const Value: TArrayListaCodigos);
+begin
+  FListaCodigos := Value;
+end;
+
+end.

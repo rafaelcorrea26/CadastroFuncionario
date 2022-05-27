@@ -1,0 +1,86 @@
+unit uContador; // classe contadora de envios
+
+interface
+
+uses
+  uInterfacesAPI, System.SysUtils;
+
+type
+
+  TContador = class;
+
+  TContador = class(TInterfacedObject, iErro)
+  private
+    FSucesso: integer;
+    FExcluido: integer;
+    FErro: integer;
+
+    FRecebimentoCP: integer;
+    FRecebimentoCR: integer;
+    FEnvioCP: integer;
+    FEnvioCR: integer;
+
+    FTotalRecebimentoCP: integer;
+    FTotalRecebimentoCR: integer;
+    FTotalEnvioCP: integer;
+    FTotalEnvioCR: integer;
+
+    class var FContadorErro: TContador;
+
+  public
+    destructor Destroy; override;
+    constructor Create;
+
+    property Sucesso: integer read FSucesso write FSucesso;
+    property Excluido: integer read FExcluido write FExcluido;
+    property Erro: integer read FErro write FErro;
+
+    property RecebimentoCP: integer read FRecebimentoCP write FRecebimentoCP;
+    property RecebimentoCR: integer read FRecebimentoCR write FRecebimentoCR;
+    property EnvioCP: integer read FEnvioCP write FEnvioCP;
+    property EnvioCR: integer read FEnvioCR write FEnvioCR;
+
+    property TotalRecebimentoCP: integer read FTotalRecebimentoCP write FTotalRecebimentoCP;
+    property TotalRecebimentoCR: integer read FTotalRecebimentoCR write FTotalRecebimentoCR;
+    property TotalEnvioCP: integer read FTotalEnvioCP write FTotalEnvioCP;
+    property TotalEnvioCR: integer read FTotalEnvioCR write FTotalEnvioCR;
+
+    class procedure ReleaseMe;
+    class function GetContadorErro: TContador; static;
+    class property ContadorErro: TContador read GetContadorErro write FContadorErro;
+  end;
+
+implementation
+
+{ TContador }
+
+constructor TContador.Create;
+begin
+
+end;
+
+destructor TContador.Destroy;
+begin
+
+  inherited;
+end;
+
+class function TContador.GetContadorErro: TContador;
+begin
+  if NOT Assigned(FContadorErro) then
+  begin
+    FContadorErro := TContador.Create;
+  end;
+
+  result := FContadorErro;
+end;
+
+class procedure TContador.ReleaseMe;
+begin
+  if Assigned(FContadorErro) then
+  begin
+    FreeAndNil(FContadorErro);
+  end;
+end;
+
+end.

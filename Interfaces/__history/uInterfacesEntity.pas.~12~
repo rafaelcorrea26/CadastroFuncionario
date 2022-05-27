@@ -1,0 +1,31 @@
+unit uInterfacesEntity;
+
+interface
+
+uses
+  System.JSON;
+
+type
+
+  // Entidades
+
+  iEntidade = interface
+    ['{F069D59C-9CB6-49ED-B475-D0C7FAC36DF8}']
+  end;
+
+  // DAO
+
+  iEntidadeDAO = interface
+    ['{7904B91D-DEF0-4C96-8474-B02F0773E4BB}']
+
+    class function Carrega(pFuncionario: TFuncionario): Boolean;
+    class function Incluir(pFuncionario: TFuncionario): Boolean;
+    class function Alterar(pFuncionario: TFuncionario): Boolean;
+    class function Excluir(pCodigo: Integer): Boolean;
+    class function Limpar(pFuncionario: TFuncionario): Boolean;
+    class function Existe(pCodigo: Integer): Boolean;
+  end;
+
+implementation
+
+end.

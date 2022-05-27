@@ -1,0 +1,27 @@
+unit uInterfacesEntity;
+
+interface
+
+uses
+  System.JSON;
+
+type
+  iCliente= interface
+   ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iClienteDAO = interface
+   ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+
+
+    iContasReceber= interface
+   ['{31E0743F-BDE7-492A-8016-A61CED36DF48}']
+  end;
+
+  iContasReceberDAO = interface
+   ['{57CAE789-BB43-4E4F-86BA-D56885B99101}']
+  end;
+implementation
+
+end.

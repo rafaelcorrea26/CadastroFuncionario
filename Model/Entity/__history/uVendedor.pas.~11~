@@ -1,0 +1,81 @@
+unit uVendedor;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity,
+  REST.JSON.Types;
+
+type
+  TVendedor = class;
+
+  TVendedor = class(TInterfacedObject, iCliente)
+  private
+    FCodigo: Integer;
+    FNome: string;
+    FComissaoVista: Double;
+    FComissaoPrazo: Double;
+    FModificaPrecoVenda: Boolean;
+    FLimiteDesconto: Double;
+    FMetaVenda: Double;
+    FParticiparAgenda: Boolean;
+    FTipoPrecoVenda: string;
+    FEndereco: string;
+    FCpfCnpj: string;
+    FCidade: string;
+    FCep: string;
+    FFone: string;
+    FEmail: string;
+    FObservacoes: string;
+    FSenha: string;
+
+  public
+    property Codigo: Integer read FCodigo write FCodigo;
+    property Nome: string read FNome write FNome;
+    property ComissaoVista: Double read FComissaoVista write FComissaoVista;
+    property ComissaoPrazo: Double read FComissaoPrazo write FComissaoPrazo;
+    property ModificaPrecoVenda: Boolean read FModificaPrecoVenda write FModificaPrecoVenda;
+    property LimiteDesconto: Double read FLimiteDesconto write FLimiteDesconto;
+    property MetaVenda: Double read FMetaVenda write FMetaVenda;
+    property ParticiparAgenda: Boolean read FParticiparAgenda write FParticiparAgenda;
+    property TipoPrecoVenda: string read FTipoPrecoVenda write FTipoPrecoVenda;
+
+    property Endereco: string read FEndereco write FEndereco;
+    property CpfCnpj: string read FCpfCnpj write FCpfCnpj;
+    property Cidade: string read FCidade write FCidade;
+    property Cep: string read FCep write FCep;
+    property Fone: string read FFone write FFone;
+    property Email: string read FEmail write FEmail;
+    property Observacoes: string read FObservacoes write FObservacoes;
+    property Senha: string read FSenha write FSenha;
+
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: string;
+  end;
+
+implementation
+
+destructor TVendedor.Destroy;
+begin
+
+  inherited;
+end;
+
+function TVendedor.ToJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TVendedor.Create;
+begin
+
+end;
+
+end.

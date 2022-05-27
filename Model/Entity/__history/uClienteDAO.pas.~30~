@@ -1,0 +1,1454 @@
+unit uCliente;
+
+interface
+
+uses
+
+  uCidadeDAO,
+  uQuery,
+  System.SysUtils,
+  Vcl.Dialogs,
+  Data.DB, uFunctions;
+
+type
+  TCliente = class
+  private
+    FCodigo: Integer;
+    FNome: string;
+    FFormaDePagamentoPadrao: Integer;
+    // FLimiteDeCredito: Double;
+    FTipoDeCredito: string;
+    FAtivo: Boolean;
+    FPrazoMaximoEmDias: Integer;
+    FPessoaFisica: Boolean;
+    FSaldoCalculado: Double;
+    FCPF: string;
+    FCNPJ: string;
+    FAtivoNoSPC: Boolean;
+    FValorLimiteDoCliente: Double;
+    FDiaFixoDeVencimento: Integer;
+    FIe: string;
+    FFone: string;
+    FEmail: string;
+    FBairro: string;
+    FFax: string;
+    FUf: string;
+    FCodigoCidadeIbge: string;
+    FCep: string;
+    FNumero: string;
+    FComplemento: string;
+    FDataCadastro: TDatetime;
+    FMatricula: string;
+    FCidade: string;
+    FEndereco: string;
+    FCelular: string;
+    FEnderecoOk: Boolean;
+    FConvenioOk: Boolean;
+    FSubstituicaoTributaria: Boolean;
+    FSalarioOk: Boolean;
+    FPisCofins: Boolean;
+    FSped: Boolean;
+    FUsuarioAlteracao: Integer;
+    FUsuarioCadastro: Integer;
+    FIndicadorDestinatario: string;
+    FConsumidorFinal: string;
+    FIndicadorPresencaComprador: string;
+    FDataAlteracao: TDatetime;
+    FSaldoCredito: Double;
+    FNumeroDuplicatasAbertas: Integer;
+    FCidadeIbge: TCidade;
+    FDataNascimento: TDate;
+    FRg: string;
+    FSexo: string;
+    FEstadoCivil: string;
+    FNaturalidade: string;
+    FPai: string;
+    FMae: string;
+    FEnderecoCobranca: string;
+    FCidadeCobranca: string;
+    FBairroCobranca: string;
+    FCepCobranca: string;
+    FUfCobranca: string;
+    FContato: string;
+    FAluguel: string;
+    FValorAluguel: Double;
+    FTempoAluguel: string;
+    FEmpresa: string;
+    FFoneEmpresa: string;
+    FFuncaoEmpresa: string;
+    FAdmissao: string;
+    FSalario: string;
+    FReferenciaComercial: string;
+    FReferenciaBanco: string;
+    FDataSpc: TDate;
+    FObservacaoSpc: string;
+    FObservacaoGeral: string;
+    FConjuge: string;
+    FReferenciaPessoal: string;
+    FDataOrci: string;
+    FDataMovimento: TDate;
+    FUltimaNf: string;
+    FValorNf: Double;
+    FTabelaLocalizacao: Integer;
+    FTabelaExtra: Integer;
+    FLocalCobranca: string;
+    FVendedor: Integer;
+    FVip: string;
+    FValidadeVip: TDate;
+    FTabelaConvenio: Integer;
+    FTabelaProfissao: Integer;
+    FDataCobranca: TDate;
+    FQuantidadeCobranca: Integer;
+    FIcms: Double;
+    FFotoCaminho: string;
+    FAtacado: string;
+    FLimiteDesconto: Double;
+    FMudarFormaPagamento: string;
+    FDivida: Double;
+    FSaldoTotal: Double;
+    FRota: string;
+    FOrdemVisita: Integer;
+    FObservacao1: string;
+    FObservacao2: string;
+    FSuperLimiteDias: Integer;
+    FCartorio: string;
+    FSerasa: string;
+    FBoletoComTaxa: string;
+    FNomeCompletoNfe: string;
+    FObservacaoInterna: string;
+
+    class var FObjetoBusca: TCliente;
+
+    function RetornaCPFOuCNPJ: string;
+    function getTipoDeCredito: string;
+    procedure setTipoDeCredito(const Value: string);
+    procedure ValidaChequesEmAberto;
+    function GetIe: string;
+    procedure SetIe(const Value: string);
+  public
+    destructor Destroy; override;
+    property Codigo: Integer read FCodigo write FCodigo; // mc01codigo integer,
+    property Nome: string read FNome write FNome; // mc01nome varchar(35),
+    property Matricula: string read FMatricula write FMatricula; // mc01fantasia varchar(35),
+    property Endereco: string read FEndereco write FEndereco; // mc01endereco varchar(35),
+    property Numero: string read FNumero write FNumero; // mc01_nr varchar(15),
+    property Bairro: string read FBairro write FBairro; // mc01bairro varchar(20),
+    property Cidade: string read FCidade write FCidade; // mc01cidade varchar(30),
+    property Cep: string read FCep write FCep; // mc01cep varchar(10),
+    property Complemento: string read FComplemento write FComplemento; // mc01_complemento varchar(50),
+    property Ie: string read GetIe write SetIe; // mc01ie varchar(20),
+    property Fone: string read FFone write FFone; // mc01fone varchar(15),
+    property Fax: string read FFax write FFax; // mc01fax varchar(15),
+    property Celular: string read FCelular write FCelular; // mc01celular varchar(15),
+    property Email: string read FEmail write FEmail; // mc01email varchar(50),
+    property CodigoCidadeIbge: string read FCodigoCidadeIbge write FCodigoCidadeIbge; // mc01codvip varchar(14),
+    property Uf: string read FUf write FUf; // mc01uf char(2),
+    property ConvenioOk: Boolean read FConvenioOk write FConvenioOk; // mc01_convenio_ok char(1),
+    property SalarioOk: Boolean read FSalarioOk write FSalarioOk; // mc01_salario_ok char(1),
+    property EnderecoOk: Boolean read FEnderecoOk write FEnderecoOk; // mc01_endereco_ok char(1),
+    property SubstituicaoTributaria: Boolean read FSubstituicaoTributaria write FSubstituicaoTributaria;
+    // mc01_subst_trib char(1),
+    property Sped: Boolean read FSped write FSped; // mc01_sped_sn char(1),
+    property PisCofins: Boolean read FPisCofins write FPisCofins; // mc01_piscofins_sn char(1),
+    property ConsumidorFinal: string read FConsumidorFinal write FConsumidorFinal; // mc01_consumidor_final char(1),
+    property IndicadorPresencaComprador: string read FIndicadorPresencaComprador write FIndicadorPresencaComprador;
+    // mc01_indpres char(1),
+    property IndicadorDestinatario: string read FIndicadorDestinatario write FIndicadorDestinatario;
+    // mc01_indiedest char(1),
+    property UsuarioCadastro: Integer read FUsuarioCadastro write FUsuarioCadastro; // mc01_usu_cadastro integer,
+    property UsuarioAlteracao: Integer read FUsuarioAlteracao write FUsuarioAlteracao; // mc01_usu_alteracao integer,
+    property DataCadastro: TDatetime read FDataCadastro write FDataCadastro; // mc01dtcadastro timestamp,
+    property DataAlteracao: TDatetime read FDataAlteracao write FDataAlteracao; // mc01_dt_alteracao timestamp,
+    property SaldoCredito: Double read FSaldoCredito write FSaldoCredito; // mc01saldocred numeric(15,4),
+    property NumeroDuplicatasAbertas: Integer read FNumeroDuplicatasAbertas write FNumeroDuplicatasAbertas;
+    // mc01nrdupabe integer,
+    property TipoDeCredito: string read getTipoDeCredito write setTipoDeCredito; // mc01tipocred char(1),
+    // property LimiteDeCredito: Double read FLimiteDeCredito write FLimiteDeCredito;
+    property Ativo: Boolean read FAtivo write FAtivo; // mc01atiinativo char(1),
+    property FormaDePagamentoPadrao: Integer read FFormaDePagamentoPadrao write FFormaDePagamentoPadrao;
+    // mc01_frpgto integer,
+    property PrazoMaximoEmDias: Integer read FPrazoMaximoEmDias write FPrazoMaximoEmDias; // mc01_prazo_dias integer,
+    property PessoaFisica: Boolean read FPessoaFisica write FPessoaFisica; // mc01fisjur char(1),
+    property SaldoCalculado: Double read FSaldoCalculado write FSaldoCalculado;
+    property ValorLimiteDoCliente: Double read FValorLimiteDoCliente write FValorLimiteDoCliente;
+    // mc01limitecred numeric(15,4),
+    property CPF: string read FCPF write FCPF; // mc01cpf varchar(11),
+    property CNPJ: string read FCNPJ write FCNPJ; // mc01cgc varchar(14),
+    property DiaFixoDeVencimento: Integer read FDiaFixoDeVencimento write FDiaFixoDeVencimento default 1;
+    // mc01_dia_vcto integer,
+    property AtivoNoSPC: Boolean read FAtivoNoSPC write FAtivoNoSPC; // mc01sitspc char(1),
+    property DataNascimento: TDate read FDataNascimento write FDataNascimento; // mc01dtnascto date,
+    property Rg: string read FRg write FRg; // mc01ci varchar(10),
+    property Sexo: string read FSexo write FSexo; // mc01sexo char(1),
+    property EstadoCivil: string read FEstadoCivil write FEstadoCivil; // mc01estcivil char(1),
+    property Naturalidade: string read FNaturalidade write FNaturalidade; // mc01naturalidade varchar(30),
+    property Pai: string read FPai write FPai; // mc01pai varchar(35),
+    property Mae: string read FMae write FMae; // mc01mae varchar(35),
+    property EnderecoCobranca: string read FEnderecoCobranca write FEnderecoCobranca; // mc01endcob varchar(35),
+    property CidadeCobranca: string read FCidadeCobranca write FCidadeCobranca; // mc01cidadecob varchar(30),
+    property BairroCobranca: string read FBairroCobranca write FBairroCobranca; // mc01bairrocob varchar(20),
+    property CepCobranca: string read FCepCobranca write FCepCobranca; // mc01cepcob varchar(10),
+    property UfCobranca: string read FUfCobranca write FUfCobranca; // mc01ufcob char(2),
+    property Contato: string read FContato write FContato; // mc01contato varchar(50),
+    property Aluguel: string read FAluguel write FAluguel; // mc01aluguel char(1),
+    property ValorAluguel: Double read FValorAluguel write FValorAluguel; // mc01valoraluguel numeric(15,4),
+    property TempoAluguel: string read FTempoAluguel write FTempoAluguel; // mc01tempoaluguel varchar(25),
+    property Empresa: string read FEmpresa write FEmpresa; // mc01empresa varchar(35),
+    property FoneEmpresa: string read FFoneEmpresa write FFoneEmpresa; // mc01foneemp varchar(15),
+    property FuncaoEmpresa: string read FFuncaoEmpresa write FFuncaoEmpresa; // mc01funcaoemp varchar(25),
+    property Admissao: string read FAdmissao write FAdmissao; // mc01admissao varchar(25),
+    property Salario: string read FSalario write FSalario; // mc01salario varchar(25),
+    property ReferenciaComercial: string read FReferenciaComercial write FReferenciaComercial;
+    // mc01refcom varchar(100),
+    property ReferenciaBanco: string read FReferenciaBanco write FReferenciaBanco; // mc01refban varchar(100),
+    property DataSpc: TDate read FDataSpc write FDataSpc; // mc01dtspc date,
+    property ObservacaoSpc: string read FObservacaoSpc write FObservacaoSpc; // mc01obsspc varchar(100),
+    property ObservacaoGeral: string read FObservacaoGeral write FObservacaoGeral; // mc01obsgeral blob sub_type binary,
+    property Conjuge: string read FConjuge write FConjuge; // mc01conjuge varchar(50),
+    property ReferenciaPessoal: string read FReferenciaPessoal write FReferenciaPessoal; // mc01refpessoal varchar(50),
+    property DataOrci: string read FDataOrci write FDataOrci; // mc01dtorci varchar(25),
+    property DataMovimento: TDate read FDataMovimento write FDataMovimento; // mc01dtmov date,
+    property UltimaNf: string read FUltimaNf write FUltimaNf; // mc01ultimanf char(10),
+    property ValorNf: Double read FValorNf write FValorNf; // mc01valornf numeric(15,4),
+    property TabelaLocalizacao: Integer read FTabelaLocalizacao write FTabelaLocalizacao; // mc01tblocal integer,
+    property TabelaExtra: Integer read FTabelaExtra write FTabelaExtra; // mc01tbextra integer,
+    property LocalCobranca: string read FLocalCobranca write FLocalCobranca; // mc01localcob char(3),
+    property Vendedor: Integer read FVendedor write FVendedor; // mc01rep integer,
+    property Vip: string read FVip write FVip; // mc01vip char(1),
+    property ValidadeVip: TDate read FValidadeVip write FValidadeVip; // mc01validvip date,
+    property TabelaConvenio: Integer read FTabelaConvenio write FTabelaConvenio; // mc01_tab_convenio integer,
+    property TabelaProfissao: Integer read FTabelaProfissao write FTabelaProfissao; // mc01_tab_profissao integer,
+    property DataCobranca: TDate read FDataCobranca write FDataCobranca; // mc01_dt_cobranca date,
+    property QuantidadeCobranca: Integer read FQuantidadeCobranca write FQuantidadeCobranca;
+    // mc01_qtde_cobranca integer,
+    property Icms: Double read FIcms write FIcms; // mc01_icms numeric(15,4),
+    property FotoCaminho: string read FFotoCaminho write FFotoCaminho; // mc01foto varchar(45),
+    property Atacado: string read FAtacado write FAtacado; // mc01_atacado char(1),
+    property LimiteDesconto: Double read FLimiteDesconto write FLimiteDesconto; // mc01_limitedesconto numeric(15,4),
+    property MudarFormaPagamento: string read FMudarFormaPagamento write FMudarFormaPagamento;
+    // mc01_mudar_frpgto char(1),
+    property Divida: Double read FDivida write FDivida; // mc01divida numeric(15,4),
+    property SaldoTotal: Double read FSaldoTotal write FSaldoTotal; // mc01tol_saldo numeric(15,4),
+    property Rota: string read FRota write FRota; // mc01rota varchar(4),
+    property OrdemVisita: Integer read FOrdemVisita write FOrdemVisita; // mc01ord_vis integer,
+    property Observacao1: string read FObservacao1 write FObservacao1; // mc01_obs1 varchar(75),
+    property Observacao2: string read FObservacao2 write FObservacao2; // mc01_obs2 varchar(75),
+    property SuperLimiteDias: Integer read FSuperLimiteDias write FSuperLimiteDias; // mc01super_limite_dias integer,
+    property Cartorio: string read FCartorio write FCartorio; // mc01_cartorio char(1),
+    property Serasa: string read FSerasa write FSerasa; // mc01_serasa char(1),
+    property BoletoComTaxa: string read FBoletoComTaxa write FBoletoComTaxa; // mc01_boleto_com_taxa char(1),
+    property NomeCompletoNfe: string read FNomeCompletoNfe write FNomeCompletoNfe;
+    // mc01_nome_completo_nfe varchar(60),
+    property ObservacaoInterna: string read FObservacaoInterna write FObservacaoInterna;
+    // mc01obs_interna blob sub_type binary
+
+    property CidadeIbge: TCidade read FCidadeIbge write FCidadeIbge; // 20.05.00
+
+    class property ObjetoBusca: TCliente read FObjetoBusca write FObjetoBusca;
+
+    procedure CarregaCliente;
+    procedure AtualizaSaldoCalculado;
+    procedure CarregaDadosComplementares(pDataSet: TdataSet); virtual;
+    procedure AtualizaSaldoClienteAposVenda(pNota, pTipoFormaPagamento: string; pEmissaoNota: TDate;
+      pTotalNota: Double);
+    function ValidaSaldoCliente(pValorValidado: Double): Boolean;
+    function ValidaSeEControleDeSaldo: Boolean;
+    function ValidaSePossuiCPFouCNPJInformado: Boolean;
+    function ValidaCodigoDoClienteFinal(pCodigoCliente: Integer): Boolean;
+    function BuscaAliquotaInternaUFDest(pUF: string): Currency;
+    constructor Create;
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    procedure Limpar;
+
+    function GeraCodigo: Integer;
+
+    class function BuscaCodigoPorCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+    class function BuscaCodigoPorCpfInscricaoEstadual(pCpf, pInscricaoEstadual: string): Integer;
+    class function Existe(pCodigo: Integer): Boolean;
+    class function DadosFiscaisNFeOk(pCodigo: Integer): Boolean;
+  end;
+
+implementation
+
+{ TCliente }
+function TCliente.RetornaCPFOuCNPJ: string;
+begin
+  Result := FCNPJ;
+  if FPessoaFisica then
+    Result := FCPF;
+end;
+
+procedure TCliente.SetIe(const Value: string);
+begin
+  FIe := Tfunctions.RemoveCaracteres(Value);
+end;
+
+procedure TCliente.setTipoDeCredito(const Value: string);
+begin
+  FTipoDeCredito := Value;
+end;
+
+procedure TCliente.ValidaChequesEmAberto;
+var
+  lQuery: TQuery;
+  lMensagem: string;
+begin
+  lMensagem := EmptyStr;
+
+  lQuery := TQuery.Create(nil);
+  try
+    // cheques em aberto
+
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT ');
+    lQuery.SQL.Add(' COUNT(*) AS QTDE, ');
+    lQuery.SQL.Add(' SUM(AN09VALOR) AS TOTAL ');
+    lQuery.SQL.Add(' FROM MC09CHEQUE ');
+    lQuery.SQL.Add(' WHERE AC09_CPFCGC= ' + QuotedStr(RetornaCPFOuCNPJ));
+    lQuery.SQL.Add(' AND AC09SIT= ''N''');
+    lQuery.SQL.Add(' GROUP BY AC09_CPFCGC ');
+    lQuery.Open;
+    lQuery.FetchAll;
+    if lQuery.RecordCount > 0 then
+      lMensagem := lMensagem + 'Cheques em Aberto: ' + lQuery.FieldByName('QTDE').AsString +
+        FormatFloat(' Total R$ ##,##0.00', lQuery.FieldByName('TOTAL').AsFloat) + #13;
+
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT ');
+    lQuery.SQL.Add(' AC09_CPFCNPJ, AD09_DT_BLOQ, ');
+    lQuery.SQL.Add(' AD09_RESP, AC09_NOME, AC09_MOTIVO ');
+    lQuery.SQL.Add(' FROM MC09_CANCELADO ');
+    lQuery.SQL.Add(' WHERE ( AC09_CPFCNPJ = ' + QuotedStr(RetornaCPFOuCNPJ) + ')');
+    lQuery.Open;
+    lQuery.FetchAll;
+    if lQuery.RecordCount > 0 then
+      lMensagem := lMensagem + 'CPF/CNPJ: Bloqueado em ' + lQuery.FieldByName('AD09_DT_BLOQ').AsString + #13;
+
+    lQuery.close;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TCliente.ValidaCodigoDoClienteFinal(pCodigoCliente: Integer): Boolean;
+begin
+  Result := (FCodigo = pCodigoCliente);
+  if not Result then
+  begin
+    ShowMessage(' O cliente informado difere do cliente ultilizado para rotina de forma de pagamento.' + slinebreak +
+      'Código do Cliente informado na venda :' + inttostr(pCodigoCliente) + slinebreak +
+      'Código do Cliente informado na rotina de forma de pagamento :' + inttostr(FCodigo));
+  end;
+end;
+
+function TCliente.ValidaSaldoCliente(pValorValidado: Double): Boolean;
+begin
+  Result := not ValidaSeEControleDeSaldo;
+  if not Result then
+  begin
+    AtualizaSaldoCalculado;
+    Result := ((FValorLimiteDoCliente - (pValorValidado + FSaldoCalculado)) > 0);
+  end;
+end;
+
+function TCliente.ValidaSeEControleDeSaldo: Boolean;
+begin
+  Result := (FTipoDeCredito = 'S');
+end;
+
+function TCliente.ValidaSePossuiCPFouCNPJInformado: Boolean;
+begin
+  Result := (Length(Trim(RetornaCPFOuCNPJ)) > 0);
+end;
+
+procedure TCliente.Alterar(pEfetuarCommit: Boolean);
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('update MC01CLIENTE set                             ');
+    lQuery.SQL.Add('  MC01NOME               =:MC01NOME,               ');
+    lQuery.SQL.Add('  MC01FANTASIA           =:MC01FANTASIA,           ');
+    lQuery.SQL.Add('  MC01ENDERECO           =:MC01ENDERECO,           ');
+    lQuery.SQL.Add('  MC01BAIRRO             =:MC01BAIRRO,             ');
+    lQuery.SQL.Add('  MC01CIDADE             =:MC01CIDADE,             ');
+    lQuery.SQL.Add('  MC01CEP                =:MC01CEP,                ');
+    lQuery.SQL.Add('  MC01UF                 =:MC01UF,                 ');
+    lQuery.SQL.Add('  MC01FONE               =:MC01FONE,               ');
+    lQuery.SQL.Add('  MC01FAX                =:MC01FAX,                ');
+    lQuery.SQL.Add('  MC01CELULAR            =:MC01CELULAR,            ');
+    lQuery.SQL.Add('  MC01EMAIL              =:MC01EMAIL,              ');
+    lQuery.SQL.Add('  MC01DTCADASTRO         =:MC01DTCADASTRO,         ');
+    lQuery.SQL.Add('  MC01FISJUR             =:MC01FISJUR,             ');
+    lQuery.SQL.Add('  MC01ATIINATIVO         =:MC01ATIINATIVO,         ');
+    lQuery.SQL.Add('  MC01DTNASCTO           =:MC01DTNASCTO,           ');
+    lQuery.SQL.Add('  MC01CPF                =:MC01CPF,                ');
+    lQuery.SQL.Add('  MC01CI                 =:MC01CI,                 ');
+    lQuery.SQL.Add('  MC01CGC                =:MC01CGC,                ');
+    lQuery.SQL.Add('  MC01IE                 =:MC01IE,                 ');
+    lQuery.SQL.Add('  MC01SEXO               =:MC01SEXO,               ');
+    lQuery.SQL.Add('  MC01ESTCIVIL           =:MC01ESTCIVIL,           ');
+    lQuery.SQL.Add('  MC01NATURALIDADE       =:MC01NATURALIDADE,       ');
+    lQuery.SQL.Add('  MC01PAI                =:MC01PAI,                ');
+    lQuery.SQL.Add('  MC01MAE                =:MC01MAE,                ');
+    lQuery.SQL.Add('  MC01ENDCOB             =:MC01ENDCOB,             ');
+    lQuery.SQL.Add('  MC01CIDADECOB          =:MC01CIDADECOB,          ');
+    lQuery.SQL.Add('  MC01BAIRROCOB          =:MC01BAIRROCOB,          ');
+    lQuery.SQL.Add('  MC01CEPCOB             =:MC01CEPCOB,             ');
+    lQuery.SQL.Add('  MC01UFCOB              =:MC01UFCOB,              ');
+    lQuery.SQL.Add('  MC01CONTATO            =:MC01CONTATO,            ');
+    lQuery.SQL.Add('  MC01ALUGUEL            =:MC01ALUGUEL,            ');
+    lQuery.SQL.Add('  MC01VALORALUGUEL       =:MC01VALORALUGUEL,       ');
+    lQuery.SQL.Add('  MC01TEMPOALUGUEL       =:MC01TEMPOALUGUEL,       ');
+    lQuery.SQL.Add('  MC01EMPRESA            =:MC01EMPRESA,            ');
+    lQuery.SQL.Add('  MC01FONEEMP            =:MC01FONEEMP,            ');
+    lQuery.SQL.Add('  MC01FUNCAOEMP          =:MC01FUNCAOEMP,          ');
+    lQuery.SQL.Add('  MC01ADMISSAO           =:MC01ADMISSAO,           ');
+    lQuery.SQL.Add('  MC01SALARIO            =:MC01SALARIO,            ');
+    lQuery.SQL.Add('  MC01REFCOM             =:MC01REFCOM,             ');
+    lQuery.SQL.Add('  MC01REFBAN             =:MC01REFBAN,             ');
+    lQuery.SQL.Add('  MC01DTSPC              =:MC01DTSPC,              ');
+    lQuery.SQL.Add('  MC01OBSSPC             =:MC01OBSSPC,             ');
+    lQuery.SQL.Add('  MC01OBSGERAL           =:MC01OBSGERAL,           ');
+    lQuery.SQL.Add('  MC01SITSPC             =:MC01SITSPC,             ');
+    lQuery.SQL.Add('  MC01CONJUGE            =:MC01CONJUGE,            ');
+    lQuery.SQL.Add('  MC01REFPESSOAL         =:MC01REFPESSOAL,         ');
+    lQuery.SQL.Add('  MC01DTORCI             =:MC01DTORCI,             ');
+    lQuery.SQL.Add('  MC01DTMOV              =:MC01DTMOV,              ');
+    lQuery.SQL.Add('  MC01LIMITECRED         =:MC01LIMITECRED,         ');
+    lQuery.SQL.Add('  MC01SALDOCRED          =:MC01SALDOCRED,          ');
+    lQuery.SQL.Add('  MC01ULTIMANF           =:MC01ULTIMANF,           ');
+    lQuery.SQL.Add('  MC01VALORNF            =:MC01VALORNF,            ');
+    lQuery.SQL.Add('  MC01TBLOCAL            =:MC01TBLOCAL,            ');
+    lQuery.SQL.Add('  MC01TBEXTRA            =:MC01TBEXTRA,            ');
+    lQuery.SQL.Add('  MC01LOCALCOB           =:MC01LOCALCOB,           ');
+    lQuery.SQL.Add('  MC01REP                =:MC01REP,                ');
+    lQuery.SQL.Add('  MC01TIPOCRED           =:MC01TIPOCRED,           ');
+    lQuery.SQL.Add('  MC01NRDUPABE           =:MC01NRDUPABE,           ');
+    lQuery.SQL.Add('  MC01VIP                =:MC01VIP,                ');
+    lQuery.SQL.Add('  MC01CODVIP             =:MC01CODVIP,             ');
+    lQuery.SQL.Add('  MC01VALIDVIP           =:MC01VALIDVIP,           ');
+    lQuery.SQL.Add('  MC01_DT_ALTERACAO      =:MC01_DT_ALTERACAO,      ');
+    lQuery.SQL.Add('  MC01_SALARIO_OK        =:MC01_SALARIO_OK,        ');
+    lQuery.SQL.Add('  MC01_ENDERECO_OK       =:MC01_ENDERECO_OK,       ');
+    lQuery.SQL.Add('  MC01_CONVENIO_OK       =:MC01_CONVENIO_OK,       ');
+    lQuery.SQL.Add('  MC01_TAB_CONVENIO      =:MC01_TAB_CONVENIO,      ');
+    lQuery.SQL.Add('  MC01_TAB_PROFISSAO     =:MC01_TAB_PROFISSAO,     ');
+    lQuery.SQL.Add('  MC01_DIA_VCTO          =:MC01_DIA_VCTO,          ');
+    lQuery.SQL.Add('  MC01_DT_COBRANCA       =:MC01_DT_COBRANCA,       ');
+    lQuery.SQL.Add('  MC01_QTDE_COBRANCA     =:MC01_QTDE_COBRANCA,     ');
+    lQuery.SQL.Add('  MC01_ICMS              =:MC01_ICMS,              ');
+    lQuery.SQL.Add('  MC01_SUBST_TRIB        =:MC01_SUBST_TRIB,        ');
+    lQuery.SQL.Add('  MC01FOTO               =:MC01FOTO,               ');
+    lQuery.SQL.Add('  MC01_ATACADO           =:MC01_ATACADO,           ');
+    lQuery.SQL.Add('  MC01_LIMITEDESCONTO    =:MC01_LIMITEDESCONTO,    ');
+    lQuery.SQL.Add('  MC01_FRPGTO            =:MC01_FRPGTO,            ');
+    lQuery.SQL.Add('  MC01_MUDAR_FRPGTO      =:MC01_MUDAR_FRPGTO,      ');
+    lQuery.SQL.Add('  MC01_PRAZO_DIAS        =:MC01_PRAZO_DIAS,        ');
+    lQuery.SQL.Add('  MC01DIVIDA             =:MC01DIVIDA,             ');
+    lQuery.SQL.Add('  MC01TOL_SALDO          =:MC01TOL_SALDO,          ');
+    lQuery.SQL.Add('  MC01ROTA               =:MC01ROTA,               ');
+    lQuery.SQL.Add('  MC01ORD_VIS            =:MC01ORD_VIS,            ');
+    lQuery.SQL.Add('  MC01_OBS1              =:MC01_OBS1,              ');
+    lQuery.SQL.Add('  MC01_OBS2              =:MC01_OBS2,              ');
+    lQuery.SQL.Add('  MC01SUPER_LIMITE_DIAS  =:MC01SUPER_LIMITE_DIAS,  ');
+    lQuery.SQL.Add('  MC01_CARTORIO          =:MC01_CARTORIO,          ');
+    lQuery.SQL.Add('  MC01_SERASA            =:MC01_SERASA,            ');
+    lQuery.SQL.Add('  MC01_USU_ALTERACAO     =:MC01_USU_ALTERACAO,     ');
+    lQuery.SQL.Add('  MC01_SPED_SN           =:MC01_SPED_SN,           ');
+    lQuery.SQL.Add('  MC01_PISCOFINS_SN      =:MC01_PISCOFINS_SN,      ');
+    lQuery.SQL.Add('  MC01_NR                =:MC01_NR,                ');
+    lQuery.SQL.Add('  MC01_CONSUMIDOR_FINAL  =:MC01_CONSUMIDOR_FINAL,  ');
+    lQuery.SQL.Add('  MC01_INDPRES           =:MC01_INDPRES,           ');
+    lQuery.SQL.Add('  MC01_INDIEDEST         =:MC01_INDIEDEST,         ');
+    lQuery.SQL.Add('  MC01_COMPLEMENTO       =:MC01_COMPLEMENTO,       ');
+    lQuery.SQL.Add('  MC01_BOLETO_COM_TAXA   =:MC01_BOLETO_COM_TAXA,   ');
+    lQuery.SQL.Add('  MC01_NOME_COMPLETO_NFE =:MC01_NOME_COMPLETO_NFE, ');
+    lQuery.SQL.Add('  MC01OBS_INTERNA        =:MC01OBS_INTERNA         ');
+    lQuery.SQL.Add('WHERE MC01CODIGO         =:MC01CODIGO              ');
+
+    lQuery.ParamByName('MC01NOME').AsString := FNome;
+    lQuery.ParamByName('MC01FANTASIA').AsString := FMatricula;
+    lQuery.ParamByName('MC01ENDERECO').AsString := FEndereco;
+    lQuery.ParamByName('MC01BAIRRO').AsString := FBairro;
+    lQuery.ParamByName('MC01CIDADE').AsString := FCidade;
+    lQuery.ParamByName('MC01CEP').AsString := FCep;
+    lQuery.ParamByName('MC01UF').AsString := FUf;
+    lQuery.ParamByName('MC01FONE').AsString := FFone;
+    lQuery.ParamByName('MC01FAX').AsString := FFax;
+    lQuery.ParamByName('MC01CELULAR').AsString := FCelular;
+    lQuery.ParamByName('MC01EMAIL').AsString := FEmail;
+    lQuery.ParamByName('MC01DTCADASTRO').AsDateTime := FDataCadastro;
+    lQuery.ParamByName('MC01FISJUR').AsString := Tfunctions.GetSn(FPessoaFisica);
+    lQuery.ParamByName('MC01ATIINATIVO').AsString := Tfunctions.GetSn(FAtivo);
+    lQuery.ParamByName('MC01DTNASCTO').AsDAte := FDataNascimento;
+    lQuery.ParamByName('MC01CPF').AsString := FCPF;
+    lQuery.ParamByName('MC01CI').AsString := FRg;
+    lQuery.ParamByName('MC01CGC').AsString := FCNPJ;
+    lQuery.ParamByName('MC01IE').AsString := FIe;
+    lQuery.ParamByName('MC01SEXO').AsString := FSexo;
+    lQuery.ParamByName('MC01ESTCIVIL').AsString := FEstadoCivil;
+    lQuery.ParamByName('MC01NATURALIDADE').AsString := FNaturalidade;
+    lQuery.ParamByName('MC01PAI').AsString := FPai;
+    lQuery.ParamByName('MC01MAE').AsString := FMae;
+    lQuery.ParamByName('MC01ENDCOB').AsString := FEnderecoCobranca;
+    lQuery.ParamByName('MC01CIDADECOB').AsString := FCidadeCobranca;
+    lQuery.ParamByName('MC01BAIRROCOB').AsString := FBairroCobranca;
+    lQuery.ParamByName('MC01CEPCOB').AsString := FCepCobranca;
+    lQuery.ParamByName('MC01UFCOB').AsString := FUfCobranca;
+    lQuery.ParamByName('MC01CONTATO').AsString := FContato;
+    lQuery.ParamByName('MC01ALUGUEL').AsString := FAluguel;
+    lQuery.ParamByName('MC01VALORALUGUEL').AsFloat := FValorAluguel;
+    lQuery.ParamByName('MC01TEMPOALUGUEL').AsString := FTempoAluguel;
+    lQuery.ParamByName('MC01EMPRESA').AsString := FEmpresa;
+    lQuery.ParamByName('MC01FONEEMP').AsString := FFoneEmpresa;
+    lQuery.ParamByName('MC01FUNCAOEMP').AsString := FFuncaoEmpresa;
+    lQuery.ParamByName('MC01ADMISSAO').AsString := FAdmissao;
+    lQuery.ParamByName('MC01SALARIO').AsString := FSalario;
+    lQuery.ParamByName('MC01REFCOM').AsString := FReferenciaComercial;
+    lQuery.ParamByName('MC01REFBAN').AsString := FReferenciaBanco;
+    lQuery.ParamByName('MC01DTSPC').AsDAte := FDataSpc;
+    lQuery.ParamByName('MC01OBSSPC').AsString := FObservacaoSpc;
+    lQuery.ParamByName('MC01OBSGERAL').AsString := FObservacaoGeral;
+    lQuery.ParamByName('MC01SITSPC').AsString := Tfunctions.GetSn(FAtivoNoSPC);
+    lQuery.ParamByName('MC01CONJUGE').AsString := FConjuge;
+    lQuery.ParamByName('MC01REFPESSOAL').AsString := FReferenciaPessoal;
+    lQuery.ParamByName('MC01DTORCI').AsString := FDataOrci;
+    lQuery.ParamByName('MC01DTMOV').AsDAte := FDataMovimento;
+    lQuery.ParamByName('MC01LIMITECRED').AsFloat := FValorLimiteDoCliente;
+    lQuery.ParamByName('MC01SALDOCRED').AsFloat := FSaldoCredito;
+    lQuery.ParamByName('MC01ULTIMANF').AsString := FUltimaNf;
+    lQuery.ParamByName('MC01VALORNF').AsFloat := FValorNf;
+    lQuery.ParamByName('MC01TBLOCAL').AsInteger := FTabelaLocalizacao;
+    lQuery.ParamByName('MC01TBEXTRA').AsInteger := FTabelaExtra;
+    lQuery.ParamByName('MC01LOCALCOB').AsString := FLocalCobranca;
+    lQuery.ParamByName('MC01REP').AsInteger := FVendedor;
+    lQuery.ParamByName('MC01TIPOCRED').AsString := FTipoDeCredito;
+    lQuery.ParamByName('MC01NRDUPABE').AsInteger := FNumeroDuplicatasAbertas;
+    lQuery.ParamByName('MC01VIP').AsString := FVip;
+    lQuery.ParamByName('MC01CODVIP').AsString := FCodigoCidadeIbge;
+    lQuery.ParamByName('MC01VALIDVIP').AsDAte := FValidadeVip;
+    lQuery.ParamByName('MC01_DT_ALTERACAO').AsDateTime := FDataAlteracao;
+    lQuery.ParamByName('MC01_SALARIO_OK').AsString := Tfunctions.GetSn(FSalarioOk);
+    lQuery.ParamByName('MC01_ENDERECO_OK').AsString := Tfunctions.GetSn(FEnderecoOk);
+    lQuery.ParamByName('MC01_CONVENIO_OK').AsString := Tfunctions.GetSn(FConvenioOk);
+    lQuery.ParamByName('MC01_TAB_CONVENIO').AsInteger := FTabelaConvenio;
+    lQuery.ParamByName('MC01_TAB_PROFISSAO').AsInteger := FTabelaProfissao;
+    lQuery.ParamByName('MC01_DIA_VCTO').AsInteger := FDiaFixoDeVencimento;
+    lQuery.ParamByName('MC01_DT_COBRANCA').AsDAte := FDataCobranca;
+    lQuery.ParamByName('MC01_QTDE_COBRANCA').AsInteger := FQuantidadeCobranca;
+    lQuery.ParamByName('MC01_ICMS').AsFloat := FIcms;
+    lQuery.ParamByName('MC01_SUBST_TRIB').AsString := Tfunctions.GetSn(FSubstituicaoTributaria);
+    lQuery.ParamByName('MC01FOTO').AsString := FFotoCaminho;
+    lQuery.ParamByName('MC01_ATACADO').AsString := FAtacado;
+    lQuery.ParamByName('MC01_LIMITEDESCONTO').AsFloat := FLimiteDesconto;
+    lQuery.ParamByName('MC01_FRPGTO').AsInteger := FFormaDePagamentoPadrao;
+    lQuery.ParamByName('MC01_MUDAR_FRPGTO').AsString := FMudarFormaPagamento;
+    lQuery.ParamByName('MC01_PRAZO_DIAS').AsInteger := FPrazoMaximoEmDias;
+    lQuery.ParamByName('MC01DIVIDA').AsFloat := FDivida;
+    lQuery.ParamByName('MC01TOL_SALDO').AsFloat := FSaldoTotal;
+    lQuery.ParamByName('MC01ROTA').AsString := FRota;
+    lQuery.ParamByName('MC01ORD_VIS').AsInteger := FOrdemVisita;
+    lQuery.ParamByName('MC01_OBS1').AsString := FObservacao1;
+    lQuery.ParamByName('MC01_OBS2').AsString := FObservacao2;
+    lQuery.ParamByName('MC01SUPER_LIMITE_DIAS').AsInteger := FSuperLimiteDias;
+    lQuery.ParamByName('MC01_CARTORIO').AsString := FCartorio;
+    lQuery.ParamByName('MC01_SERASA').AsString := FSerasa;
+    lQuery.ParamByName('MC01_USU_ALTERACAO').AsInteger := FUsuarioAlteracao;
+    lQuery.ParamByName('MC01_SPED_SN').AsString := Tfunctions.GetSn(FSped);
+    lQuery.ParamByName('MC01_PISCOFINS_SN').AsString := Tfunctions.GetSn(FPisCofins);
+    lQuery.ParamByName('MC01_NR').AsString := FNumero;
+    lQuery.ParamByName('MC01_CONSUMIDOR_FINAL').AsString := FConsumidorFinal;
+    lQuery.ParamByName('MC01_INDPRES').AsString := FIndicadorPresencaComprador;
+    lQuery.ParamByName('MC01_INDIEDEST').AsString := FIndicadorDestinatario;
+    lQuery.ParamByName('MC01_COMPLEMENTO').AsString := FComplemento;
+    lQuery.ParamByName('MC01_BOLETO_COM_TAXA').AsString := FBoletoComTaxa;
+    lQuery.ParamByName('MC01_NOME_COMPLETO_NFE').AsString := FNomeCompletoNfe;
+    lQuery.ParamByName('MC01OBS_INTERNA').AsString := FObservacaoInterna;
+    lQuery.ParamByName('MC01CODIGO').AsInteger := FCodigo;
+
+    lQuery.ExecSql;
+    lQuery.connection.commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TCliente.AtualizaSaldoCalculado;
+var
+  lQuery: TQuery;
+begin
+  if ValidaSeEControleDeSaldo then
+  begin
+
+    lQuery := TQuery.Create(nil);
+    try
+      // busca saldo contas a receber
+      lQuery.close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' SELECT SUM(AN09VALOR) AS TOTAL ');
+      lQuery.SQL.Add(' FROM MC09CREC                   ');
+      lQuery.SQL.Add(' WHERE  AN09CLIENTE=' + inttostr(FCodigo));
+      lQuery.SQL.Add(' AND  AC09SIT=''N''');
+      lQuery.Open;
+      FSaldoCalculado := lQuery.FieldByName('TOTAL').AsFloat;
+
+      lQuery.close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add(' SELECT SUM(AN13_VALOR_PARC) as TOTAL ');
+      lQuery.SQL.Add(' FROM MC13_PARCELAS, MC13VENDA ');
+      lQuery.SQL.Add(' WHERE(AC13_NOTA = AC13NOTA) ');
+      lQuery.SQL.Add(' AND AC13CLIENTE = ' + inttostr(FCodigo));
+      lQuery.SQL.Add(' AND AC13_GERADO = ''N''');
+      lQuery.Open;
+      FSaldoCalculado := FSaldoCalculado + lQuery.FieldByName('TOTAL').AsFloat;
+      lQuery.close;
+    finally
+      lQuery.Free;
+    end;
+  end;
+end;
+
+procedure TCliente.AtualizaSaldoClienteAposVenda(pNota, pTipoFormaPagamento: string; pEmissaoNota: TDate;
+  pTotalNota: Double);
+var
+  lDataSet: TQuery;
+begin
+  lDataSet := TQuery.Create(nil);
+  try
+    lDataSet.close;
+    lDataSet.SQL.Clear;
+    lDataSet.SQL.Add(' UPDATE MC01CLIENTE SET     ');
+    lDataSet.SQL.Add(' MC01ULTIMANF     = :PR00 , ');
+    lDataSet.SQL.Add(' MC01DTMOV        = :PR01 , ');
+    lDataSet.SQL.Add(' MC01VALORNF      = :PR02   ');
+
+    if (FTipoDeCredito = 'S') and (pTipoFormaPagamento = 'P') then
+    begin
+      lDataSet.SQL.Add(' , MC01SALDOCRED  = MC01SALDOCRED - :PR03  ');
+      lDataSet.SQL.Add(' WHERE MC01CODIGO = :PR04   ');
+    end
+    else
+    begin
+      lDataSet.SQL.Add(' WHERE MC01CODIGO = :PR03   ');
+    end;
+
+    lDataSet.Params[0].AsString := pNota;
+    lDataSet.Params[1].AsDAte := pEmissaoNota;
+    lDataSet.Params[2].AsFloat := pTotalNota;
+    if (FTipoDeCredito = 'S') and (pTipoFormaPagamento = 'P') then
+    begin
+      lDataSet.Params[3].AsFloat := pTotalNota;
+      lDataSet.Params[4].AsInteger := FCodigo;
+    end
+    else
+    begin
+      lDataSet.Params[3].AsInteger := FCodigo;
+    end;
+
+    lDataSet.ExecSql;
+  finally
+    lDataSet.Free;
+  end;
+end;
+
+function TCliente.BuscaAliquotaInternaUFDest(pUF: string): Currency;
+var
+  lQuery: TQuery;
+begin
+  Result := 0;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT  ALIQ_INTERNA_UF_DEST FROM MC_ALIQUOTA_UF  ');
+    lQuery.SQL.Add(' WHERE UF  =' + QuotedStr(pUF));
+    lQuery.Open;
+
+    Result := lQuery.FieldByName('ALIQ_INTERNA_UF_DEST').AsCurrency;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TCliente.BuscaCodigoPorCnpjInscricaoEstadual(pCnpj, pInscricaoEstadual: string): Integer;
+var
+  lQuery: TQuery;
+begin
+  // HS-100 // Vagner Oliveira
+  Result := 0;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT MC01CODIGO FROM MC01CLIENTE   ');
+    lQuery.SQL.Add(' WHERE MC01CGC = :CNPJ               ');
+    lQuery.ParamByName('CNPJ').AsString := pCnpj;
+    if (Length(Trim(pInscricaoEstadual)) > 0) then
+    begin
+      lQuery.SQL.Add
+        (' AND   REPLACE(REPLACE(REPLACE(REPLACE(MC01IE, ''/'',''''),''-'',''''),''.'',''''),'' '','''') = :INSCRICAO_ESTADUAL ');
+      lQuery.ParamByName('INSCRICAO_ESTADUAL').AsString := Tfunctions.RemoveCaracteres(pInscricaoEstadual);
+    end;
+
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC01CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+class function TCliente.BuscaCodigoPorCpfInscricaoEstadual(pCpf, pInscricaoEstadual: string): Integer;
+var
+  lQuery: TQuery;
+begin
+  // HS-100 // Vagner Oliveira
+  Result := 0;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT MC01CODIGO FROM MC01CLIENTE   ');
+    lQuery.SQL.Add(' WHERE MC01CPF = :CPF                ');
+    lQuery.ParamByName('CPF').AsString := pCpf;
+    if (Length(Trim(pInscricaoEstadual)) > 0) then
+    begin
+      lQuery.SQL.Add
+        (' AND   REPLACE(REPLACE(REPLACE(REPLACE(MC01IE, ''/'',''''),''-'',''''),''.'',''''),'' '','''') = :INSCRICAO_ESTADUAL ');
+      lQuery.ParamByName('INSCRICAO_ESTADUAL').AsString := Tfunctions.RemoveCaracteresEspeciais(pInscricaoEstadual);
+    end;
+
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := lQuery.FieldByName('MC01CODIGO').AsInteger;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TCliente.CarregaCliente;
+var
+  lQuery: TQuery;
+begin
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add(' SELECT * FROM MC01CLIENTE WHERE MC01CODIGO = :MC01CODIGO ');
+    lQuery.ParamByName('MC01CODIGO').AsString := FCodigo;
+    lQuery.Open;
+
+    FCodigo := lQuery.FieldByName('MC01CODIGO').AsInteger;
+    FNome := lQuery.FieldByName('MC01NOME').AsString;
+    FFormaDePagamentoPadrao := lQuery.FieldByName('MC01_FRPGTO').AsInteger;
+    FTipoDeCredito := lQuery.FieldByName('MC01TIPOCRED').AsString;
+    FPrazoMaximoEmDias := lQuery.FieldByName('MC01_PRAZO_DIAS').AsInteger;
+    FPessoaFisica := (lQuery.FieldByName('MC01FISJUR').AsString = 'S');
+    FCPF := lQuery.FieldByName('MC01CPF').AsString;
+    FCNPJ := lQuery.FieldByName('MC01CGC').AsString;
+    FValorLimiteDoCliente := lQuery.FieldByName('MC01LIMITECRED').AsFloat;
+
+    FAtivo := (lQuery.FieldByName('MC01ATIINATIVO').AsString = 'S');
+    FAtivoNoSPC := (lQuery.FieldByName('MC01SITSPC').AsString = 'S');
+
+    if not lQuery.FieldByName('MC01_DIA_VCTO').IsNull then
+    begin
+      FDiaFixoDeVencimento := lQuery.FieldByName('MC01_DIA_VCTO').AsInteger;
+    end;
+
+    FIe := lQuery.FieldByName('MC01IE').AsString;
+    FFone := lQuery.FieldByName('MC01FONE').AsString;
+    FEmail := lQuery.FieldByName('MC01EMAIL').AsString;
+    FBairro := lQuery.FieldByName('MC01BAIRRO').AsString;
+    FFax := lQuery.FieldByName('MC01FAX').AsString;
+    FUf := lQuery.FieldByName('MC01UF').AsString;
+    FCodigoCidadeIbge := lQuery.FieldByName('MC01CODVIP').AsString;
+
+    // 20.05.00
+    FCidadeIbge.Codigo := FCodigoCidadeIbge;
+    if (Length(Trim(FCidadeIbge.Codigo)) > 0) then
+    begin
+      FCidadeIbge.Carrega;
+    end;
+
+    FCep := lQuery.FieldByName('MC01CEP').AsString;
+    FNumero := lQuery.FieldByName('MC01_NR').AsString;
+    FComplemento := lQuery.FieldByName('MC01_COMPLEMENTO').AsString;
+    FMatricula := lQuery.FieldByName('MC01FANTASIA').AsString;
+    FCidade := lQuery.FieldByName('MC01CIDADE').AsString;
+    FEndereco := lQuery.FieldByName('MC01ENDERECO').AsString;
+    FCelular := lQuery.FieldByName('MC01CELULAR').AsString;
+    FEnderecoOk := lQuery.FieldByName('MC01_ENDERECO_OK').AsString = 'S';
+    FConvenioOk := lQuery.FieldByName('MC01_CONVENIO_OK').AsString = 'S';
+    FSubstituicaoTributaria := lQuery.FieldByName('MC01_SUBST_TRIB').AsString = 'S';
+    FSalarioOk := lQuery.FieldByName('MC01_SALARIO_OK').AsString = 'S';
+    FPisCofins := lQuery.FieldByName('MC01_PISCOFINS_SN').AsString = 'S';
+    FSped := lQuery.FieldByName('MC01_SPED_SN').AsString = 'S';
+    FUsuarioAlteracao := lQuery.FieldByName('MC01_USU_ALTERACAO').AsInteger;
+    FUsuarioCadastro := lQuery.FieldByName('MC01_USU_CADASTRO').AsInteger;
+    FDataCadastro := lQuery.FieldByName('MC01DTCADASTRO').AsDateTime;
+    FDataAlteracao := lQuery.FieldByName('MC01_DT_ALTERACAO').AsDateTime;
+    FIndicadorDestinatario := lQuery.FieldByName('MC01_INDIEDEST').AsString;
+    FConsumidorFinal := lQuery.FieldByName('MC01_CONSUMIDOR_FINAL').AsString;
+    FIndicadorPresencaComprador := lQuery.FieldByName('MC01_INDPRES').AsString;
+    FSaldoCredito := lQuery.FieldByName('MC01SALDOCRED').AsFloat;
+    FNumeroDuplicatasAbertas := lQuery.FieldByName('MC01NRDUPABE').AsInteger;
+    FDataNascimento := lQuery.FieldByName('mc01dtnascto').AsDateTime; // date,
+    FRg := lQuery.FieldByName('mc01ci').AsString; // varchar(10),
+    FSexo := lQuery.FieldByName('mc01sexo').AsString; // char(1),
+    FEstadoCivil := lQuery.FieldByName('mc01estcivil').AsString; // char(1),
+    FNaturalidade := lQuery.FieldByName('mc01naturalidade').AsString; // varchar(30),
+    FPai := lQuery.FieldByName('mc01pai').AsString; // varchar(35),
+    FMae := lQuery.FieldByName('mc01mae').AsString; // varchar(35),
+    FEnderecoCobranca := lQuery.FieldByName('mc01endcob').AsString; // varchar(35),
+    FCidadeCobranca := lQuery.FieldByName('mc01cidadecob').AsString; // varchar(30),
+    FBairroCobranca := lQuery.FieldByName('mc01bairrocob').AsString; // varchar(20),
+    FCepCobranca := lQuery.FieldByName('mc01cepcob').AsString; // varchar(10),
+    FUfCobranca := lQuery.FieldByName('mc01ufcob').AsString; // char(2),
+    FContato := lQuery.FieldByName('mc01contato').AsString; // varchar(50),
+    FAluguel := lQuery.FieldByName('mc01aluguel').AsString; // char(1),
+    FValorAluguel := lQuery.FieldByName('mc01valoraluguel').AsFloat; // numeric(15,4),
+    FTempoAluguel := lQuery.FieldByName('mc01tempoaluguel').AsString; // varchar(25),
+    FEmpresa := lQuery.FieldByName('mc01empresa').AsString; // varchar(35),
+    FFoneEmpresa := lQuery.FieldByName('mc01foneemp').AsString; // varchar(15),
+    FFuncaoEmpresa := lQuery.FieldByName('mc01funcaoemp').AsString; // varchar(25),
+    FAdmissao := lQuery.FieldByName('mc01admissao').AsString; // varchar(25),
+    FSalario := lQuery.FieldByName('mc01salario').AsString; // varchar(25),
+    FReferenciaComercial := lQuery.FieldByName('mc01refcom').AsString; // varchar(100),
+    FReferenciaBanco := lQuery.FieldByName('mc01refban').AsString; // varchar(100),
+    FDataSpc := lQuery.FieldByName('mc01dtspc').AsDateTime; // date,
+    FObservacaoSpc := lQuery.FieldByName('mc01obsspc').AsString; // varchar(100),
+    FObservacaoGeral := lQuery.FieldByName('mc01obsgeral').AsString; // blob sub_type binary,
+    FConjuge := lQuery.FieldByName('mc01conjuge').AsString; // varchar(50),
+    FReferenciaPessoal := lQuery.FieldByName('mc01refpessoal').AsString; // varchar(50),
+    FDataOrci := lQuery.FieldByName('mc01dtorci').AsString; // varchar(25),
+    FDataMovimento := lQuery.FieldByName('mc01dtmov').AsDateTime; // date,
+    FUltimaNf := lQuery.FieldByName('mc01ultimanf').AsString; // char(10),
+    FValorNf := lQuery.FieldByName('mc01valornf').AsFloat; // numeric(15,4),
+    FTabelaLocalizacao := lQuery.FieldByName('mc01tblocal').AsInteger; // integer,
+    FTabelaExtra := lQuery.FieldByName('mc01tbextra').AsInteger; // integer,
+    FLocalCobranca := lQuery.FieldByName('mc01localcob').AsString; // char(3),
+    FVendedor := lQuery.FieldByName('mc01rep').AsInteger; // integer,
+    FVip := lQuery.FieldByName('mc01vip').AsString; // char(1),
+    FValidadeVip := lQuery.FieldByName('mc01validvip').AsDateTime; // date,
+    FTabelaConvenio := lQuery.FieldByName('mc01_tab_convenio').AsInteger; // integer,
+    FTabelaProfissao := lQuery.FieldByName('mc01_tab_profissao').AsInteger; // integer,
+    FDataCobranca := lQuery.FieldByName('mc01_dt_cobranca').AsDateTime; // date,
+    FQuantidadeCobranca := lQuery.FieldByName('mc01_qtde_cobranca').AsInteger; // integer,
+    FIcms := lQuery.FieldByName('mc01_icms').AsFloat; // numeric(15,4),
+    FFotoCaminho := lQuery.FieldByName('mc01foto').AsString; // varchar(45),
+    FAtacado := lQuery.FieldByName('mc01_atacado').AsString; // char(1),
+    FLimiteDesconto := lQuery.FieldByName('mc01_limitedesconto').AsFloat; // numeric(15,4),
+    FMudarFormaPagamento := lQuery.FieldByName('mc01_mudar_frpgto').AsString; // char(1),
+    FDivida := lQuery.FieldByName('mc01divida').AsFloat; // numeric(15,4),
+    FSaldoTotal := lQuery.FieldByName('mc01tol_saldo').AsFloat; // numeric(15,4),
+    FRota := lQuery.FieldByName('mc01rota').AsString; // varchar(4),
+    FOrdemVisita := lQuery.FieldByName('mc01ord_vis').AsInteger; // integer,
+    FObservacao1 := lQuery.FieldByName('mc01_obs1').AsString; // varchar(75),
+    FObservacao2 := lQuery.FieldByName('mc01_obs2').AsString; // varchar(75),
+    FSuperLimiteDias := lQuery.FieldByName('mc01super_limite_dias').AsInteger; // integer,
+    FCartorio := lQuery.FieldByName('mc01_cartorio').AsString; // char(1),
+    FSerasa := lQuery.FieldByName('mc01_serasa').AsString; // char(1),
+    FBoletoComTaxa := lQuery.FieldByName('mc01_boleto_com_taxa').AsString; // char(1),
+    FNomeCompletoNfe := lQuery.FieldByName('mc01_nome_completo_nfe').AsString; // varchar(60),
+    FObservacaoInterna := lQuery.FieldByName('mc01obs_interna').AsString; // blob sub_type binary
+
+    CarregaDadosComplementares(lQuery);
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+procedure TCliente.CarregaDadosComplementares(pDataSet: TdataSet);
+begin
+  // implementar no filho
+end;
+
+constructor TCliente.Create;
+begin
+  FCidadeIbge := TCidade.Create;
+end;
+
+class function TCliente.DadosFiscaisNFeOk(pCodigo: Integer): Boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    Result := False;
+
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('SELECT            ');
+    lQuery.SQL.Add(' MC01CODIGO,      ');
+    lQuery.SQL.Add(' MC01NOME,        ');
+    lQuery.SQL.Add(' MC01FANTASIA,    ');
+    lQuery.SQL.Add(' MC01ENDERECO,    ');
+    lQuery.SQL.Add(' MC01BAIRRO,      ');
+    lQuery.SQL.Add(' MC01CIDADE,      ');
+    lQuery.SQL.Add(' MC01CEP,         ');
+    lQuery.SQL.Add(' MC01UF,          ');
+    lQuery.SQL.Add(' MC01FONE,        ');
+    lQuery.SQL.Add(' MC01EMAIL,       ');
+    lQuery.SQL.Add(' MC01FISJUR,      ');
+    lQuery.SQL.Add(' MC01CPF,         ');
+    lQuery.SQL.Add(' MC01CI,          ');
+    lQuery.SQL.Add(' MC01CGC,         ');
+    lQuery.SQL.Add(' MC01IE,          ');
+    lQuery.SQL.Add(' MC01CODVIP       ');
+    lQuery.SQL.Add(' FROM MC01CLIENTE ');
+    lQuery.SQL.Add(' WHERE MC01CODIGO = :CODIGO ');
+    lQuery.ParamByName('CODIGO').AsInteger := pCodigo;
+    lQuery.Open;
+
+    if (Length(Trim(lQuery.FieldByName('MC01NOME').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01ENDERECO').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01BAIRRO').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01CIDADE').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01CEP').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01UF').AsString)) > 0) and
+      (Length(Trim(lQuery.FieldByName('MC01CODVIP').AsString)) = 7) then
+    begin
+      if (Trim(lQuery.FieldByName('MC01FISJUR').AsString) = 'S') then
+      begin
+        if (Length(Trim(lQuery.FieldByName('MC01CPF').AsString)) > 0) then
+        begin
+          Result := True;
+        end;
+      end
+      else
+      begin
+        if (Length(Trim(lQuery.FieldByName('MC01CGC').AsString)) > 0) then
+        begin
+          Result := True;
+        end;
+      end;
+
+    end;
+    if lQuery.FieldByName('MC01CODVIP').AsString = '9999999' then
+    begin
+      Result := True;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+destructor TCliente.Destroy;
+begin
+  lQuery.Free;
+  FQuery.Free;
+  FCidadeIbge.Free;
+  inherited;
+end;
+
+procedure TCliente.Excluir(pEfetuarCommit: Boolean);
+begin
+  try
+    if (TSistema.ValidaCaminhoBanco) then
+    begin
+      lQuery.close;
+      lQuery.SQL.Clear;
+      lQuery.SQL.Add('DELETE FROM MC01CLIENTE          ');
+      lQuery.SQL.Add('  WHERE MC01CODIGO = :MC01CODIGO ');
+      lQuery.ParamByName('MC01CODIGO').AsInteger := FCodigo;
+      lQuery.ExecSql;
+
+      if (pEfetuarCommit) then
+      begin
+        TSistema.GravarNoBanco(lQuery, False);
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+class function TCliente.Existe(pCodigo: Integer): Boolean;
+var
+  lQuery: TQuery;
+begin
+  // HS-100 // Vagner Oliveira
+  Result := False;
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC01CLIENTE WHERE MC01CODIGO = :CODIGO');
+    lQuery.ParamByName('CODIGO').AsInteger := pCodigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+
+      if not Assigned(FObjetoBusca) then
+      begin
+        FObjetoBusca := TCliente.Create;
+      end;
+      FObjetoBusca.Codigo := pCodigo;
+      FObjetoBusca.CarregaCliente;
+    end;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+function TCliente.GeraCodigo: Integer;
+begin
+  FQuery.close;
+  FQuery.SQL.Clear;
+  FQuery.SQL.Add('SELECT MAX(MC01CODIGO) + 1 CODIGO FROM MC01CLIENTE ');
+  FQuery.Open;
+
+  Result := FQuery.FieldByName('CODIGO').AsInteger;
+end;
+
+function TCliente.GetIe: string;
+begin
+  Result := FIe;
+end;
+
+function TCliente.getTipoDeCredito: string;
+begin
+  Result := FTipoDeCredito;
+end;
+
+procedure TCliente.Incluir(pEfetuarCommit: Boolean);
+var
+  lQuery: TQuery;
+begin
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.Add('insert into MC01CLIENTE (      ');
+    lQuery.SQL.Add('  MC01CODIGO,                  ');
+    lQuery.SQL.Add('  MC01NOME,                    ');
+    lQuery.SQL.Add('  MC01FANTASIA,                ');
+    lQuery.SQL.Add('  MC01ENDERECO,                ');
+    lQuery.SQL.Add('  MC01BAIRRO,                  ');
+    lQuery.SQL.Add('  MC01CIDADE,                  ');
+    lQuery.SQL.Add('  MC01CEP,                     ');
+    lQuery.SQL.Add('  MC01UF,                      ');
+    lQuery.SQL.Add('  MC01FONE,                    ');
+    lQuery.SQL.Add('  MC01FAX,                     ');
+    lQuery.SQL.Add('  MC01CELULAR,                 ');
+    lQuery.SQL.Add('  MC01EMAIL,                   ');
+    lQuery.SQL.Add('  MC01DTCADASTRO,              ');
+    lQuery.SQL.Add('  MC01FISJUR,                  ');
+    lQuery.SQL.Add('  MC01ATIINATIVO,              ');
+    lQuery.SQL.Add('  MC01DTNASCTO,                ');
+    lQuery.SQL.Add('  MC01CPF,                     ');
+    lQuery.SQL.Add('  MC01CI,                      ');
+    lQuery.SQL.Add('  MC01CGC,                     ');
+    lQuery.SQL.Add('  MC01IE,                      ');
+    lQuery.SQL.Add('  MC01SEXO,                    ');
+    lQuery.SQL.Add('  MC01ESTCIVIL,                ');
+    lQuery.SQL.Add('  MC01NATURALIDADE,            ');
+    lQuery.SQL.Add('  MC01PAI,                     ');
+    lQuery.SQL.Add('  MC01MAE,                     ');
+    lQuery.SQL.Add('  MC01ENDCOB,                  ');
+    lQuery.SQL.Add('  MC01CIDADECOB,               ');
+    lQuery.SQL.Add('  MC01BAIRROCOB,               ');
+    lQuery.SQL.Add('  MC01CEPCOB,                  ');
+    lQuery.SQL.Add('  MC01UFCOB,                   ');
+    lQuery.SQL.Add('  MC01CONTATO,                 ');
+    lQuery.SQL.Add('  MC01ALUGUEL,                 ');
+    lQuery.SQL.Add('  MC01VALORALUGUEL,            ');
+    lQuery.SQL.Add('  MC01TEMPOALUGUEL,            ');
+    lQuery.SQL.Add('  MC01EMPRESA,                 ');
+    lQuery.SQL.Add('  MC01FONEEMP,                 ');
+    lQuery.SQL.Add('  MC01FUNCAOEMP,               ');
+    lQuery.SQL.Add('  MC01ADMISSAO,                ');
+    lQuery.SQL.Add('  MC01SALARIO,                 ');
+    lQuery.SQL.Add('  MC01REFCOM,                  ');
+    lQuery.SQL.Add('  MC01REFBAN,                  ');
+    lQuery.SQL.Add('  MC01DTSPC,                   ');
+    lQuery.SQL.Add('  MC01OBSSPC,                  ');
+    lQuery.SQL.Add('  MC01OBSGERAL,                ');
+    lQuery.SQL.Add('  MC01SITSPC,                  ');
+    lQuery.SQL.Add('  MC01CONJUGE,                 ');
+    lQuery.SQL.Add('  MC01REFPESSOAL,              ');
+    lQuery.SQL.Add('  MC01DTORCI,                  ');
+    lQuery.SQL.Add('  MC01DTMOV,                   ');
+    lQuery.SQL.Add('  MC01LIMITECRED,              ');
+    lQuery.SQL.Add('  MC01SALDOCRED,               ');
+    lQuery.SQL.Add('  MC01ULTIMANF,                ');
+    lQuery.SQL.Add('  MC01VALORNF,                 ');
+    lQuery.SQL.Add('  MC01TBLOCAL,                 ');
+    lQuery.SQL.Add('  MC01TBEXTRA,                 ');
+    lQuery.SQL.Add('  MC01LOCALCOB,                ');
+    lQuery.SQL.Add('  MC01REP,                     ');
+    lQuery.SQL.Add('  MC01TIPOCRED,                ');
+    lQuery.SQL.Add('  MC01NRDUPABE,                ');
+    lQuery.SQL.Add('  MC01VIP,                     ');
+    lQuery.SQL.Add('  MC01CODVIP,                  ');
+    lQuery.SQL.Add('  MC01VALIDVIP,                ');
+    lQuery.SQL.Add('  MC01_SALARIO_OK,             ');
+    lQuery.SQL.Add('  MC01_ENDERECO_OK,            ');
+    lQuery.SQL.Add('  MC01_CONVENIO_OK,            ');
+    lQuery.SQL.Add('  MC01_TAB_CONVENIO,           ');
+    lQuery.SQL.Add('  MC01_TAB_PROFISSAO,          ');
+    lQuery.SQL.Add('  MC01_DIA_VCTO,               ');
+    lQuery.SQL.Add('  MC01_DT_COBRANCA,            ');
+    lQuery.SQL.Add('  MC01_QTDE_COBRANCA,          ');
+    lQuery.SQL.Add('  MC01_ICMS,                   ');
+    lQuery.SQL.Add('  MC01_SUBST_TRIB,             ');
+    lQuery.SQL.Add('  MC01FOTO,                    ');
+    lQuery.SQL.Add('  MC01_ATACADO,                ');
+    lQuery.SQL.Add('  MC01_LIMITEDESCONTO,         ');
+    lQuery.SQL.Add('  MC01_FRPGTO,                 ');
+    lQuery.SQL.Add('  MC01_MUDAR_FRPGTO,           ');
+    lQuery.SQL.Add('  MC01_PRAZO_DIAS,             ');
+    lQuery.SQL.Add('  MC01DIVIDA,                  ');
+    lQuery.SQL.Add('  MC01TOL_SALDO,               ');
+    lQuery.SQL.Add('  MC01ROTA,                    ');
+    lQuery.SQL.Add('  MC01ORD_VIS,                 ');
+    lQuery.SQL.Add('  MC01_OBS1,                   ');
+    lQuery.SQL.Add('  MC01_OBS2,                   ');
+    lQuery.SQL.Add('  MC01SUPER_LIMITE_DIAS,       ');
+    lQuery.SQL.Add('  MC01_CARTORIO,               ');
+    lQuery.SQL.Add('  MC01_SERASA,                 ');
+    lQuery.SQL.Add('  MC01_USU_CADASTRO,           ');
+    lQuery.SQL.Add('  MC01_SPED_SN,                ');
+    lQuery.SQL.Add('  MC01_PISCOFINS_SN,           ');
+    lQuery.SQL.Add('  MC01_NR,                     ');
+    lQuery.SQL.Add('  MC01_CONSUMIDOR_FINAL,       ');
+    lQuery.SQL.Add('  MC01_INDPRES,                ');
+    lQuery.SQL.Add('  MC01_INDIEDEST,              ');
+    lQuery.SQL.Add('  MC01_COMPLEMENTO,            ');
+    lQuery.SQL.Add('  MC01_BOLETO_COM_TAXA,        ');
+    lQuery.SQL.Add('  MC01_NOME_COMPLETO_NFE,      ');
+    lQuery.SQL.Add('  MC01OBS_INTERNA              ');
+    lQuery.SQL.Add('  ) values (                   ');
+    lQuery.SQL.Add('  :MC01CODIGO,                 ');
+    lQuery.SQL.Add('  :MC01NOME,                   ');
+    lQuery.SQL.Add('  :MC01FANTASIA,               ');
+    lQuery.SQL.Add('  :MC01ENDERECO,               ');
+    lQuery.SQL.Add('  :MC01BAIRRO,                 ');
+    lQuery.SQL.Add('  :MC01CIDADE,                 ');
+    lQuery.SQL.Add('  :MC01CEP,                    ');
+    lQuery.SQL.Add('  :MC01UF,                     ');
+    lQuery.SQL.Add('  :MC01FONE,                   ');
+    lQuery.SQL.Add('  :MC01FAX,                    ');
+    lQuery.SQL.Add('  :MC01CELULAR,                ');
+    lQuery.SQL.Add('  :MC01EMAIL,                  ');
+    lQuery.SQL.Add('  :MC01DTCADASTRO,             ');
+    lQuery.SQL.Add('  :MC01FISJUR,                 ');
+    lQuery.SQL.Add('  :MC01ATIINATIVO,             ');
+    lQuery.SQL.Add('  :MC01DTNASCTO,               ');
+    lQuery.SQL.Add('  :MC01CPF,                    ');
+    lQuery.SQL.Add('  :MC01CI,                     ');
+    lQuery.SQL.Add('  :MC01CGC,                    ');
+    lQuery.SQL.Add('  :MC01IE,                     ');
+    lQuery.SQL.Add('  :MC01SEXO,                   ');
+    lQuery.SQL.Add('  :MC01ESTCIVIL,               ');
+    lQuery.SQL.Add('  :MC01NATURALIDADE,           ');
+    lQuery.SQL.Add('  :MC01PAI,                    ');
+    lQuery.SQL.Add('  :MC01MAE,                    ');
+    lQuery.SQL.Add('  :MC01ENDCOB,                 ');
+    lQuery.SQL.Add('  :MC01CIDADECOB,              ');
+    lQuery.SQL.Add('  :MC01BAIRROCOB,              ');
+    lQuery.SQL.Add('  :MC01CEPCOB,                 ');
+    lQuery.SQL.Add('  :MC01UFCOB,                  ');
+    lQuery.SQL.Add('  :MC01CONTATO,                ');
+    lQuery.SQL.Add('  :MC01ALUGUEL,                ');
+    lQuery.SQL.Add('  :MC01VALORALUGUEL,           ');
+    lQuery.SQL.Add('  :MC01TEMPOALUGUEL,           ');
+    lQuery.SQL.Add('  :MC01EMPRESA,                ');
+    lQuery.SQL.Add('  :MC01FONEEMP,                ');
+    lQuery.SQL.Add('  :MC01FUNCAOEMP,              ');
+    lQuery.SQL.Add('  :MC01ADMISSAO,               ');
+    lQuery.SQL.Add('  :MC01SALARIO,                ');
+    lQuery.SQL.Add('  :MC01REFCOM,                 ');
+    lQuery.SQL.Add('  :MC01REFBAN,                 ');
+    lQuery.SQL.Add('  :MC01DTSPC,                  ');
+    lQuery.SQL.Add('  :MC01OBSSPC,                 ');
+    lQuery.SQL.Add('  :MC01OBSGERAL,               ');
+    lQuery.SQL.Add('  :MC01SITSPC,                 ');
+    lQuery.SQL.Add('  :MC01CONJUGE,                ');
+    lQuery.SQL.Add('  :MC01REFPESSOAL,             ');
+    lQuery.SQL.Add('  :MC01DTORCI,                 ');
+    lQuery.SQL.Add('  :MC01DTMOV,                  ');
+    lQuery.SQL.Add('  :MC01LIMITECRED,             ');
+    lQuery.SQL.Add('  :MC01SALDOCRED,              ');
+    lQuery.SQL.Add('  :MC01ULTIMANF,               ');
+    lQuery.SQL.Add('  :MC01VALORNF,                ');
+    lQuery.SQL.Add('  :MC01TBLOCAL,                ');
+    lQuery.SQL.Add('  :MC01TBEXTRA,                ');
+    lQuery.SQL.Add('  :MC01LOCALCOB,               ');
+    lQuery.SQL.Add('  :MC01REP,                    ');
+    lQuery.SQL.Add('  :MC01TIPOCRED,               ');
+    lQuery.SQL.Add('  :MC01NRDUPABE,               ');
+    lQuery.SQL.Add('  :MC01VIP,                    ');
+    lQuery.SQL.Add('  :MC01CODVIP,                 ');
+    lQuery.SQL.Add('  :MC01VALIDVIP,               ');
+    lQuery.SQL.Add('  :MC01_SALARIO_OK,            ');
+    lQuery.SQL.Add('  :MC01_ENDERECO_OK,           ');
+    lQuery.SQL.Add('  :MC01_CONVENIO_OK,           ');
+    lQuery.SQL.Add('  :MC01_TAB_CONVENIO,          ');
+    lQuery.SQL.Add('  :MC01_TAB_PROFISSAO,         ');
+    lQuery.SQL.Add('  :MC01_DIA_VCTO,              ');
+    lQuery.SQL.Add('  :MC01_DT_COBRANCA,           ');
+    lQuery.SQL.Add('  :MC01_QTDE_COBRANCA,         ');
+    lQuery.SQL.Add('  :MC01_ICMS,                  ');
+    lQuery.SQL.Add('  :MC01_SUBST_TRIB,            ');
+    lQuery.SQL.Add('  :MC01FOTO,                   ');
+    lQuery.SQL.Add('  :MC01_ATACADO,               ');
+    lQuery.SQL.Add('  :MC01_LIMITEDESCONTO,        ');
+    lQuery.SQL.Add('  :MC01_FRPGTO,                ');
+    lQuery.SQL.Add('  :MC01_MUDAR_FRPGTO,          ');
+    lQuery.SQL.Add('  :MC01_PRAZO_DIAS,            ');
+    lQuery.SQL.Add('  :MC01DIVIDA,                 ');
+    lQuery.SQL.Add('  :MC01TOL_SALDO,              ');
+    lQuery.SQL.Add('  :MC01ROTA,                   ');
+    lQuery.SQL.Add('  :MC01ORD_VIS,                ');
+    lQuery.SQL.Add('  :MC01_OBS1,                  ');
+    lQuery.SQL.Add('  :MC01_OBS2,                  ');
+    lQuery.SQL.Add('  :MC01SUPER_LIMITE_DIAS,      ');
+    lQuery.SQL.Add('  :MC01_CARTORIO,              ');
+    lQuery.SQL.Add('  :MC01_SERASA,                ');
+    lQuery.SQL.Add('  :MC01_USU_CADASTRO,          ');
+    lQuery.SQL.Add('  :MC01_SPED_SN,               ');
+    lQuery.SQL.Add('  :MC01_PISCOFINS_SN,          ');
+    lQuery.SQL.Add('  :MC01_NR,                    ');
+    lQuery.SQL.Add('  :MC01_CONSUMIDOR_FINAL,      ');
+    lQuery.SQL.Add('  :MC01_INDPRES,               ');
+    lQuery.SQL.Add('  :MC01_INDIEDEST,             ');
+    lQuery.SQL.Add('  :MC01_COMPLEMENTO,           ');
+    lQuery.SQL.Add('  :MC01_BOLETO_COM_TAXA,       ');
+    lQuery.SQL.Add('  :MC01_NOME_COMPLETO_NFE,     ');
+    lQuery.SQL.Add('  :MC01OBS_INTERNA             ');
+    lQuery.SQL.Add('        );                     ');
+
+    lQuery.ParamByName('MC01CODIGO').AsInteger := FCodigo;
+    lQuery.ParamByName('MC01NOME').AsString := FNome;
+    lQuery.ParamByName('MC01FANTASIA').AsString := FMatricula;
+    lQuery.ParamByName('MC01ENDERECO').AsString := FEndereco;
+    lQuery.ParamByName('MC01BAIRRO').AsString := FBairro;
+    lQuery.ParamByName('MC01CIDADE').AsString := FCidade;
+    lQuery.ParamByName('MC01CEP').AsString := FCep;
+    lQuery.ParamByName('MC01UF').AsString := FUf;
+    lQuery.ParamByName('MC01FONE').AsString := FFone;
+    lQuery.ParamByName('MC01FAX').AsString := FFax;
+    lQuery.ParamByName('MC01CELULAR').AsString := FCelular;
+    lQuery.ParamByName('MC01EMAIL').AsString := FEmail;
+    lQuery.ParamByName('MC01DTCADASTRO').AsDateTime := FDataCadastro;
+    lQuery.ParamByName('MC01FISJUR').AsString := Tfunctions.GetSn(FPessoaFisica);
+    lQuery.ParamByName('MC01ATIINATIVO').AsString := Tfunctions.GetSn(FAtivo);
+    lQuery.ParamByName('MC01DTNASCTO').AsDAte := FDataNascimento;
+    lQuery.ParamByName('MC01CPF').AsString := FCPF;
+    lQuery.ParamByName('MC01CI').AsString := FRg;
+    lQuery.ParamByName('MC01CGC').AsString := FCNPJ;
+    lQuery.ParamByName('MC01IE').AsString := FIe;
+    lQuery.ParamByName('MC01SEXO').AsString := FSexo;
+    lQuery.ParamByName('MC01ESTCIVIL').AsString := FEstadoCivil;
+    lQuery.ParamByName('MC01NATURALIDADE').AsString := FNaturalidade;
+    lQuery.ParamByName('MC01PAI').AsString := FPai;
+    lQuery.ParamByName('MC01MAE').AsString := FMae;
+    lQuery.ParamByName('MC01ENDCOB').AsString := FEnderecoCobranca;
+    lQuery.ParamByName('MC01CIDADECOB').AsString := FCidadeCobranca;
+    lQuery.ParamByName('MC01BAIRROCOB').AsString := FBairroCobranca;
+    lQuery.ParamByName('MC01CEPCOB').AsString := FCepCobranca;
+    lQuery.ParamByName('MC01UFCOB').AsString := FUfCobranca;
+    lQuery.ParamByName('MC01CONTATO').AsString := FContato;
+    lQuery.ParamByName('MC01ALUGUEL').AsString := FAluguel;
+    lQuery.ParamByName('MC01VALORALUGUEL').AsFloat := FValorAluguel;
+    lQuery.ParamByName('MC01TEMPOALUGUEL').AsString := FTempoAluguel;
+    lQuery.ParamByName('MC01EMPRESA').AsString := FEmpresa;
+    lQuery.ParamByName('MC01FONEEMP').AsString := FFoneEmpresa;
+    lQuery.ParamByName('MC01FUNCAOEMP').AsString := FFuncaoEmpresa;
+    lQuery.ParamByName('MC01ADMISSAO').AsString := FAdmissao;
+    lQuery.ParamByName('MC01SALARIO').AsString := FSalario;
+    lQuery.ParamByName('MC01REFCOM').AsString := FReferenciaComercial;
+    lQuery.ParamByName('MC01REFBAN').AsString := FReferenciaBanco;
+    lQuery.ParamByName('MC01DTSPC').AsDAte := FDataSpc;
+    lQuery.ParamByName('MC01OBSSPC').AsString := FObservacaoSpc;
+    lQuery.ParamByName('MC01OBSGERAL').AsString := FObservacaoGeral;
+    lQuery.ParamByName('MC01SITSPC').AsString := Tfunctions.GetSn(FAtivoNoSPC);
+    lQuery.ParamByName('MC01CONJUGE').AsString := FConjuge;
+    lQuery.ParamByName('MC01REFPESSOAL').AsString := FReferenciaPessoal;
+    lQuery.ParamByName('MC01DTORCI').AsString := FDataOrci;
+    lQuery.ParamByName('MC01DTMOV').AsDAte := FDataMovimento;
+    lQuery.ParamByName('MC01LIMITECRED').AsFloat := FValorLimiteDoCliente;
+    lQuery.ParamByName('MC01SALDOCRED').AsFloat := FSaldoCredito;
+    lQuery.ParamByName('MC01ULTIMANF').AsString := FUltimaNf;
+    lQuery.ParamByName('MC01VALORNF').AsFloat := FValorNf;
+    lQuery.ParamByName('MC01TBLOCAL').AsInteger := FTabelaLocalizacao;
+    lQuery.ParamByName('MC01TBEXTRA').AsInteger := FTabelaExtra;
+    lQuery.ParamByName('MC01LOCALCOB').AsString := FLocalCobranca;
+    lQuery.ParamByName('MC01REP').AsInteger := FVendedor;
+    lQuery.ParamByName('MC01TIPOCRED').AsString := FTipoDeCredito;
+    lQuery.ParamByName('MC01NRDUPABE').AsInteger := FNumeroDuplicatasAbertas;
+    lQuery.ParamByName('MC01VIP').AsString := FVip;
+    lQuery.ParamByName('MC01CODVIP').AsString := FCodigoCidadeIbge;
+    lQuery.ParamByName('MC01VALIDVIP').AsDAte := FValidadeVip;
+    lQuery.ParamByName('MC01_SALARIO_OK').AsString := Tfunctions.GetSn(FSalarioOk);
+    lQuery.ParamByName('MC01_ENDERECO_OK').AsString := Tfunctions.GetSn(FEnderecoOk);
+    lQuery.ParamByName('MC01_CONVENIO_OK').AsString := Tfunctions.GetSn(FConvenioOk);
+    lQuery.ParamByName('MC01_TAB_CONVENIO').AsInteger := FTabelaConvenio;
+    lQuery.ParamByName('MC01_TAB_PROFISSAO').AsInteger := FTabelaProfissao;
+    lQuery.ParamByName('MC01_DIA_VCTO').AsInteger := FDiaFixoDeVencimento;
+    lQuery.ParamByName('MC01_DT_COBRANCA').AsDAte := FDataCobranca;
+    lQuery.ParamByName('MC01_QTDE_COBRANCA').AsInteger := FQuantidadeCobranca;
+    lQuery.ParamByName('MC01_ICMS').AsFloat := FIcms;
+    lQuery.ParamByName('MC01_SUBST_TRIB').AsString := Tfunctions.GetSn(FSubstituicaoTributaria);
+    lQuery.ParamByName('MC01FOTO').AsString := FFotoCaminho;
+    lQuery.ParamByName('MC01_ATACADO').AsString := FAtacado;
+    lQuery.ParamByName('MC01_LIMITEDESCONTO').AsFloat := FLimiteDesconto;
+    lQuery.ParamByName('MC01_FRPGTO').AsInteger := FFormaDePagamentoPadrao;
+    lQuery.ParamByName('MC01_MUDAR_FRPGTO').AsString := FMudarFormaPagamento;
+    lQuery.ParamByName('MC01_PRAZO_DIAS').AsInteger := FPrazoMaximoEmDias;
+    lQuery.ParamByName('MC01DIVIDA').AsFloat := FDivida;
+    lQuery.ParamByName('MC01TOL_SALDO').AsFloat := FSaldoTotal;
+    lQuery.ParamByName('MC01ROTA').AsString := FRota;
+    lQuery.ParamByName('MC01ORD_VIS').AsInteger := FOrdemVisita;
+    lQuery.ParamByName('MC01_OBS1').AsString := FObservacao1;
+    lQuery.ParamByName('MC01_OBS2').AsString := FObservacao2;
+    lQuery.ParamByName('MC01SUPER_LIMITE_DIAS').AsInteger := FSuperLimiteDias;
+    lQuery.ParamByName('MC01_CARTORIO').AsString := FCartorio;
+    lQuery.ParamByName('MC01_SERASA').AsString := FSerasa;
+    lQuery.ParamByName('MC01_USU_CADASTRO').AsInteger := FUsuarioCadastro;
+    lQuery.ParamByName('MC01_SPED_SN').AsString := Tfunctions.GetSn(FSped);
+    lQuery.ParamByName('MC01_PISCOFINS_SN').AsString := Tfunctions.GetSn(FPisCofins);
+    lQuery.ParamByName('MC01_NR').AsString := FNumero;
+    lQuery.ParamByName('MC01_CONSUMIDOR_FINAL').AsString := FConsumidorFinal;
+    lQuery.ParamByName('MC01_INDPRES').AsString := FIndicadorPresencaComprador;
+    lQuery.ParamByName('MC01_INDIEDEST').AsString := FIndicadorDestinatario;
+    lQuery.ParamByName('MC01_COMPLEMENTO').AsString := FComplemento;
+    lQuery.ParamByName('MC01_BOLETO_COM_TAXA').AsString := FBoletoComTaxa;
+    lQuery.ParamByName('MC01_NOME_COMPLETO_NFE').AsString := FNomeCompletoNfe;
+    lQuery.ParamByName('MC01OBS_INTERNA').AsString := FObservacaoInterna;
+
+    lQuery.ExecSql;
+    lQuery.connection.commit;
+  finally
+    lQuery.Free;
+  end;
+end;
+
+procedure TCliente.Limpar;
+begin
+  FCodigo := 0;
+  FNome := '';
+  FFormaDePagamentoPadrao := 0;
+  // FLimiteDeCredito: Double;
+  FTipoDeCredito := '';
+  FAtivo := False;
+  FPrazoMaximoEmDias := 0;
+  FPessoaFisica := False;
+  FSaldoCalculado := 0;
+  FCPF := '';
+  FCNPJ := '';
+  FAtivoNoSPC := False;
+  FValorLimiteDoCliente := 0;
+  FDiaFixoDeVencimento := 0;
+  FIe := '';
+  FFone := '';
+  FEmail := '';
+  FBairro := '';
+  FFax := '';
+  FUf := '';
+  FCodigoCidadeIbge := '';
+  FCep := '';
+  FNumero := '';
+  FComplemento := '';
+  FDataCadastro := 0;
+  FMatricula := '';
+  FCidade := '';
+  FEndereco := '';
+  FCelular := '';
+  FEnderecoOk := False;
+  FConvenioOk := False;
+  FSubstituicaoTributaria := False;
+  FSalarioOk := False;
+  FPisCofins := False;
+  FSped := False;
+  FUsuarioAlteracao := 0;
+  FUsuarioCadastro := 0;
+  FIndicadorDestinatario := '';
+  FConsumidorFinal := '';
+  FIndicadorPresencaComprador := '';
+  FDataAlteracao := 0;
+  FSaldoCredito := 0;
+  FNumeroDuplicatasAbertas := 0;
+  // FCidadeIbge: TCidade;
+  FDataNascimento := 0;
+  FRg := '';
+  FSexo := '';
+  FEstadoCivil := '';
+  FNaturalidade := '';
+  FPai := '';
+  FMae := '';
+  FEnderecoCobranca := '';
+  FCidadeCobranca := '';
+  FBairroCobranca := '';
+  FCepCobranca := '';
+  FUfCobranca := '';
+  FContato := '';
+  FAluguel := '';
+  FValorAluguel := 0;
+  FTempoAluguel := '';
+  FEmpresa := '';
+  FFoneEmpresa := '';
+  FFuncaoEmpresa := '';
+  FAdmissao := '';
+  FSalario := '';
+  FReferenciaComercial := '';
+  FReferenciaBanco := '';
+  FDataSpc := 0;
+  FObservacaoSpc := '';
+  FObservacaoGeral := '';
+  FConjuge := '';
+  FReferenciaPessoal := '';
+  FDataOrci := '';
+  FDataMovimento := 0;
+  FUltimaNf := '';
+  FValorNf := 0;
+  FTabelaLocalizacao := 0;
+  FTabelaExtra := 0;
+  FLocalCobranca := '';
+  FVendedor := 0;
+  FVip := '';
+  FValidadeVip := 0;
+  FTabelaConvenio := 0;
+  FTabelaProfissao := 0;
+  FDataCobranca := 0;
+  FQuantidadeCobranca := 0;
+  FIcms := 0;
+  FFotoCaminho := '';
+  FAtacado := '';
+  FLimiteDesconto := 0;
+  FMudarFormaPagamento := '';
+  FDivida := 0;
+  FSaldoTotal := 0;
+  FRota := '';
+  FOrdemVisita := 0;
+  FObservacao1 := '';
+  FObservacao2 := '';
+  FSuperLimiteDias := 0;
+  FCartorio := '';
+  FSerasa := '';
+  FBoletoComTaxa := '';
+  FNomeCompletoNfe := '';
+  FObservacaoInterna := '';
+end;
+
+end.

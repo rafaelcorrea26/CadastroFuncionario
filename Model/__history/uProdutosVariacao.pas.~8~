@@ -1,0 +1,68 @@
+unit uProdutosVariacao;
+
+interface
+
+uses
+  System.JSON, REST.JSON, System.Generics.Collections, FireDAC.Comp.Client, uConexao,
+  System.SysUtils;
+
+type
+  TProdutoVariacao = class;
+
+  TProdutoVariacao = class
+  private
+
+      Fean: string ;
+      Forder: string ;
+      Fprice: Double ;
+      Fcost_price: Double ;
+      Fstock: Double ;
+      Fminimum_stock: Double ;
+      Freference: string ;
+      Fweight: Double ;
+      Flength: Double ;
+      Fwidth: Double ;
+      Fheight: Double ;
+      Fstart_promotion: string ;
+      Fend_promotion: string ;
+      Fpromotional_price: Double ;
+  public
+    destructor Destroy; override;
+
+      property CodigoBarras: string read Fean write Fean;
+      property CodigoVariacao: string read Forder write Forder;
+      property Preco: Double read Fprice write Fprice;
+      property Custo: Double read Fcost_price write Fcost_price;
+      property Estoque: Double read Fstock write Fstock;
+      property EstoqueMinimo: Double read Fminimum_stock write Fminimum_stock;
+      property Sku: string read Freference write Freference;
+      property Peso: Double read Fweight write Fweight;
+      property Comprimento: Double read Flength write Flength;
+      property Largura: Double read Fwidth write Fwidth;
+      property Altura: Double read Fheight write Fheight;
+      property InicioPromocao: string read Fstart_promotion write Fstart_promotion;
+      property FimPromocao: string read Fend_promotion write Fend_promotion;
+      property PrecoPromocao: Double read Fpromotional_price write Fpromotional_price;
+
+
+    constructor Create;
+
+    function ToJson: TJSONObject;
+  end;
+
+implementation
+
+function TProdutoVariacao.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonObject(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TProdutoVariacao.Create;
+begin
+end;
+
+destructor TProdutoVariacao.Destroy;
+begin
+end;
+
+end.

@@ -1,0 +1,101 @@
+unit uFornecedor;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfaces;
+
+type
+  TFornecedor = class;
+
+  TFornecedor = class(TInterfacedObject, iclassSend)
+  private
+
+    Fcnpj: string; // 5570714000159,
+    Fcpf: string; // null,
+    Fnome: string; // "KABUM COMERCIO ELETRONICO S.A.",
+    Ffantasia: string; // "KABUM!",
+    Ftipo: string; // "J",
+    Fsituacao: string; // "A",
+    Fendereco: string; // "Rua Carlos Gomes",
+    Fendereco_numero: string; // 1321,
+    Fendereco_bairro: string; // "Centro",
+    Fendereco_cidade: string; // "Limeira",
+    Fendereco_uf: string; // "SP",
+    Fendereco_cep: string; // "13480010",
+    Fcodigo_cidade_sefaz: string; // read271,
+    Ftelefone: string; // "(19) 2114-4444",
+    Fcelular: string; // "(19) 22114-4444",
+    Femail: string; // "faleconosco@kabum.com.br",
+    Fcart_identidade: string; // 1234,
+    Finsc_estadual: string; // 5678,
+    Fobs1: string; // "obs 1",
+    Fobs2: string; // "obs 2",
+    Fatualizar_custos: string; // "S",
+    Fgerar_rel_sped: string; // "S",
+    Fregime_tributario: integer; // 1,
+    Fcrt: integer; // 1,
+    Fcnae: string; // "a123",
+    Frepresentante_nome: string; // "José",
+    Frepresentante_telefone: string; // "(19) 22114-4444",
+    Frepresentante_email: string; // "jose@gmail.com"
+
+  public
+
+    property cnpj: string read Fcnpj write Fcnpj;
+    property cpf: string read Fcpf write Fcpf;
+    property nome: string read Fnome write Fnome;
+    property fantasia: string read Ffantasia write Ffantasia;
+    property tipo: string read Ftipo write Ftipo;
+    property situacao: string read Fsituacao write Fsituacao;
+    property endereco: string read Fendereco write Fendereco;
+    property endereco_numero: string read Fendereco_numero write Fendereco_numero;
+    property endereco_bairro: string read Fendereco_bairro write Fendereco_bairro;
+    property endereco_cidade: string read Fendereco_cidade write Fendereco_cidade;
+    property endereco_uf: string read Fendereco_uf write Fendereco_uf;
+    property endereco_cep: string read Fendereco_cep write Fendereco_cep;
+    property codigo_cidade_sefaz: string read Fcodigo_cidade_sefaz write Fcodigo_cidade_sefaz;
+    property telefone: string read Ftelefone write Ftelefone;
+    property celular: string read Fcelular write Fcelular;
+    property email: string read Femail write Femail;
+    property cart_identidade: string read Fcart_identidade write Fcart_identidade;
+    property insc_estadual: string read Finsc_estadual write Finsc_estadual;
+    property obs1: string read Fobs1 write Fobs1;
+    property obs2: string read Fobs2 write Fobs2;
+    property atualizar_custos: string read Fatualizar_custos write Fatualizar_custos;
+    property gerar_rel_sped: string read Fgerar_rel_sped write Fgerar_rel_sped;
+    property regime_tributario: integer read Fregime_tributario write Fregime_tributario;
+    property crt: integer read Fcrt write Fcrt;
+    property cnae: string read Fcnae write Fcnae;
+    property representante_nome: string read Frepresentante_nome write Frepresentante_nome;
+    property representante_telefone: string read Frepresentante_telefone write Frepresentante_telefone;
+    property representante_email: string read Frepresentante_email write Frepresentante_email;
+
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: TJSONObject;
+  end;
+
+implementation
+
+function TFornecedor.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonObject(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TFornecedor.Create;
+begin
+
+end;
+
+destructor TFornecedor.Destroy;
+begin
+end;
+
+end.

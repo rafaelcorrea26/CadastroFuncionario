@@ -1,0 +1,213 @@
+unit uContaDAO;
+
+interface
+
+uses
+  System.Classes,
+  uQuery,
+  pcnconversao,
+  System.SysUtils,
+  uFunctions,
+  uConta,
+   Vcl.Dialogs;
+
+type
+  TContaDAO = class
+  private
+
+  public
+    class function Limpar(pConta: Tconta): boolean;
+    class function Carrega(pConta: Tconta): boolean;
+    class function Incluir(pConta: Tconta): boolean;
+    class function Alterar(pConta: Tconta): boolean;
+    class function Excluir(pCodigo: string): boolean;
+    class function Existe(pCodigo: Integer): boolean;
+  end;
+
+implementation
+
+{ TFormaDePagamento }
+
+{ TFormaDePagamento }
+
+class function TContaDAO.Alterar(pConta: Tconta): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;;
+    lQuery.SQL.add(' UPDATE  MC07CTA SET                         ');
+    lQuery.SQL.add('   AC07NOME = :AC07NOME                      ');
+    lQuery.SQL.add(' , AC07TIPO = :AC07TIPO                      ');
+    lQuery.SQL.add(' , AC07CC = :AC07CC                          ');
+    lQuery.SQL.add(' , AC07DP = :AC07DP                          ');
+    lQuery.SQL.add(' , AC07BCO = :AC07BCO                        ');
+    lQuery.SQL.add(' , AC07CTA2 = :AC07CTA2                      ');
+    lQuery.SQL.add(' , AC07_HISTORICO = :AC07_HISTORICO          ');
+    lQuery.SQL.add(' , AC07DRE = :AC07DRE                        ');
+    lQuery.SQL.add(' , AN07NIVELDRE = :AN07NIVELDRE              ');
+    lQuery.SQL.add(' , AC07TIPOCUSTO = :AC07TIPOCUSTO            ');
+    lQuery.SQL.add(' , AC07COMBUSTIVEL = :AC07COMBUSTIVEL        ');
+    lQuery.SQL.add(' , AC07SBG = :AC07SBG                        ');
+    lQuery.SQL.add(' where (AC07CTA = :AC07CTA)                  ');
+    lQuery.parambyname('AC07CTA').asstring := pConta.codigo;
+    lQuery.parambyname('AC07NOME').asstring := pConta.nome;
+    lQuery.parambyname('AC07TIPO').asstring := pConta.tipo;
+    lQuery.parambyname('AC07CC').asstring := pConta.centro_custo;
+    lQuery.parambyname('AC07DP').asstring := pConta.duplicar;
+    lQuery.parambyname('AC07BCO').asstring := pConta.caixa_dest;
+    lQuery.parambyname('AC07CTA2').asstring := pConta.conta_dest;
+    lQuery.parambyname('AC07_HISTORICO').asstring := pConta.historico;
+    lQuery.parambyname('AC07DRE').asstring := pConta.dre;
+    lQuery.parambyname('AN07NIVELDRE').asinteger := pConta.nivel_dre;
+    lQuery.parambyname('AC07TIPOCUSTO').asstring := pConta.tipo_custo;
+    lQuery.parambyname('AC07COMBUSTIVEL').asstring := pConta.combustivel;
+    lQuery.parambyname('AC07SBG').asstring := pConta.subgrupo;
+    lQuery.execsql;
+    lQuery.connection.commit;
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TContaDAO.Carrega(pConta: Tconta): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.add(' select * from MC07CTA          ');
+    lQuery.SQL.add(' where AC07CTA = :AC07CTA  ');
+    lQuery.parambyname('AC07CTA').asstring := pConta.codigo;
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      // carrega dados
+      pConta.nome := lQuery.FieldByName('AC07NOME').asstring;
+      pConta.tipo := lQuery.FieldByName('AC07TIPO').asstring;
+      pConta.centro_custo := lQuery.FieldByName('AC07CC').asstring;
+      pConta.duplicar := lQuery.FieldByName('AC07DP').asstring;
+      pConta.caixa_dest := lQuery.FieldByName('AC07BCO').asstring;
+      pConta.conta_dest := lQuery.FieldByName('AC07CTA2').asstring;
+      pConta.historico := lQuery.FieldByName('AC07_HISTORICO').asstring;
+      pConta.dre := lQuery.FieldByName('AC07DRE').asstring;
+      pConta.nivel_dre := lQuery.FieldByName('AN07NIVELDRE').asinteger;
+      pConta.tipo_custo := lQuery.FieldByName('AC07TIPOCUSTO').asstring;
+      pConta.combustivel := lQuery.FieldByName('AC07COMBUSTIVEL').asstring;
+      pConta.subgrupo := lQuery.FieldByName('AC07SBG').asstring;
+    end;
+
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TContaDAO.Excluir(pCodigo: string): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.add(' DELETE FROM MC07CTA             ');
+    lQuery.SQL.add(' where AC07CTA = :AC07CTA   ');
+    lQuery.parambyname('AC07CTA').asstring := pCodigo;
+    lQuery.execsql;
+    lQuery.connection.commit;
+
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TContaDAO.Existe(pCodigo: Integer): boolean;
+begin
+
+end;
+
+class function TContaDAO.Incluir(pConta: Tconta): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;;
+    lQuery.SQL.add('    insert into MC07CTA (          ');
+    lQuery.SQL.add('    AC07CTA                        ');
+    lQuery.SQL.add('  , AC07NOME                       ');
+    lQuery.SQL.add('  , AC07TIPO                       ');
+    lQuery.SQL.add('  , AC07CC                         ');
+    lQuery.SQL.add('  , AC07DP                         ');
+    lQuery.SQL.add('  , AC07BCO                        ');
+    lQuery.SQL.add('  , AC07CTA2                       ');
+    lQuery.SQL.add('  , AC07_HISTORICO                 ');
+    lQuery.SQL.add('  , AC07DRE                        ');
+    lQuery.SQL.add('  , AN07NIVELDRE                   ');
+    lQuery.SQL.add('  , AC07TIPOCUSTO                  ');
+    lQuery.SQL.add('  , AC07COMBUSTIVEL                ');
+    lQuery.SQL.add('  , AC07SBG                        ');
+    lQuery.SQL.add('  )values(                         ');
+    lQuery.SQL.add('    :AC07CTA                       ');
+    lQuery.SQL.add('  , :AC07NOME                      ');
+    lQuery.SQL.add('  , :AC07TIPO                      ');
+    lQuery.SQL.add('  , :AC07CC                        ');
+    lQuery.SQL.add('  , :AC07DP                        ');
+    lQuery.SQL.add('  , :AC07BCO                       ');
+    lQuery.SQL.add('  , :AC07CTA2                      ');
+    lQuery.SQL.add('  , :AC07_HISTORICO                ');
+    lQuery.SQL.add('  , :AC07DRE                       ');
+    lQuery.SQL.add('  , :AN07NIVELDRE                  ');
+    lQuery.SQL.add('  , :AC07TIPOCUSTO                 ');
+    lQuery.SQL.add('  , :AC07COMBUSTIVEL               ');
+    lQuery.SQL.add('  , :AC07SBG                       ');
+    lQuery.SQL.add(' )                                 ');
+    lQuery.parambyname('AC07CTA').asstring := pConta.codigo;
+    lQuery.parambyname('AC07NOME').asstring := pConta.nome;
+    lQuery.parambyname('AC07TIPO').asstring := pConta.tipo;
+    lQuery.parambyname('AC07CC').asstring := pConta.centro_custo;
+    lQuery.parambyname('AC07DP').asstring := pConta.duplicar;
+    lQuery.parambyname('AC07BCO').asstring := pConta.caixa_dest;
+    lQuery.parambyname('AC07CTA2').asstring := pConta.conta_dest;
+    lQuery.parambyname('AC07_HISTORICO').asstring := pConta.historico;
+    lQuery.parambyname('AC07DRE').asstring := pConta.dre;
+    lQuery.parambyname('AN07NIVELDRE').asinteger := pConta.nivel_dre;
+    lQuery.parambyname('AC07TIPOCUSTO').asstring := pConta.tipo_custo;
+    lQuery.parambyname('AC07COMBUSTIVEL').asstring := pConta.combustivel;
+    lQuery.parambyname('AC07SBG').asstring := pConta.subgrupo;
+    lQuery.execsql;
+    lQuery.connection.commit;
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TContaDAO.Limpar(pConta: Tconta): boolean;
+begin
+  pConta.codigo := EmptyStr;
+  pConta.nome := EmptyStr;
+  pConta.tipo := EmptyStr;
+  pConta.centro_custo := EmptyStr;
+  pConta.duplicar := EmptyStr;
+  pConta.caixa_dest := EmptyStr;
+  pConta.conta_dest := EmptyStr;
+  pConta.historico := EmptyStr;
+  pConta.dre := EmptyStr;
+  pConta.nivel_dre := 0;
+  pConta.tipo_custo := EmptyStr;
+  pConta.combustivel := EmptyStr;
+  pConta.subgrupo := EmptyStr;
+end;
+
+end.

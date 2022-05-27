@@ -1,0 +1,673 @@
+unit uVendas;
+
+interface
+
+uses
+  System.JSON, REST.JSON, System.Generics.Collections, System.SysUtils,
+  FireDAC.Comp.Client, uConexao, System.StrUtils;
+
+type
+  TVenda = class;
+  TVendaItem = class;
+  TListaVendas = class;
+{$REGION 'Venda'}
+
+  TVenda = class
+  private
+
+    FListaItens: TObjectList<TVendaItem>;
+
+    FPedido: Integer;
+    FCodigo: Integer;
+    FEmissao: TDate;
+    FCliente: Integer;
+    FVendedor: Integer;
+    FFormaPagamento: Integer;
+    FTipoPedido: string;
+    FBaixarEstoque: string;
+    FPrecoProduto: string;
+    FValorDesconto: Double;
+    FSituacao: string;
+    FTipoPreco: string;
+    FPlaca: string;
+    FOrigem: string;
+    FObservacao01: string;
+    FObservacao02: string;
+    FTipoVenda: string;
+    FDestino: string;
+    FSituacaoPreVenda: string;
+    FCodigoEmpresa: string;
+    FUtilizarEnderecoEntrega: Boolean;
+    FNome_ent: string;
+    FEndereco_ent: string;
+    FComplemento_ent: string;
+    FCidade_ent: string;
+    FEstado_ent: string;
+    FCep_ent: string;
+    FPais_ent: string;
+    FNumero_ent: string;
+    FBairro_ent: string;
+
+    FConsultaVenda, FConsultaConfigPreVenda: TFDQuery;
+
+    FIndexItem: Integer;
+    FFrete: Double;
+
+  public
+    destructor Destroy;
+
+    property Pedido: Integer read FPedido write FPedido;
+    property Codigo: Integer read FCodigo write FCodigo;
+    property Emissao: TDate read FEmissao write FEmissao;
+    property Cliente: Integer read FCliente write FCliente;
+    property Vendedor: Integer read FVendedor write FVendedor;
+    property FormaPagamento: Integer read FFormaPagamento write FFormaPagamento;
+    property TipoPedido: string read FTipoPedido write FTipoPedido;
+    property BaixarEstoque: string read FBaixarEstoque write FBaixarEstoque;
+    property PrecoProduto: string read FPrecoProduto write FPrecoProduto;
+    property ValorDesconto: Double read FValorDesconto write FValorDesconto;
+    property Situacao: string read FSituacao write FSituacao;
+    property TipoPreco: string read FTipoPreco write FTipoPreco;
+    property Placa: string read FPlaca write FPlaca;
+    property Origem: string read FOrigem write FOrigem;
+    property Observacao01: string read FObservacao01 write FObservacao01;
+    property Observacao02: string read FObservacao02 write FObservacao02;
+    property TipoVenda: string read FTipoVenda write FTipoVenda;
+    property Destino: string read FDestino write FDestino;
+    property SituacaoPreVenda: string read FSituacaoPreVenda write FSituacaoPreVenda;
+    property Frete: Double read FFrete write FFrete;
+    property CodigoEmpresa: string read FCodigoEmpresa write FCodigoEmpresa;
+
+    property UtilizarEnderecoEntrega: Boolean read FUtilizarEnderecoEntrega write FUtilizarEnderecoEntrega;
+    property Nome_ent: string read FNome_ent write FNome_ent;
+    property Endereco_ent: string read FEndereco_ent write FEndereco_ent;
+    property Complemento_ent: string read FComplemento_ent write FComplemento_ent;
+    property Cidade_ent: string read FCidade_ent write FCidade_ent;
+    property Estado_ent: string read FEstado_ent write FEstado_ent;
+    property Cep_ent: string read FCep_ent write FCep_ent;
+    property Pais_ent: string read FPais_ent write FPais_ent;
+    property Numero_ent: string read FNumero_ent write FNumero_ent;
+    property Bairro_ent: string read FBairro_ent write FBairro_ent;
+
+    property ListaItens: TObjectList<TVendaItem> read FListaItens write FListaItens;
+    property IndexItem: Integer read FIndexItem write FIndexItem;
+
+    function GetSN(pBoolean: Boolean): string;
+    procedure ValidaEAlimentaCamposDaConfigPreVenda;
+    procedure AdicionarItem(pPreVendaItem: TVendaItem);
+    procedure RemoverItem(pIndex: Integer);
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    procedure LimpaPropriedadesDaClasse;
+    constructor Create;
+    function ToJson: TJSONObject;
+  end;
+{$ENDREGION}
+{$REGION 'Venda Itens'}
+
+  TVendaItem = class
+  private
+    FIndice: Integer;
+    FPedido: Integer;
+    FId: Integer;
+    FEmissao: TDate;
+    FProduto: string;
+    FQuantidade: Double;
+    FValor: Double;
+    FSaida: Double;
+    FRetorno: Double;
+    FCodigoEmpresa: string;
+    FConsultaItem: TFDQuery;
+
+  public
+    property Indice: Integer read FIndice write FIndice;
+    property Pedido: Integer read FPedido write FPedido;
+    property Id: Integer read FId write FId;
+    property Emissao: TDate read FEmissao write FEmissao;
+    property Produto: string read FProduto write FProduto;
+    property Quantidade: Double read FQuantidade write FQuantidade;
+    property Valor: Double read FValor write FValor;
+    property Saida: Double read FSaida write FSaida;
+    property Retorno: Double read FRetorno write FRetorno;
+    property CodigoEmpresa: string read FCodigoEmpresa write FCodigoEmpresa;
+
+    procedure Limpar;
+    procedure Incluir(pEfetuarCommit: Boolean);
+    procedure Alterar(pEfetuarCommit: Boolean);
+    procedure Excluir(pEfetuarCommit: Boolean);
+    procedure ExcluirTodosItensDaPreVenda(pEfetuarCommit: Boolean);
+    constructor Create;
+    destructor Destroy;
+  end;
+{$ENDREGION}
+{$REGION 'Lista Pedidos'}
+
+  TListaVendas = class
+  private
+    FIndice: Integer;
+
+    FId: String;
+    FCodigo: String;
+    Fmarketplace: String;
+    Fstatus: String;
+    Fdata: String;
+    FListaVendas: TObjectList<TListaVendas>;
+    FIndexItem: Integer;
+  public
+    property Indice: Integer read FIndice write FIndice;
+    property Id: String read FId write FId;
+    property Codigo: String read FCodigo write FCodigo;
+    property marketplace: String read Fmarketplace write Fmarketplace;
+    property status: String read Fstatus write Fstatus;
+    property data: String read Fdata write Fdata;
+
+    procedure AdicionarPedido(pPedido: TListaVendas);
+  end;
+
+{$ENDREGION}
+
+implementation
+
+function TVenda.ToJson: TJSONObject;
+begin
+  Result := TJson.ObjectToJsonObject(self);
+end;
+
+procedure TVenda.ValidaEAlimentaCamposDaConfigPreVenda;
+begin
+  FConsultaConfigPreVenda.Close;
+  FConsultaConfigPreVenda.Sql.Clear;
+  FConsultaConfigPreVenda.Sql.Add('select * from mcconfig2000');
+  FConsultaConfigPreVenda.Open;
+
+  // decidir campos.
+  FFormaPagamento := FConsultaConfigPreVenda.FieldByName('MC_FORMA_PGTO_PREVENDA').AsInteger;
+  FVendedor := FConsultaConfigPreVenda.FieldByName('MC_VENDEDOR_PREVENDA').AsInteger;
+  FBaixarEstoque := FConsultaConfigPreVenda.FieldByName('MC_PV_BAIXAR_EST').AsString;
+end;
+
+procedure TVenda.AdicionarItem(pPreVendaItem: TVendaItem);
+var
+  lPreVendaItem: TVendaItem;
+begin
+  try
+    lPreVendaItem := TVendaItem.Create;
+
+    Inc(FIndexItem);
+    lPreVendaItem.Indice := FIndexItem;
+
+    lPreVendaItem.Pedido := pPreVendaItem.Pedido;
+    lPreVendaItem.Produto := pPreVendaItem.Produto;
+    lPreVendaItem.Quantidade := pPreVendaItem.Quantidade;
+    lPreVendaItem.Valor := pPreVendaItem.Valor;
+    lPreVendaItem.Saida := pPreVendaItem.Saida;
+    lPreVendaItem.Retorno := pPreVendaItem.Retorno;
+    lPreVendaItem.CodigoEmpresa := pPreVendaItem.CodigoEmpresa;
+    FListaItens.Add(lPreVendaItem);
+  finally
+    // lPreVendaItem.Free;
+  end;
+
+end;
+
+constructor TVenda.Create;
+begin
+  LimpaPropriedadesDaClasse;
+  FListaItens := TObjectList<TVendaItem>.Create;
+
+  FConsultaVenda := TFDQuery.Create(nil);
+  FConsultaVenda.Connection := TConexao.ObjetoConexao.ConnectionMC;
+
+  FConsultaConfigPreVenda := TFDQuery.Create(nil);
+  FConsultaConfigPreVenda.Connection := TConexao.ObjetoConexao.ConnectionMC;
+
+end;
+
+destructor TVenda.Destroy;
+begin
+  FListaItens.Free;
+  FConsultaVenda.Free;
+end;
+
+procedure TVenda.Excluir(pEfetuarCommit: Boolean);
+begin
+  try
+    begin
+      FConsultaVenda.Close;
+      FConsultaVenda.Sql.Clear;
+      FConsultaVenda.Sql.Add(' DELETE FROM MC130_PREVENDA         ');
+      FConsultaVenda.Sql.Add(' WHERE AN130_PEDIDO = :AN130_PEDIDO ');
+      FConsultaVenda.ParamByName('AN130_PEDIDO').AsInteger := FPedido;
+      FConsultaVenda.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaVenda.Transaction.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+function TVenda.GetSN(pBoolean: Boolean): string;
+begin
+  Result := IfThen(pBoolean, 'S', 'N');
+end;
+
+procedure TVenda.Incluir(pEfetuarCommit: Boolean);
+var
+  I: Integer;
+begin
+  try
+
+    if (FListaItens.Count > 0) then
+    begin
+      for I := 0 to FListaItens.Count - 1 do
+      begin
+        FListaItens[I].Incluir(False);
+      end;
+    end;
+
+    FConsultaVenda.Close;
+    FConsultaVenda.Sql.Clear;
+    FConsultaVenda.Sql.Add('Insert into MC130_PREVENDA (     ');
+    FConsultaVenda.Sql.Add('AN130_PEDIDO,                    ');
+    FConsultaVenda.Sql.Add('AD130_EMISSAO,                   ');
+    FConsultaVenda.Sql.Add('AN130_CLIENTE,                   ');
+    FConsultaVenda.Sql.Add('AN130_VENDEDOR,                  ');
+    FConsultaVenda.Sql.Add('AC130_NOMECLI,                   ');
+    FConsultaVenda.Sql.Add('AC130_FRPGTO,                    ');
+    FConsultaVenda.Sql.Add('AC130_TIPOPEDIDO,                ');
+    FConsultaVenda.Sql.Add('AC130_BAIXARESTOQUE,             ');
+    FConsultaVenda.Sql.Add('AC130_ORIGEM,                    ');
+    FConsultaVenda.Sql.Add('AC130_DESTINO,                   ');
+    FConsultaVenda.Sql.Add('AC130_PRECOPROD,                 ');
+    FConsultaVenda.Sql.Add('AC130_OBS1,                      ');
+    FConsultaVenda.Sql.Add('AC130_OBS2,                      ');
+    FConsultaVenda.Sql.Add('AC130_SIT,                       ');
+    FConsultaVenda.Sql.Add('AC130_TIPOPRECO,                 ');
+    FConsultaVenda.Sql.Add('AC130_PLACA,                     ');
+    FConsultaVenda.Sql.Add('AN130_PRAZO,                     ');
+    FConsultaVenda.Sql.Add('AC130_TIPOVENDA,                 ');
+    FConsultaVenda.Sql.Add('AN130_FRETE,                     ');
+    FConsultaVenda.Sql.Add('AN130_DESCONTO,                  ');
+    if trim(FCodigoEmpresa) <> '' then
+    begin
+      FConsultaVenda.Sql.Add('an130_empresa,                 ');
+    end;
+
+    if FUtilizarEnderecoEntrega then
+    begin
+      FConsultaVenda.Sql.Add('AC130_UTILIZAREND_ENT,                 ');
+      FConsultaVenda.Sql.Add('AC130_Nome_ent,                        ');
+      FConsultaVenda.Sql.Add('AC130_Endereco_ent,                    ');
+      FConsultaVenda.Sql.Add('AC130_Complemento_ent,                 ');
+      FConsultaVenda.Sql.Add('AC130_Cidade_ent,                      ');
+      FConsultaVenda.Sql.Add('AC130_Estado_ent,                      ');
+      FConsultaVenda.Sql.Add('AC130_Cep_ent,                         ');
+      FConsultaVenda.Sql.Add('AC130_Pais_ent,                        ');
+      FConsultaVenda.Sql.Add('AC130_Numero_ent,                      ');
+      FConsultaVenda.Sql.Add('AC130_Bairro_ent,                      ');
+    end;
+
+    FConsultaVenda.Sql.Add('AC130_SIT_PREVENDA)              ');
+    FConsultaVenda.Sql.Add('values (                         ');
+    FConsultaVenda.Sql.Add(':AN130_PEDIDO,                   ');
+    FConsultaVenda.Sql.Add(':AD130_EMISSAO,                  ');
+    FConsultaVenda.Sql.Add(':AN130_CLIENTE,                  ');
+    FConsultaVenda.Sql.Add(':AN130_VENDEDOR,                 ');
+    FConsultaVenda.Sql.Add(':AC130_NOMECLI,                  ');
+    FConsultaVenda.Sql.Add(':AC130_FRPGTO,                   ');
+    FConsultaVenda.Sql.Add(':AC130_TIPOPEDIDO,               ');
+    FConsultaVenda.Sql.Add(':AC130_BAIXARESTOQUE,            ');
+    FConsultaVenda.Sql.Add(':AC130_ORIGEM,                   ');
+    FConsultaVenda.Sql.Add(':AC130_DESTINO,                  ');
+    FConsultaVenda.Sql.Add(':AC130_PRECOPROD,                ');
+    FConsultaVenda.Sql.Add(':AC130_OBS1,                     ');
+    FConsultaVenda.Sql.Add(':AC130_OBS2,                     ');
+    FConsultaVenda.Sql.Add(':AC130_SIT,                      ');
+    FConsultaVenda.Sql.Add(':AC130_TIPOPRECO,                ');
+    FConsultaVenda.Sql.Add(':AC130_PLACA,                    ');
+    FConsultaVenda.Sql.Add(':AN130_PRAZO,                    ');
+    FConsultaVenda.Sql.Add(':AC130_TIPOVENDA,                ');
+    FConsultaVenda.Sql.Add(':AN130_FRETE,                    ');
+    FConsultaVenda.Sql.Add(':AN130_DESCONTO,                 ');
+    if trim(FCodigoEmpresa) <> '' then
+    begin
+      FConsultaVenda.Sql.Add(':an130_empresa,                ');
+    end;
+
+    if FUtilizarEnderecoEntrega then
+    begin
+      FConsultaVenda.Sql.Add(':AC130_UTILIZAREND_ENT,                ');
+      FConsultaVenda.Sql.Add(':AC130_Nome_ent,                       ');
+      FConsultaVenda.Sql.Add(':AC130_Endereco_ent,                   ');
+      FConsultaVenda.Sql.Add(':AC130_Complemento_ent,                ');
+      FConsultaVenda.Sql.Add(':AC130_Cidade_ent,                     ');
+      FConsultaVenda.Sql.Add(':AC130_Estado_ent,                     ');
+      FConsultaVenda.Sql.Add(':AC130_Cep_ent,                        ');
+      FConsultaVenda.Sql.Add(':AC130_Pais_ent,                       ');
+      FConsultaVenda.Sql.Add(':AC130_Numero_ent,                     ');
+      FConsultaVenda.Sql.Add(':AC130_Bairro_ent,                     ');
+    end;
+    FConsultaVenda.Sql.Add(':AC130_SIT_PREVENDA)             ');
+    FConsultaVenda.ParamByName('AN130_PEDIDO').AsInteger := FPedido;
+    FConsultaVenda.ParamByName('AD130_EMISSAO').AsDate := FEmissao;
+    FConsultaVenda.ParamByName('AN130_CLIENTE').AsInteger := FCliente;
+    FConsultaVenda.ParamByName('AN130_VENDEDOR').AsInteger := FVendedor;
+    FConsultaVenda.ParamByName('AC130_NOMECLI').AsString := '';
+    FConsultaVenda.ParamByName('AC130_FRPGTO').AsInteger := FFormaPagamento;
+    FConsultaVenda.ParamByName('AC130_TIPOPEDIDO').AsString := FTipoPedido;
+    FConsultaVenda.ParamByName('AC130_BAIXARESTOQUE').AsString := FBaixarEstoque;
+    FConsultaVenda.ParamByName('AC130_ORIGEM').AsString := FOrigem;
+    FConsultaVenda.ParamByName('AC130_DESTINO').AsString := FDestino;
+    FConsultaVenda.ParamByName('AC130_PRECOPROD').AsString := FPrecoProduto;
+    FConsultaVenda.ParamByName('AC130_OBS1').AsString := FObservacao01;
+    FConsultaVenda.ParamByName('AC130_OBS2').AsString := FObservacao02;
+    FConsultaVenda.ParamByName('AC130_SIT').AsString := FSituacao;
+    FConsultaVenda.ParamByName('AC130_TIPOPRECO').AsString := FTipoPreco;
+    FConsultaVenda.ParamByName('AC130_PLACA').AsString := FPlaca;
+    FConsultaVenda.ParamByName('AC130_TIPOVENDA').AsString := FTipoVenda;
+    FConsultaVenda.ParamByName('AC130_SIT_PREVENDA').AsString := FSituacaoPreVenda;
+    FConsultaVenda.ParamByName('AN130_FRETE').AsFloat := FFrete;
+    FConsultaVenda.ParamByName('AN130_DESCONTO').AsFloat := FValorDesconto;
+    if trim(FCodigoEmpresa) <> '' then
+    begin
+      FConsultaVenda.ParamByName('an130_empresa').AsString := FCodigoEmpresa;
+    end;
+
+    if FUtilizarEnderecoEntrega then
+    begin
+      FConsultaVenda.ParamByName('AC130_UTILIZAREND_ENT').AsString := GetSN(FUtilizarEnderecoEntrega);
+      FConsultaVenda.ParamByName('AC130_Nome_ent').AsString := UpperCase(FNome_ent);
+      FConsultaVenda.ParamByName('AC130_Endereco_ent').AsString := UpperCase(FEndereco_ent);
+      FConsultaVenda.ParamByName('AC130_Complemento_ent').AsString := UpperCase(FComplemento_ent);
+      FConsultaVenda.ParamByName('AC130_Cidade_ent').AsString := UpperCase(FCidade_ent);
+      FConsultaVenda.ParamByName('AC130_Estado_ent').AsString := UpperCase(FEstado_ent);
+      FConsultaVenda.ParamByName('AC130_Cep_ent').AsString := UpperCase(FCep_ent);
+      FConsultaVenda.ParamByName('AC130_Pais_ent').AsString := UpperCase(FPais_ent);
+      FConsultaVenda.ParamByName('AC130_Numero_ent').AsString := UpperCase(FNumero_ent);
+      FConsultaVenda.ParamByName('AC130_Bairro_ent').AsString := UpperCase(FBairro_ent);
+    end;
+    FConsultaVenda.ExecSQL;
+
+    if (pEfetuarCommit) then
+    begin
+      FConsultaVenda.Connection.Commit;
+    end;
+
+  except
+    on E: Exception do
+  end;
+
+end;
+
+procedure TVenda.LimpaPropriedadesDaClasse;
+begin
+  FFormaPagamento := 0;
+  FObservacao01 := '';
+  FObservacao02 := '';
+  FPlaca := '';
+  FTipoPedido := '';
+  FBaixarEstoque := '';
+  FOrigem := '';
+  FDestino := '';
+  FPrecoProduto := '';
+  FSituacao := '';
+  FTipoPreco := '';
+  FTipoVenda := '';
+  FSituacaoPreVenda := '';
+  FCodigoEmpresa := '';
+  FValorDesconto := 0;
+  FFrete := 0;
+  FUtilizarEnderecoEntrega := False;
+  FNome_ent := '';
+  FEndereco_ent := '';
+  FComplemento_ent := '';
+  FCidade_ent := '';
+  FEstado_ent := '';
+  FCep_ent := '';
+  FPais_ent := '';
+  FNumero_ent := '';
+  FBairro_ent := '';
+  // FListaItens.Clear;
+end;
+
+procedure TVenda.RemoverItem(pIndex: Integer);
+var
+  lCompraItem: TVendaItem;
+  I: Integer;
+begin
+  try
+    if FListaItens.Count <> 0 then
+    begin
+      for I := (FListaItens.Count - 1) downto 0 do
+      begin
+        if (FListaItens.Items[I].Indice = pIndex) then
+        begin
+          lCompraItem := FListaItens.Items[I];
+          FListaItens.Remove(lCompraItem);
+        end;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+{ TVendaItem }
+
+procedure TVendaItem.Alterar(pEfetuarCommit: Boolean);
+begin
+  try
+
+    begin
+      FConsultaItem.Close;
+      FConsultaItem.Sql.Clear;
+      FConsultaItem.Sql.Add('update MC140_ITEMPREVENDA set        ');
+      FConsultaItem.Sql.Add(' AN140_PEDIDO    = :AN140_PEDIDO,    ');
+      FConsultaItem.Sql.Add(' AC140_PRODUTO   = :AC140_PRODUTO,   ');
+      FConsultaItem.Sql.Add(' AN140_QTDE      = :AN140_QTDE,      ');
+      FConsultaItem.Sql.Add(' AN140_VALOR     = :AN140_VALOR,     ');
+      FConsultaItem.Sql.Add(' AN140_SAIDA     = :AN140_SAIDA,     ');
+      FConsultaItem.Sql.Add(' AN140_RETORNO   = :AN140_RETORNO,   ');
+      FConsultaItem.Sql.Add(' AC140_REF_EXTRA = :AC140_REF_EXTRA, ');
+      if trim(FCodigoEmpresa) <> '' then
+      begin
+        FConsultaItem.Sql.Add(' an140_empresa   = :an140_empresa,    ');
+      end;
+      FConsultaItem.Sql.Add(' AC140_LOTE      = :AC140_LOTE       ');
+      FConsultaItem.Sql.Add('where AN140_LCTO = :AN140_LCTO       ');
+      FConsultaItem.Sql.Add(' AN140_EMPRESA   = :AN140_EMPRESA    ');
+      FConsultaItem.ParamByName('AN140_PEDIDO').AsInteger := FPedido;
+      FConsultaItem.ParamByName('AC140_PRODUTO').AsString := FProduto;
+      FConsultaItem.ParamByName('AN140_QTDE').AsFloat := FQuantidade;
+      FConsultaItem.ParamByName('AN140_VALOR').AsFloat := FValor;
+      FConsultaItem.ParamByName('AN140_SAIDA').AsFloat := FSaida;
+      FConsultaItem.ParamByName('AN140_RETORNO').AsFloat := FRetorno;
+      if trim(FCodigoEmpresa) <> '' then
+      begin
+        FConsultaItem.ParamByName('an140_empresa').AsString := FCodigoEmpresa;
+      end;
+
+      FConsultaItem.ParamByName('AN140_LCTO').AsInteger := FId;
+      FConsultaItem.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaItem.Connection.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+constructor TVendaItem.Create;
+begin
+  FConsultaItem := TFDQuery.Create(nil);
+  FConsultaItem.Connection := TConexao.ObjetoConexao.ConnectionMC;
+end;
+
+destructor TVendaItem.Destroy;
+begin
+  FConsultaItem.Free;
+end;
+
+procedure TVendaItem.Excluir(pEfetuarCommit: Boolean);
+begin
+  try
+    begin
+      FConsultaItem.Close;
+      FConsultaItem.Sql.Clear;
+      FConsultaItem.Sql.Add('DELETE FROM MC140_ITEMPREVENDA       ');
+      FConsultaItem.Sql.Add('  WHERE AN140_LCTO = :AN140_LCTO ');
+      FConsultaItem.ParamByName('AN140_LCTO').AsInteger := FId;
+      FConsultaItem.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaItem.Connection.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+procedure TVendaItem.ExcluirTodosItensDaPreVenda(pEfetuarCommit: Boolean);
+begin
+  try
+    begin
+      FConsultaItem.Close;
+      FConsultaItem.Sql.Clear;
+      FConsultaItem.Sql.Add('DELETE FROM MC140_ITEMPREVENDA       ');
+      FConsultaItem.Sql.Add('  WHERE AN140_PEDIDO = :AN140_PEDIDO ');
+      FConsultaItem.ParamByName('AN140_PEDIDO').AsInteger := FPedido;
+      FConsultaItem.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaItem.Connection.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, Self, E);
+    end;
+  end;
+end;
+
+procedure TVendaItem.Incluir(pEfetuarCommit: Boolean);
+begin
+  try
+
+    begin
+      FConsultaItem.Close;
+      FConsultaItem.Sql.Clear;
+      FConsultaItem.Sql.Add('insert into MC140_ITEMPREVENDA ( ');
+      FConsultaItem.Sql.Add(' AN140_PEDIDO,                   ');
+      FConsultaItem.Sql.Add(' AC140_PRODUTO,                  ');
+      FConsultaItem.Sql.Add(' AN140_QTDE,                     ');
+      FConsultaItem.Sql.Add(' AN140_VALOR,                    ');
+      FConsultaItem.Sql.Add(' AN140_SAIDA,                    ');
+      FConsultaItem.Sql.Add(' AN140_RETORNO,                  ');
+      FConsultaItem.Sql.Add(' AC140_REF_EXTRA,                ');
+      if trim(FCodigoEmpresa) <> '' then
+      begin
+        FConsultaItem.Sql.Add(' AN140_EMPRESA,                ');
+      end;
+      FConsultaItem.Sql.Add(' AC140_LOTE                      ');
+      FConsultaItem.Sql.Add(' ) values (                      ');
+      FConsultaItem.Sql.Add(' :AN140_PEDIDO,                  ');
+      FConsultaItem.Sql.Add(' :AC140_PRODUTO,                 ');
+      FConsultaItem.Sql.Add(' :AN140_QTDE,                    ');
+      FConsultaItem.Sql.Add(' :AN140_VALOR,                   ');
+      FConsultaItem.Sql.Add(' :AN140_SAIDA,                   ');
+      FConsultaItem.Sql.Add(' :AN140_RETORNO,                 ');
+      FConsultaItem.Sql.Add(' :AC140_REF_EXTRA,               ');
+      if trim(FCodigoEmpresa) <> '' then
+      begin
+        FConsultaItem.Sql.Add(' :AN140_EMPRESA,               ');
+      end;
+      FConsultaItem.Sql.Add(' :AC140_LOTE                     ');
+      FConsultaItem.Sql.Add(' )                               ');
+      FConsultaItem.ParamByName('AN140_PEDIDO').AsInteger := FPedido;
+      FConsultaItem.ParamByName('AC140_PRODUTO').AsString := FProduto;
+      FConsultaItem.ParamByName('AN140_QTDE').AsFloat := FQuantidade;
+      FConsultaItem.ParamByName('AN140_VALOR').AsFloat := FValor;
+      FConsultaItem.ParamByName('AN140_SAIDA').AsFloat := FSaida;
+      FConsultaItem.ParamByName('AN140_RETORNO').AsFloat := FRetorno;
+      if trim(FCodigoEmpresa) <> '' then
+      begin
+        FConsultaItem.ParamByName('AN140_EMPRESA').AsString := FCodigoEmpresa;
+      end;
+      FConsultaItem.ExecSQL;
+
+      if (pEfetuarCommit) then
+      begin
+        FConsultaItem.Connection.Commit;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      // TLogErros.ExecutaGravaLogErro(TSistema.Usuario.Codigo, self, E);
+    end;
+  end;
+
+end;
+
+procedure TVendaItem.Limpar;
+begin
+  FId := 0;
+  FPedido := 0;
+  FProduto := '';
+  FQuantidade := 0;
+  FValor := 0;
+  FSaida := 0;
+  FRetorno := 0;
+  FCodigoEmpresa := '';
+end;
+{ TVendaWC }
+
+{ TListaVendas }
+
+procedure TListaVendas.AdicionarPedido(pPedido: TListaVendas);
+var
+  lListaVenda: TListaVendas;
+begin
+  try
+    lListaVenda := TListaVendas.Create;
+
+    Inc(FIndexItem);
+    lListaVenda.Indice := FIndexItem;
+
+    lListaVenda.Id := pPedido.Id;
+    lListaVenda.Codigo := pPedido.Codigo;
+    lListaVenda.marketplace := pPedido.marketplace;
+    lListaVenda.status := pPedido.status;
+    lListaVenda.data := pPedido.data;
+
+    FListaVendas.Add(lListaVenda);
+  finally
+
+  end;
+
+end;
+
+end.

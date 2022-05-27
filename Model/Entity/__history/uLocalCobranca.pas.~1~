@@ -1,0 +1,70 @@
+unit uLocalCobranca;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity;
+
+type
+  TLocalCobranca = class;
+
+  TLocalCobranca = class(TInterfacedObject, iCliente)
+  private
+    Fcodigo: string;
+
+  public
+    property codigo: string read Fcodigo write Fcodigo;
+
+    destructor Destroy; override;
+    constructor Create;
+
+    function Get(pAll: Boolean = false): string;
+    function Delete: string;
+    function Put: string;
+    function Post: string;
+    function ToJson: TJSONObject;
+  end;
+
+implementation
+
+function TLocalCobranca.ToJson: TJSONObject;
+begin
+  result := TJson.ObjectToJsonObject(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TLocalCobranca.Create;
+begin
+
+end;
+
+function TLocalCobranca.Delete: string;
+begin
+
+end;
+
+destructor TLocalCobranca.Destroy;
+begin
+end;
+
+function TLocalCobranca.Get(pAll: Boolean): string;
+begin
+
+end;
+
+function TLocalCobranca.Post: string;
+begin
+
+end;
+
+function TLocalCobranca.Put: string;
+begin
+
+end;
+
+end.

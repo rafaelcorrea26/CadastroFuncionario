@@ -1,0 +1,254 @@
+unit uCliente;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity,
+  uCidade,
+  REST.JSON.Types;
+
+type
+  TCliente = class;
+
+  TCliente = class(TInterfacedObject, iCliente)
+  private
+    [JSONMarshalledAttribute(False)]
+    Fcodigo: integer;
+
+    Fnome: string;
+    Fforma_de_pagamento_padrao: integer;
+    Flimite_de_credito: double;
+    Ftipodecredito: string;
+    Fativo: boolean;
+    Fprazo_maximo_em_dias: integer;
+    Fpessoa_fisica: boolean;
+    Fsaldo_calculado: double;
+    Fcpf: string;
+    Fcnpj: string;
+    Fativo_no_spc: boolean;
+    Fvalor_limite_do_cliente: double;
+    Fdia_fixo_de_vencimento: integer;
+    Fie: string;
+    Ffone: string;
+    Femail: string;
+    Fbairro: string;
+    Ffax: string;
+    Fuf: string;
+    Fcodigo_cidade_ibge: string;
+    Fcep: string;
+    Fnumero: string;
+    Fcomplemento: string;
+    Fdata_cadastro: tdatetime;
+    Fmatricula: string;
+    Fcidade: string;
+    Fendereco: string;
+    Fcelular: string;
+    Fendereco_ok: boolean;
+    Fconvenio_ok: boolean;
+    Fsubstituicao_tributaria: boolean;
+    Fsalario_ok: boolean;
+    Fpis_cofins: boolean;
+    Fsped: boolean;
+    Fusuario_alteracao: integer;
+    Fusuario_cadastro: integer;
+    Findicador_destinatario: string;
+    Fconsumidor_final: string;
+    Findicador_presenca_comprador: string;
+    Fdata_alteracao: tdatetime;
+    Fsaldo_credito: double;
+    Fnumero_duplicatas_abertas: integer;
+    Fcidade_ibge: tcidade;
+    Fdata_nascimento: tdate;
+    Frg: string;
+    Fsexo: string;
+    Festado_civil: string;
+    Fnaturalidade: string;
+    Fpai: string;
+    Fmae: string;
+    Fendereco_cobranca: string;
+    Fcidade_cobranca: string;
+    Fbairro_cobranca: string;
+    Fcep_cobranca: string;
+    Fuf_cobranca: string;
+    Fcontato: string;
+    Faluguel: string;
+    Fvalor_aluguel: double;
+    Ftempo_aluguel: string;
+    Fempresa: string;
+    Ffone_empresa: string;
+    Ffuncao_empresa: string;
+    Fadmissao: string;
+    Fsalario: string;
+    Freferencia_comercial: string;
+    Freferencia_banco: string;
+    Fdata_spc: tdate;
+    Fobservacao_spc: string;
+    Fobservacao_geral: string;
+    Fconjuge: string;
+    Freferencia_pessoal: string;
+    Fdata_orci: string;
+    Fdata_movimento: tdate;
+    Fultima_nf: string;
+    Fvalor_nf: double;
+    Ftabela_localizacao: integer;
+    Ftabela_extra: integer;
+    Flocal_cobranca: string;
+    Fvendedor: integer;
+    Fvip: string;
+    Fvalidade_vip: tdate;
+    Ftabela_convenio: integer;
+    Ftabela_profissao: integer;
+    Fdata_cobranca: tdate;
+    Fquantidade_cobranca: integer;
+    Ficms: double;
+    Ffoto_caminho: string;
+    Fatacado: string;
+    Flimite_desconto: double;
+    Fmudar_forma_pagamento: string;
+    Fdivida: double;
+    Fsaldo_total: double;
+    Frota: string;
+    Fordem_visita: integer;
+    Fobservacao1: string;
+    Fobservacao2: string;
+    Fsuper_limite_dias: integer;
+    Fcartorio: string;
+    Fserasa: string;
+    Fboleto_com_taxa: string;
+    Fnome_completo_nfe: string;
+    Fobservacao_interna: string;
+
+  public
+    property codigo: integer read Fcodigo write Fcodigo;
+    property nome: string read Fnome write Fnome;
+    property matricula: string read Fmatricula write Fmatricula;
+    property endereco: string read Fendereco write Fendereco;
+    property numero: string read Fnumero write Fnumero;
+    property bairro: string read Fbairro write Fbairro;
+    property cidade: string read Fcidade write Fcidade;
+    property cep: string read Fcep write Fcep;
+    property complemento: string read Fcomplemento write Fcomplemento;
+    property ie: string read Fie write Fie;
+    property fone: string read Ffone write Ffone;
+    property fax: string read Ffax write Ffax;
+    property celular: string read Fcelular write Fcelular;
+    property email: string read Femail write Femail;
+    property codigocidadeibge: string read Fcodigocidadeibge write Fcodigocidadeibge;
+    property uf: string read Fuf write Fuf;
+    property conveniook: boolean read Fconveniook write Fconveniook;
+    property salariook: boolean read Fsalariook write Fsalariook;
+    property enderecook: boolean read Fenderecook write Fenderecook;
+    property substituicaotributaria: boolean read Fsubstituicaotributaria write Fsubstituicaotributaria;
+    property sped: boolean read Fsped write Fsped;
+    property piscofins: boolean read Fpiscofins write Fpiscofins;
+    property consumidorfinal: string read Fconsumidorfinal write Fconsumidorfinal;
+    property indicadorpresencacomprador: string read Findicadorpresencacomprador write Findicadorpresencacomprador;
+    property indicadordestinatario: string read Findicadordestinatario write Findicadordestinatario;
+    property usuariocadastro: integer read Fusuariocadastro write Fusuariocadastro;
+    property usuarioalteracao: integer read Fusuarioalteracao write Fusuarioalteracao;
+    property datacadastro: tdatetime read Fdatacadastro write Fdatacadastro;
+    property dataalteracao: tdatetime read Fdataalteracao write Fdataalteracao;
+    property saldocredito: double read Fsaldocredito write Fsaldocredito;
+    property numeroduplicatasabertas: integer read Fnumeroduplicatasabertas write Fnumeroduplicatasabertas;
+    property tipodecredito: string read Ftipodecredito write Ftipodecredito;
+    property limitedecredito: double read Flimite_de_credito write Flimite_de_credito;
+    property ativo: boolean read Fativo write Fativo;
+    property formadepagamentopadrao: integer read Fformadepagamentopadrao write Fformadepagamentopadrao;
+    property prazomaximoemdias: integer read Fprazomaximoemdias write Fprazomaximoemdias;
+    property pessoafisica: boolean read Fpessoafisica write Fpessoafisica;
+    property saldocalculado: double read Fsaldocalculado write Fsaldocalculado;
+    property valorlimitedocliente: double read Fvalorlimitedocliente write Fvalorlimitedocliente;
+    property cpf: string read Fcpf write Fcpf;
+    property cnpj: string read Fcnpj write Fcnpj;
+    property diafixodevencimento: integer read Fdiafixodevencimento write Fdiafixodevencimento default 1;
+    property ativonospc: boolean read Fativonospc write Fativonospc;
+    property datanascimento: tdate read Fdatanascimento write Fdatanascimento;
+    property rg: string read Frg write Frg;
+    property sexo: string read Fsexo write Fsexo;
+    property estadocivil: string read Festadocivil write Festadocivil;
+    property naturalidade: string read Fnaturalidade write Fnaturalidade;
+    property pai: string read Fpai write Fpai;
+    property mae: string read Fmae write Fmae;
+    property enderecocobranca: string read Fenderecocobranca write Fenderecocobranca;
+    property cidadecobranca: string read Fcidadecobranca write Fcidadecobranca;
+    property bairrocobranca: string read Fbairrocobranca write Fbairrocobranca;
+    property cepcobranca: string read Fcepcobranca write Fcepcobranca;
+    property ufcobranca: string read Fufcobranca write Fufcobranca;
+    property contato: string read Fcontato write Fcontato;
+    property aluguel: string read Faluguel write Faluguel;
+    property valoraluguel: double read Fvaloraluguel write Fvaloraluguel;
+    property tempoaluguel: string read Ftempoaluguel write Ftempoaluguel;
+    property empresa: string read Fempresa write Fempresa;
+    property foneempresa: string read Ffoneempresa write Ffoneempresa;
+    property funcaoempresa: string read Ffuncaoempresa write Ffuncaoempresa;
+    property admissao: string read Fadmissao write Fadmissao;
+    property salario: string read Fsalario write Fsalario;
+    property referenciacomercial: string read Freferenciacomercial write Freferenciacomercial;
+    property referenciabanco: string read Freferenciabanco write Freferenciabanco;
+    property dataspc: tdate read Fdataspc write Fdataspc;
+    property observacaospc: string read Fobservacaospc write Fobservacaospc;
+    property observacaogeral: string read Fobservacaogeral write Fobservacaogeral;
+    property conjuge: string read Fconjuge write Fconjuge;
+    property referenciapessoal: string read Freferenciapessoal write Freferenciapessoal;
+    property dataorci: string read Fdataorci write Fdataorci;
+    property datamovimento: tdate read Fdatamovimento write Fdatamovimento;
+    property ultimanf: string read Fultimanf write Fultimanf;
+    property valornf: double read Fvalornf write Fvalornf;
+    property tabelalocalizacao: integer read Ftabelalocalizacao write Ftabelalocalizacao;
+    property tabelaextra: integer read Ftabelaextra write Ftabelaextra;
+    property localcobranca: string read Flocalcobranca write Flocalcobranca;
+    property vendedor: integer read Fvendedor write Fvendedor;
+    property vip: string read Fvip write Fvip;
+    property validadevip: tdate read Fvalidadevip write Fvalidadevip;
+    property tabelaconvenio: integer read Ftabelaconvenio write Ftabelaconvenio;
+    property tabelaprofissao: integer read Ftabelaprofissao write Ftabelaprofissao;
+    property datacobranca: tdate read Fdatacobranca write Fdatacobranca;
+    property quantidadecobranca: integer read Fquantidadecobranca write Fquantidadecobranca;
+    property icms: double read Ficms write Ficms;
+    property fotocaminho: string read Ffotocaminho write Ffotocaminho;
+    property atacado: string read Fatacado write Fatacado;
+    property limitedesconto: double read Flimitedesconto write Flimitedesconto;
+    property mudarformapagamento: string read Fmudarformapagamento write Fmudarformapagamento;
+    property divida: double read Fdivida write Fdivida;
+    property saldototal: double read Fsaldototal write Fsaldototal;
+    property rota: string read Frota write Frota;
+    property ordemvisita: integer read Fordemvisita write Fordemvisita;
+    property observacao1: string read Fobservacao1 write Fobservacao1;
+    property observacao2: string read Fobservacao2 write Fobservacao2;
+    property superlimitedias: integer read Fsuperlimitedias write Fsuperlimitedias;
+    property cartorio: string read Fcartorio write Fcartorio;
+    property serasa: string read Fserasa write Fserasa;
+    property boleto_com_taxa: string read Fboletocomtaxa write Fboletocomtaxa;
+    property nome_completonfe: string read Fnomecompletonfe write Fnomecompletonfe;
+    property observacao_interna: string read Fobservacaointerna write Fobservacaointerna;
+    property cidade_ibge: tcidade read Fcidadeibge write Fcidadeibge;
+
+    destructor destroy; override;
+    constructor create;
+    function toJson: string;
+  end;
+
+implementation
+
+function TCliente.toJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TCliente.create;
+begin
+  Fcidadeibge := tcidade.create;
+end;
+
+destructor TCliente.destroy;
+begin
+  Fcidadeibge.Free;
+end;
+
+end.

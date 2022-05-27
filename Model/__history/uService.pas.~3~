@@ -1,0 +1,11 @@
+unit uService;
+
+interface
+
+type
+
+  TServiceAPI = (tGetLogErros, tPostLogErros, tPutLogErros, tDeleteLogErros);
+
+implementation
+
+end.

@@ -1,0 +1,70 @@
+unit uConta;
+
+interface
+
+uses
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  FireDAC.Comp.Client,
+  uConnection,
+  System.SysUtils,
+  uInterfacesEntity;
+
+type
+  TConta = class;
+
+  TConta = class(TInterfacedObject, iCliente)
+
+  private
+    FCodigo: string;
+    Fnome: string;
+    Ftipo: string;
+    Fcentro_custo: string;
+    Fduplicar: string;
+    Fcaixa_dest: string;
+    Fconta_dest: string;
+    Fhistorico: string;
+    Fdre: string;
+    Fnivel_dre: integer;
+    Ftipo_custo: string;
+    Fcombustivel: string;
+    Fsubgrupo: string;
+
+  public
+    property Codigo: string read FCodigo write FCodigo;
+    property nome: string read Fnome write Fnome;
+    property tipo: string read Ftipo write Ftipo;
+    property centro_custo: string read Fcentro_custo write Fcentro_custo;
+    property duplicar: string read Fduplicar write Fduplicar;
+    property caixa_dest: string read Fcaixa_dest write Fcaixa_dest;
+    property conta_dest: string read Fconta_dest write Fconta_dest;
+    property historico: string read Fhistorico write Fhistorico;
+    property dre: string read Fdre write Fdre;
+    property nivel_dre: integer read Fnivel_dre write Fnivel_dre;
+    property tipo_custo: string read Ftipo_custo write Ftipo_custo;
+    property combustivel: string read Fcombustivel write Fcombustivel;
+    property subgrupo: string read Fsubgrupo write Fsubgrupo;
+
+    destructor Destroy; override;
+    constructor Create;
+    function ToJson: string;
+  end;
+
+implementation
+
+destructor TConta.Destroy;
+begin
+  inherited;
+end;
+
+function TConta.ToJson: string;
+begin
+  result := TJson.ObjectToJsonString(self, [joIgnoreEmptyStrings]);
+end;
+
+constructor TConta.Create;
+begin
+end;
+
+end.

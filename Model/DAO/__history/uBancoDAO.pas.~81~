@@ -1,0 +1,185 @@
+unit uBancoDAO;
+
+interface
+
+uses
+  System.Classes,
+  uQuery,
+  pcnconversao,
+  System.SysUtils,
+  uFunctions,
+  uBanco,
+  Vcl.Dialogs,
+  REST.JSON.Types,
+  uInterfacesEntity;
+
+type
+  TBancoDAO = class(TInterfacedObject, iBancoDAO)
+  private
+
+  public
+    class function Limpar(pBanco: TBanco): boolean;
+    class function Carrega(pBanco: TBanco): boolean;
+    class function Incluir(pBanco: TBanco): boolean;
+    class function Alterar(pBanco: TBanco): boolean;
+    class function Excluir(pCodigo: string): boolean;
+    class function Existe(pBanco: TBanco): boolean;
+  end;
+
+implementation
+
+{ TBanco }
+
+
+class function TBancoDAO.Alterar(pBanco: TBanco): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;;
+    lQuery.SQL.add(' UPDATE  MC09_BANCO SET                              ');
+    lQuery.SQL.add('   AC09_CODIGO = :AC09_CODIGO                        ');
+    lQuery.SQL.add(' , AC09_BANCO = :AC09_BANCO                          ');
+    lQuery.SQL.add(' , AC09_ARQUIVO = :AC09_ARQUIVO                      ');
+    lQuery.SQL.add(' , AC09_LOCAL = :AC09_LOCAL                          ');
+    lQuery.SQL.add(' , AN09_NARQUIVO = :AN09_NARQUIVO                    ');
+    lQuery.SQL.add(' , AN09_DIGITO_BANCO = :AN09_DIGITO_BANCO            ');
+    lQuery.SQL.add(' , AC09_DTHORA_ARQUIVO_SN = :AC09_DTHORA_ARQUIVO_SN  ');
+    lQuery.parambyname('AC09_CODIGO').asstring := pBanco.Codigo;
+    lQuery.parambyname('AC09_BANCO').asstring := pBanco.banco;
+    lQuery.parambyname('AC09_ARQUIVO').asstring := pBanco.arquivo;
+    lQuery.parambyname('AC09_LOCAL').asstring := pBanco.local;
+    lQuery.parambyname('AN09_NARQUIVO').asstring := pBanco.numero_arquivo;
+    lQuery.parambyname('AN09_DIGITO_BANCO').asstring := pBanco.digito_banco;
+    lQuery.parambyname('AC09_DTHORA_ARQUIVO_SN').asstring := pBanco.data_hora_arquivo_sn;
+    lQuery.execsql;
+    lQuery.connection.commit;
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TBancoDAO.Carrega(pBanco: TBanco): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.add(' select * from MC09_BANCO          ');
+    lQuery.SQL.add(' where AC09_CODIGO = :AC09_CODIGO  ');
+    lQuery.parambyname('AC09_CODIGO').asstring := pBanco.Codigo;
+    lQuery.Open;
+
+    if lQuery.RecordCount > 0 then
+    begin
+      // carrega dados
+      pBanco.Codigo := lQuery.FieldByName('AC09_CODIGO').asstring;
+      pBanco.banco := lQuery.FieldByName('AC09_BANCO').asstring;
+      pBanco.arquivo := lQuery.FieldByName('AC09_ARQUIVO').asstring;
+      pBanco.local := lQuery.FieldByName('AC09_LOCAL').asstring;
+      pBanco.numero_arquivo := lQuery.FieldByName('AN09_NARQUIVO').asstring;
+      pBanco.digito_banco := lQuery.FieldByName('AN09_DIGITO_BANCO').asstring;
+      pBanco.data_hora_arquivo_sn := lQuery.FieldByName('AC09_DTHORA_ARQUIVO_SN').asstring;
+    end;
+
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TBancoDAO.Excluir(pCodigo: string): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+
+    lQuery.Close;
+    lQuery.SQL.Clear;
+    lQuery.SQL.add(' DELETE FROM MC09_BANCO             ');
+    lQuery.SQL.add(' where AC09_CODIGO = :AC09_CODIGO   ');
+    lQuery.parambyname('AC09_CODIGO').asstring := pCodigo;
+    lQuery.execsql;
+    lQuery.connection.commit;
+
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TBancoDAO.Existe(pBanco: TBanco): boolean;
+var
+  lQuery: TQuery;
+begin
+  Result := false;
+
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.SQL.Add('SELECT * FROM MC09_BANCO WHERE AC09_CODIGO = :AC09_CODIGO');
+    lQuery.ParamByName('AC09_CODIGO').AsString := pBanco.Codigo;
+    lQuery.Open;
+
+    if (lQuery.RecordCount > 0) then
+    begin
+      Result := True;
+    end;
+  finally
+    lQuery.Free;
+  end;
+
+end;
+
+class function TBancoDAO.Incluir(pBanco: TBanco): boolean;
+var
+  lQuery: TQuery;
+begin
+  lQuery := TQuery.Create(nil);
+  try
+    lQuery.Close;
+    lQuery.SQL.Clear;;
+    lQuery.SQL.add(' INSERT INTO MC09_BANCO(           ');
+    lQuery.SQL.add('    AC09_CODIGO                    ');
+    lQuery.SQL.add('  , AC09_BANCO                     ');
+    lQuery.SQL.add('  , AC09_ARQUIVO                   ');
+    lQuery.SQL.add('  , AC09_LOCAL                     ');
+    lQuery.SQL.add('  , AN09_NARQUIVO                  ');
+    lQuery.SQL.add('  , AN09_DIGITO_BANCO              ');
+    lQuery.SQL.add('  , AC09_DTHORA_ARQUIVO_SN         ');
+    lQuery.SQL.add('  ) values(                        ');
+    lQuery.SQL.add('   :AC09_CODIGO                    ');
+    lQuery.SQL.add('  ,:AC09_BANCO                     ');
+    lQuery.SQL.add('  ,:AC09_ARQUIVO                   ');
+    lQuery.SQL.add('  ,:AC09_LOCAL                     ');
+    lQuery.SQL.add('  ,:AN09_NARQUIVO                  ');
+    lQuery.SQL.add('  ,:AN09_DIGITO_BANCO              ');
+    lQuery.SQL.add('  ,:AC09_DTHORA_ARQUIVO_SN         ');
+    lQuery.SQL.add(' )                                 ');
+    lQuery.parambyname('AC09_CODIGO').asstring := pBanco.Codigo;
+    lQuery.parambyname('AC09_BANCO').asstring := pBanco.banco;
+    lQuery.parambyname('AC09_ARQUIVO').asstring := pBanco.arquivo;
+    lQuery.parambyname('AC09_LOCAL').asstring := pBanco.local;
+    lQuery.parambyname('AN09_NARQUIVO').asstring := pBanco.numero_arquivo;
+    lQuery.parambyname('AN09_DIGITO_BANCO').asstring := pBanco.digito_banco;
+    lQuery.parambyname('AC09_DTHORA_ARQUIVO_SN').asstring := pBanco.data_hora_arquivo_sn;
+    lQuery.execsql;
+    lQuery.connection.commit;
+
+  finally
+    lQuery.free;
+  end;
+
+end;
+
+class function TBancoDAO.Limpar(pBanco: TBanco): boolean;
+begin
+
+end;
+
+end.
