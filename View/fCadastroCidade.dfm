@@ -23,7 +23,7 @@ object frmCadastroCidade: TfrmCadastroCidade
     Width = 800
     Height = 41
     Align = alTop
-    Caption = 'Cadastro Funcionarios'
+    Caption = 'Cadastro Cidade'
     Color = 7098370
     Font.Charset = ANSI_CHARSET
     Font.Color = clWhite
